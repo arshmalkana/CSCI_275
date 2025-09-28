@@ -1,0 +1,27 @@
+Team Introduction
+Introduce all team members and share their contact information. Explain your collaboration process—how do you communicate, assign tasks, and support each other?
+Application Overview
+Clearly describe what your application does.
+Problem Solved
+Identify the specific problem your application addresses. Why is it important?
+Target Market
+Define your intended users. Who are they, and what are their needs?
+Competitive Advantage
+How is your web app different or better than similar existing solutions?
+Minimum Viable Product (MVP)
+Describe your MVP—what key features do you expect will be included in the final release of the product?
+Team Roles and Responsibilities
+Provide a clear breakdown of each member’s role. Answer the following:
+Who will take meeting minutes?
+Will roles rotate?
+Who manages version control and resolves merge conflicts?
+Who writes the code?
+Who writes unit tests?
+Who tests the application?
+Technology Stack
+List all the technologies your team plans to use.
+Git and GitHub Configuration.
+Project Planning
+Present your plan for Deliverable 1: Specification and Review. Include timelines, milestones, and how progress will be tracked.
+Be sure to discuss these with your teammates, and finalize and prepare everything before your presentation.
+
