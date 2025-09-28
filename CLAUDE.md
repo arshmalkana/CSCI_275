@@ -10,60 +10,74 @@ AH Punjab Reporting - A Progressive Web App for Punjab's Animal Husbandry Depart
 
 **Architecture**: React PWA + Fastify + PostgreSQL (traditional client-server, not offline-first)
 
-- **Frontend**: `ahpunjabfrontend/` - React PWA with TypeScript, TailwindCSS, service workers for installability and push notifications
-- **Backend**: `Backend/` - Fastify Node.js server with PostgreSQL, Redis for caching/queues, Swagger documentation
+- **Frontend**: `ahpunjabfrontend/` - React 19 PWA with TypeScript, TailwindCSS v4, Vite, auto-updating service workers
+- **Backend**: `Backend/` - Fastify 5.6 Node.js server with plugin architecture, JSON Schema validation, Swagger docs
 
 ## Development Commands
 
 ### Frontend (ahpunjabfrontend/)
 ```bash
 cd ahpunjabfrontend
-npm run dev          # Start Vite development server (port 3000)
-npm run build        # Build for production
-npm run preview      # Preview production build locally
-npm run lint         # Run ESLint
+npm run dev          # Start Vite dev server with --host (accessible on network)
+npm run build        # TypeScript compile + Vite build with PWA manifest
+npm run preview      # Preview production build with --host
+npm run lint         # ESLint with TypeScript, React Hooks, React Refresh rules
 ```
 
 ### Backend (Backend/)
 ```bash
 cd Backend
-npm run dev          # Start Fastify development server with auto-reload (port 8080)
-npm start            # Start production server
-npm test             # Run tests with Node.js test runner (--watch mode)
+npm run dev          # Fastify start with -w (watch) and fastify.config.json
+npm start            # Production Fastify server with fastify.config.json
+npm test             # Node.js test runner with --watch mode
+```
+
+### Common Development Workflow
+```bash
+# Terminal 1: Start backend
+cd Backend && npm run dev
+
+# Terminal 2: Start frontend (proxies /v1 to backend)
+cd ahpunjabfrontend && npm run dev
+
+# Access: Frontend at http://localhost:3000, API docs at http://localhost:8080/docs
 ```
 
 ## Architecture
 
-### Frontend Structure
-- **Vite + React PWA** with TypeScript
-- Located in `ahpunjabfrontend/src/`
-- **PWA Features**: Auto-updating service workers, installable, API caching
-- **Styling**: TailwindCSS v4 with PostCSS
-- **Development**: Vite dev server with HMR, API proxy to backend
-- **Production**: Optimized builds with PWA manifest and service worker
-- **Authentication**: WebAuthn + JWT (to be implemented)
+### Frontend Structure (ahpunjabfrontend/)
+- **React 19.1.1 + TypeScript** with strict configuration (`noUnusedLocals`, `noUnusedParameters`)
+- **Vite 7.1.7** build system with ES2022 target, ESNext modules
+- **PWA Implementation**:
+  - `vite-plugin-pwa` with `registerType: 'autoUpdate'`
+  - Workbox service workers with asset caching
+  - Mobile-optimized with iOS safe area insets (`safe-top`, `safe-bottom` utilities)
+  - App shortcuts and protocol handlers in manifest
+- **Styling**: TailwindCSS v4.1.13 with PostCSS, mobile-first responsive design
+- **Development Proxy**: `/v1/*` routes proxy to `http://localhost:8080` for API calls
+- **Current State**: Basic React app with online/offline detection, PWA installation prompts
 
-### Backend Structure
-- Fastify server with modular plugin architecture
-- Main entry point: `Backend/src/server.js`
-- MVC pattern:
-  - Controllers: `src/controllers/`
-  - Routes: `src/routes/`
-  - Services: `src/services/`
-  - Schemas: `src/schemas/`
-  - Utils: `src/utils/`
-- PostgreSQL database with proper migrations
-- Redis for caching and queues
-- Swagger/OpenAPI documentation available at `/docs` when server is running
-- Configuration via `fastify.config.json` (port 8080, address 0.0.0.0)
+### Backend Structure (Backend/)
+- **Fastify 5.6.0** with ES modules (`"type": "module"`)
+- **Plugin Architecture**: Sequential plugin registration in `src/server.js`
+  ```javascript
+  await fastify.register(import('@fastify/swagger'))
+  await fastify.register(import('./routes/user.js'), { prefix: '/users' })
+  ```
+- **MVC Pattern**:
+  - **Routes**: Route definitions with schema validation (`src/routes/`)
+  - **Controllers**: Request handlers (`src/controllers/`)
+  - **Services**: Business logic (`src/services/`)
+  - **Schemas**: JSON Schema validation definitions (`src/schemas/`)
+  - **Plugins**: Fastify plugins like CORS (`src/plugins/`)
+- **Schema-First Development**: JSON Schema definitions drive API validation and Swagger docs
+- **Current State**: Basic user CRUD with in-memory storage, CORS enabled, Swagger UI active
 
-### Key Backend Features
-- WebAuthn + JWT authentication (short-lived access tokens, rotating refresh tokens)
-- Role-based access control across hierarchy levels
-- JSON schema validation using AJV
-- Structured logging with Pino
-- Auto-generated API documentation with Swagger UI
-- Plugin-based architecture for modularity
+### Communication Architecture
+- **API Versioning**: Base URL `/v1` for all backend routes
+- **Development Setup**: Frontend dev server proxies API calls to backend
+- **CORS Configuration**: `origin: '*'` for development (configured in `src/plugins/cors.js`)
+- **Documentation**: Auto-generated Swagger UI at `http://localhost:8080/docs`
 
 ## API Design
 Base URL: `/v1`
@@ -98,13 +112,54 @@ Base URL: `/v1`
 - Backend serves Swagger docs at `http://localhost:8080/docs`
 - Health endpoints: `/health`, `/ready`
 
-## Testing
-- Backend uses Node.js built-in test runner
-- Tests located in `Backend/test/`
-- Tests run in watch mode by default during development
+## Testing Architecture
+- **Backend**: Node.js built-in test runner with `--watch` mode
+- **Test Location**: `Backend/test/` directory
+- **Testing Pattern**: Fastify injection testing for API endpoints
+- **Example Test Structure**:
+  ```javascript
+  const app = Fastify()
+  app.addSchema(userSchema)
+  await app.register(appPlugin)
+  const res = await app.inject({ method: 'GET', url: '/users' })
+  assert.strictEqual(res.statusCode, 200)
+  ```
 
-## Development Workflow
-1. **Contracts first**: JSON Schemas + OpenAPI definitions
-2. **Iterative slices**: Auth → Directory → Inventory → Reports → Admin
-3. **Database migrations** for schema changes
-4. **Security-first**: All endpoints require proper authentication/authorization
+## Code Quality Tools
+### Frontend
+- **ESLint 9.36.0**: Flat config with TypeScript, React Hooks, React Refresh plugins
+- **TypeScript**: Strict mode with exhaustive linting rules
+- **Prettier**: Integrated with ESLint for code formatting
+
+### Backend
+- **ESLint**: Node.js environment configuration
+- **Prettier**: Code formatting
+- **AJV**: JSON Schema validation for request/response
+
+## Development Patterns
+1. **Schema-First API Development**: Define JSON schemas before implementation
+2. **Plugin-Based Architecture**: Register Fastify plugins sequentially in `server.js`
+3. **Mobile-First PWA**: Design for mobile devices with progressive enhancement
+4. **Auto-Documentation**: Swagger UI generates from JSON schemas automatically
+5. **ES Modules**: Both frontend and backend use `"type": "module"`
+
+## Implementation Status
+**Completed**:
+- Basic project structure with PWA foundation
+- Fastify backend with plugin architecture and Swagger docs
+- User CRUD operations with schema validation
+- Mobile-optimized React PWA with offline detection
+- Development tooling (ESLint, TypeScript, Vite)
+
+**Planned** (from existing design):
+- PostgreSQL database integration (currently mock storage)
+- WebAuthn + JWT authentication system
+- Geographic hierarchy models (village → tehsil → district → HQ)
+- Monthly reporting workflow (Draft → Submit → Approve)
+- Role-based access control with Row Level Security
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
