@@ -35,17 +35,17 @@ export default function LoginScreen() {
   const handleLogin = () => {
     if (validateForm()) {
       console.log('Login attempt:', formData)
-      // Add login logic here
+      // Add login logic
     }
   }
 
   const handleRegister = () => {
-    // Add register navigation here
+    // Add register navigation
     console.log('Navigate to register')
   }
 
   const handleForgotPassword = () => {
-    // Add forgot password navigation here
+    // Add forgot password navigation
     console.log('Navigate to forgot password')
   }
 
@@ -149,7 +149,8 @@ export default function LoginScreen() {
             Punjab Animal Husbandry Department
           </p>
           <p className="text-xs text-gray-400 font-['Poppins'] mt-1">
-            Government of Punjab, India
+            {/* Government of Punjab, India */}
+            CSCI 275 - Team 404
           </p>
         </div>
 

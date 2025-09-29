@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-
+// CHATGPT GENERATED: no idea how it works and it doesnt even work for every feature its supposed to work!!!!!
 interface PWAWrapperProps {
   children: React.ReactNode
 }

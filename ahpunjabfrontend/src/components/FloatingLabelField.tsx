@@ -57,8 +57,8 @@ export const FloatingLabelField: React.FC<FloatingLabelFieldProps> = ({
           type={showPasswordToggle ? inputType : type}
           value={value}
           onChange={(e) => onChange(field, e.target.value)}
-          onBlur={() => onBlur?.(field, value)}
-          placeholder={placeholder} // Keep as single space for floating effect
+          onBlur={() => onBlur?.(field)}
+          placeholder={placeholder} // Keep as single space for floating effect so it will go up on unfocus
           disabled={disabled}
           className={`peer w-full ${paddingLeft} ${paddingRight} pt-5 pb-2 border ${
             error ? 'border-red-300' : 'border-gray-300'
@@ -67,7 +67,7 @@ export const FloatingLabelField: React.FC<FloatingLabelFieldProps> = ({
             transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed`}
         />
 
-        {/* Password Toggle Button */}
+        {/* THE EYE */}
         {showPasswordToggle && (
           <button
             type="button"
@@ -91,7 +91,7 @@ export const FloatingLabelField: React.FC<FloatingLabelFieldProps> = ({
           </button>
         )}
 
-        {/* Floating Label */}
+        {/* Actual Cool part here: floating label */}
         <label
           className={`absolute ${hasIcon ? 'left-12' : 'left-4'} top-3 text-gray-500 text-base font-['Poppins']
             transition-all duration-200 pointer-events-none
@@ -111,7 +111,7 @@ export const FloatingLabelField: React.FC<FloatingLabelFieldProps> = ({
   );
 };
 
-// Textarea version
+// Textarea interface, noo idea how it worked
 interface FloatingLabelTextareaProps {
   field: string;
   label: string;

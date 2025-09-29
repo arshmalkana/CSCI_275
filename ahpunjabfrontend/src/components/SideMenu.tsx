@@ -7,7 +7,7 @@ interface SideMenuProps {
 
 export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
   const [isAnimating, setIsAnimating] = useState(false);
-
+//aiiiiiiiiiii
   const menuItems = [
     { name: "Home", icon: "🏠" },
     { name: "Monthly Reporting", icon: "📊" },

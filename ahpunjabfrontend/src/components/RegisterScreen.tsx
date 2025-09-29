@@ -5,7 +5,7 @@ export default function RegisterScreen() {
   const [currentStep, setCurrentStep] = useState(1)
   const totalSteps = 4
 
-  // Form state
+  // Empty Form state
   const [formData, setFormData] = useState({
     district: '',
     tehsil: '',

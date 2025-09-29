@@ -33,14 +33,14 @@ export default function ForgetPasswordScreen() {
     setErrors(newErrors)
 
     if (Object.keys(newErrors).length === 0) {
-      // Add reset password logic here
+      // Add reset password logic here laterrrrrrrrr
       console.log('Reset password for:', formData.email)
       setIsSubmitted(true)
     }
   }
 
   const handleBack = () => {
-    // Navigate back to login
+    // Navigate back to login but how!
     console.log('Navigate back to login')
   }
 

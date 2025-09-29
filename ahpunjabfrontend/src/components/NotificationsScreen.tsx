@@ -10,7 +10,7 @@ interface Notification {
 }
 
 export default function NotificationsScreen() {
-  // Sample notifications data with enhanced properties
+  // Chatgpt generated notifications data cuz m lazyyyyy
   const [notifications, setNotifications] = useState<Notification[]>([
     {
       id: 1,
@@ -51,7 +51,7 @@ export default function NotificationsScreen() {
   }
 
   const handleNotificationClick = (notification: Notification) => {
-    // Mark as read when clicked
+    // see if read when clicked
     setNotifications(prev =>
       prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n)
     )
@@ -243,7 +243,7 @@ export default function NotificationsScreen() {
             </div>
           ))
         ) : (
-          // Empty State
+          // nothing there anymore
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
               <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

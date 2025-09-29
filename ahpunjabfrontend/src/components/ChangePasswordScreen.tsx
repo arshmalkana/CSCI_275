@@ -46,18 +46,18 @@ export default function ChangePasswordScreen() {
 
   const handleChangePassword = () => {
     if (validatePasswords()) {
-      // Add change password logic here
+      // I will add change password logic here, later on
       console.log('Change password:', formData)
     }
   }
 
   const handleBack = () => {
-    // Navigate back to profile
+    // Navigate back to profile, will add it later
     console.log('Navigate back to profile')
   }
 
   const handleForgetPassword = () => {
-    // Navigate to forget password screen
+    // Navigate to forget password screen, will add laterrrrrrrr
     console.log('Navigate to forget password')
   }
 
@@ -75,10 +75,10 @@ export default function ChangePasswordScreen() {
           </svg>
         </button>
         <h1 className="text-xl font-semibold text-gray-900 font-['Poppins']">Change Password</h1>
-        <div className="w-10"></div> {/* Spacer for center alignment */}
+        <div className="w-10"></div> {/* Spacer for center alignment ); */}
       </div>
 
-      {/* Security Notice */}
+      {/* Security Notice for dumb enough users*/}
       <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-8 rounded-r-lg">
         <div className="flex items-start">
           <svg className="w-5 h-5 text-blue-400 mt-0.5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -96,7 +96,7 @@ export default function ChangePasswordScreen() {
       {/* Form */}
       <div className="space-y-6">
 
-        {/* Current Password Input */}
+        {/* Current Password Input , hope it works now*/}
         <FloatingLabelField
           field="oldPassword"
           label="Current Password"
@@ -113,7 +113,7 @@ export default function ChangePasswordScreen() {
           }
         />
 
-        {/* New Password Input */}
+        {/* New Password Input , please workkkkk*/}
         <FloatingLabelField
           field="newPassword"
           label="New Password"
@@ -130,7 +130,7 @@ export default function ChangePasswordScreen() {
           }
         />
 
-        {/* Confirm Password Input */}
+        {/* Confirm krja Password */}
         <FloatingLabelField
           field="confirmPassword"
           label="Confirm New Password"

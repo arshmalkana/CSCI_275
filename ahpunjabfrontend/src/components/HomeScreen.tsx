@@ -2,13 +2,13 @@ import { useState } from 'react'
 import SideMenu from './SideMenu'
 
 export default function HomeScreen() {
-  const [notifications] = useState(5) // Sample notification count
+  const [notifications] = useState(5) // Temproray notification count, use api to update
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false)
 
   // Sample data for the dashboard
   const instituteData = {
-    name: "Veterinary Dispensary Kot Addu",
-    welcomeMessage: "Welcome Dr. Ahmed Hassan",
+    name: "Veterinary Dispensary Malkana",
+    welcomeMessage: "Welcome Dr. Gurmeet Singh",
     location: {
       lat: "30.4681° N",
       lng: "72.6503° E"
@@ -19,22 +19,22 @@ export default function HomeScreen() {
       aiBuf: 8
     },
     staff: [
-      { name: "Dr. Ahmed Hassan", role: "Veterinary Officer", status: "Present" },
-      { name: "Ali Raza", role: "Assistant", status: "Present" },
-      { name: "Fatima Khan", role: "Lab Technician", status: "Leave" }
+      { name: "Dr. Gurmeet Singh", role: "Veterinary Officer", status: "Present" },
+      { name: "Kuldeep Singh", role: "Assistant", status: "Present" },
+      { name: "Harpreet Singh", role: "Lab Technician", status: "Leave" }
     ],
     villages: [
-      "Kot Addu",
-      "Chowk Sarwar Shaheed",
-      "Taunsa Sharif",
-      "Sanawan"
+      "Malkana",
+      "Jajjal",
+      "Teona Pujarian",
+      "Gatwali"
     ],
     targets: {
       cattlePopulation: 2500,
       buffaloPopulation: 800,
       vaccinationTarget: 150
     },
-    reportingStatus: "On Time" // Could be "Late", "Pending", etc.
+    reportingStatus: "On Time" // Could be "Late", "Pending", or maybe "Dead".
   }
 
   return (
@@ -223,7 +223,7 @@ export default function HomeScreen() {
         </div>
       </div>
 
-      {/* Side Menu */}
+      {/* Side Menu PLEASE WORKKKKKKKKKK*/}
       <SideMenu
         isOpen={isSideMenuOpen}
         onClose={() => setIsSideMenuOpen(false)}
