@@ -27,7 +27,7 @@ export default defineConfig({
         theme_color: '#E9BE28',
         background_color: '#ffffff',
         display: 'standalone',
-        orientation: 'any',
+        orientation: 'portrait',
         scope: '/',
         start_url: '/',
         categories: ['government', 'productivity', 'utilities'],
@@ -73,14 +73,6 @@ export default defineConfig({
             type: 'image/svg+xml'
           }
         ],
-        screenshots: [
-          {
-            src: 'screenshot-mobile.png',
-            sizes: '390x844',
-            type: 'image/png',
-            form_factor: 'narrow'
-          }
-        ],
         shortcuts: [
           {
             name: 'New Report',
@@ -97,25 +89,30 @@ export default defineConfig({
             icons: [{ src: 'pwa-icon.svg', sizes: '96x96' }]
           }
         ],
-        display_override: ['window-controls-overlay', 'standalone', 'minimal-ui'],
-        protocol_handlers: [
-          {
-            protocol: 'web+ahpunjab',
-            url: '/?handler=%s'
-          }
-        ]
+        display_override: ['standalone', 'minimal-ui'],
+        // display_override: ['window-controls-overlay', 'standalone', 'minimal-ui'],
+        // protocol_handlers: [
+        //   {
+        //     protocol: 'web+ahpunjab',
+        //     url: '/?handler=%s'
+        //   }
+        // ]
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true
+      },
+      devOptions: {
+        enabled: true
       }
     })
   ],
   server: {
     port: 3000,
     host: true,
+    allowedHosts: true,
     proxy: {
       '/v1': {
         target: 'http://localhost:8080',

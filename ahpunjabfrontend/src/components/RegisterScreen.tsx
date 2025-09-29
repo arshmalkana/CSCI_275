@@ -1,0 +1,441 @@
+import { useState } from 'react'
+
+export default function RegisterScreen() {
+  const [currentStep, setCurrentStep] = useState(1)
+  const totalSteps = 4
+
+  // Form state
+  const [formData, setFormData] = useState({
+    district: '',
+    tehsil: '',
+    village: '',
+    serviceVillages: '',
+    instituteType: '', // CVH, CVD, PAIW
+    isClusterAvailable: false,
+    isLabAvailable: false,
+    isTehsilHQ: false,
+    parentInstitute: '',
+    inchargeType: '',
+    inchargeName: '',
+    inchargeMobile: '',
+    inchargeEmail: '',
+    employeeType: '',
+    employeeName: '',
+    employeeMobile: '',
+    employeeEmail: '',
+    // Animal populations
+    equinePopulation: '',
+    buffaloesPopulation: '',
+    cowsPopulation: '',
+    pigsPopulation: '',
+    goatPopulation: '',
+    sheepPopulation: '',
+    poultryLayersPopulation: '',
+    poultryBroilersPopulation: ''
+  })
+
+  const [errors, setErrors] = useState<{[key: string]: string}>({})
+  const [employees, setEmployees] = useState<Array<{type: string, name: string, mobile: string, email: string}>>([])
+
+  const handleInputChange = (field: string, value: string | boolean) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }))
+    }
+  }
+
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
+
+  const validatePhone = (phone: string) => {
+    // Indian phone number format: 10 digits, can start with 6-9
+    const phoneRegex = /^[6-9]\d{9}$/
+    return phoneRegex.test(phone.replace(/\s|-/g, ''))
+  }
+
+  const validateStep = (step: number) => {
+    const newErrors: {[key: string]: string} = {}
+
+    if (step === 1) {
+      if (!formData.district) newErrors.district = 'District is required'
+      if (!formData.tehsil) newErrors.tehsil = 'Tehsil is required'
+      if (!formData.village) newErrors.village = 'Village is required'
+      if (!formData.instituteType) newErrors.instituteType = 'Institute type is required'
+    } else if (step === 2) {
+      if (!formData.inchargeType) newErrors.inchargeType = 'Incharge type is required'
+      if (!formData.inchargeName) newErrors.inchargeName = 'Incharge name is required'
+      if (!formData.inchargeMobile) {
+        newErrors.inchargeMobile = 'Mobile number is required'
+      } else if (!validatePhone(formData.inchargeMobile)) {
+        newErrors.inchargeMobile = 'Please enter a valid 10-digit mobile number'
+      }
+      if (!formData.inchargeEmail) {
+        newErrors.inchargeEmail = 'Email is required'
+      } else if (!validateEmail(formData.inchargeEmail)) {
+        newErrors.inchargeEmail = 'Please enter a valid email address'
+      }
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const addEmployee = () => {
+    if (formData.employeeName && formData.employeeMobile && employees.length < 10) {
+      setEmployees([...employees, {
+        type: formData.employeeType,
+        name: formData.employeeName,
+        mobile: formData.employeeMobile,
+        email: formData.employeeEmail
+      }])
+      setFormData(prev => ({
+        ...prev,
+        employeeType: '',
+        employeeName: '',
+        employeeMobile: '',
+        employeeEmail: ''
+      }))
+    }
+  }
+
+  const removeEmployee = (index: number) => {
+    setEmployees(employees.filter((_, i) => i !== index))
+  }
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      if (currentStep < totalSteps) {
+        setCurrentStep(currentStep + 1)
+      }
+    }
+  }
+
+  const handlePrevious = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
+    }
+  }
+
+  const handleRegister = () => {
+    if (validateStep(currentStep)) {
+      console.log('Register data:', { ...formData, employees })
+    }
+  }
+
+  const handleBack = () => {
+    console.log('Navigate back')
+  }
+
+  const stepTitles = [
+    'Institute Information',
+    'Incharge Details',
+    'Staff Information',
+    'Animal Population'
+  ]
+
+  const renderInput = (field: string, placeholder: string, type: string = 'text', required: boolean = false) => (
+    <div className="space-y-2">
+      <div className="relative">
+        <input
+          type={type}
+          value={formData[field as keyof typeof formData] as string}
+          onChange={(e) => handleInputChange(field, e.target.value)}
+          placeholder={placeholder}
+          className={`w-full px-4 py-3 border ${
+            errors[field] ? 'border-red-300' : 'border-gray-300'
+          } rounded-lg bg-gray-50 text-gray-900 text-base font-['Poppins'] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200`}
+        />
+      </div>
+      {errors[field] && (
+        <p className="text-sm text-red-600 font-['Poppins']">{errors[field]}</p>
+      )}
+    </div>
+  )
+
+  const renderSelect = (field: string, placeholder: string, options: string[] = [], required: boolean = false) => (
+    <div className="space-y-2">
+      <div className="relative">
+        <select
+          value={formData[field as keyof typeof formData] as string}
+          onChange={(e) => handleInputChange(field, e.target.value)}
+          className={`w-full px-4 py-3 border ${
+            errors[field] ? 'border-red-300' : 'border-gray-300'
+          } rounded-lg bg-gray-50 text-gray-900 text-base font-['Poppins'] focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200`}
+        >
+          <option value="">{placeholder}</option>
+          {options.map(option => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+      </div>
+      {errors[field] && (
+        <p className="text-sm text-red-600 font-['Poppins']">{errors[field]}</p>
+      )}
+    </div>
+  )
+
+  const renderCheckbox = (field: string, label: string) => (
+    <div className="flex items-center justify-between py-2">
+      <span className="text-gray-700 text-base font-['Poppins']">{label}</span>
+      <label className="relative inline-flex items-center cursor-pointer">
+        <input
+          type="checkbox"
+          checked={formData[field as keyof typeof formData] as boolean}
+          onChange={(e) => handleInputChange(field, e.target.checked)}
+          className="sr-only peer"
+        />
+        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
+      </label>
+    </div>
+  )
+
+  const renderRadioGroup = (field: string, options: string[], label?: string) => (
+    <div className="space-y-3">
+      {label && <label className="block text-base font-medium text-gray-700 font-['Poppins']">{label}</label>}
+      <div className="flex flex-wrap gap-4">
+        {options.map(option => (
+          <label key={option} className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="radio"
+              name={field}
+              value={option}
+              checked={formData[field as keyof typeof formData] === option}
+              onChange={(e) => handleInputChange(field, e.target.value)}
+              className="w-4 h-4 text-yellow-500 border-gray-300 focus:ring-yellow-500"
+            />
+            <span className="text-gray-700 text-base font-['Poppins']">{option}</span>
+          </label>
+        ))}
+      </div>
+      {errors[field] && (
+        <p className="text-sm text-red-600 font-['Poppins']">{errors[field]}</p>
+      )}
+    </div>
+  )
+
+  return (
+    <div className="RegisterScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col px-8 py-4 overflow-hidden">
+
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={handleBack}
+          className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors duration-200"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 12H5M12 19L5 12L12 5" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        <h1 className="text-xl font-semibold text-gray-900 font-['Poppins']">
+          {stepTitles[currentStep - 1]}
+        </h1>
+        <div className="w-10"></div>
+      </div>
+
+      {/* Progress Indicator */}
+      <div className="mb-4">
+        <div className="flex justify-between items-center mb-4">
+          {Array.from({ length: totalSteps }, (_, i) => (
+            <div key={i} className="flex items-center">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                i < currentStep ? 'bg-yellow-500 text-white' :
+                i === currentStep - 1 ? 'bg-yellow-500 text-white' :
+                'bg-gray-200 text-gray-500'
+              }`}>
+                {i + 1}
+              </div>
+              {i < totalSteps - 1 && (
+                <div className={`flex-1 h-1 mx-2 ${
+                  i < currentStep - 1 ? 'bg-yellow-500' : 'bg-gray-200'
+                }`}></div>
+              )}
+            </div>
+          ))}
+        </div>
+        <p className="text-gray-600 text-center font-['Poppins']">
+          Step {currentStep} of {totalSteps}
+        </p>
+      </div>
+
+      {/* Form Content */}
+      <div className="flex-1 overflow-y-auto space-y-4">
+
+        {currentStep === 1 && (
+          <div className="space-y-4">
+            <div className="text-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 font-['Poppins'] mb-1">Institute Information</h2>
+              <p className="text-gray-600 font-['Poppins'] text-sm">Tell us about your veterinary institute</p>
+            </div>
+
+            {renderSelect('district', 'Select Your District', ['Amritsar', 'Ludhiana', 'Jalandhar', 'Patiala', 'Bathinda', 'Ferozepur', 'Gurdaspur', 'Hoshiarpur'], true)}
+
+            {renderSelect('tehsil', 'Select Your Tehsil', ['Ajnala', 'Amritsar I', 'Amritsar II', 'Tarn Taran', 'Patti', 'Khadoor Sahib', 'Baba Bakala', 'Jandiala Guru'], true)}
+
+            {renderSelect('village', 'Village of Establishment', ['Ajnala', 'Attari', 'Beas', 'Bhikhiwind', 'Budha Theh', 'Chogawan', 'Dalla', 'Fatehabad', 'Ghalib Kalan', 'Harike'], true)}
+
+            {renderSelect('serviceVillages', 'Other Villages of Service (Optional)', ['Jandiala Guru', 'Kathunangal', 'Lopoke', 'Majitha', 'Naushera Pannuan', 'Ramdass', 'Rayya', 'Sultanwind'])}
+
+            {renderRadioGroup('instituteType', ['CVH', 'CVD', 'PAIW'], 'Institute Type')}
+
+            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+              <h3 className="text-base font-semibold text-gray-900 font-['Poppins']">Institute Features</h3>
+              {renderCheckbox('isClusterAvailable', 'Is Cluster Available?')}
+              {renderCheckbox('isLabAvailable', 'Is Lab Available?')}
+              {renderCheckbox('isTehsilHQ', 'Is Tehsil HQ?')}
+            </div>
+
+            {renderSelect('parentInstitute', 'Your Reporting/Parent Institute', ['District Veterinary Hospital Amritsar', 'Regional Veterinary Hospital Tarn Taran', 'Veterinary College Ludhiana', 'Animal Husbandry Department Punjab'])}
+          </div>
+        )}
+
+        {currentStep === 2 && (
+          <div className="space-y-4">
+            <div className="text-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 font-['Poppins'] mb-1">Incharge Details</h2>
+              <p className="text-gray-600 font-['Poppins'] text-sm">Information about the institute incharge</p>
+            </div>
+
+            {renderSelect('inchargeType', 'Select Incharge Type', ['Veterinary Officer', 'Assistant Veterinary Officer', 'Livestock Inspector', 'Senior Veterinary Officer', 'Chief Veterinary Officer'], true)}
+
+            {renderInput('inchargeName', 'Name of Incharge', 'text', true)}
+
+            {renderInput('inchargeMobile', 'Mobile Number', 'tel', true)}
+
+            {renderInput('inchargeEmail', 'Email Address', 'email', true)}
+          </div>
+        )}
+
+        {currentStep === 3 && (
+          <div className="space-y-4">
+            <div className="text-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 font-['Poppins'] mb-1">Staff Information</h2>
+              <p className="text-gray-600 font-['Poppins'] text-sm">Add other employees at this institute</p>
+            </div>
+
+            {/* Current Employees List */}
+            {employees.length > 0 && (
+              <div className="bg-gray-50 rounded-lg p-3">
+                <h3 className="text-base font-semibold text-gray-900 font-['Poppins'] mb-2">Added Employees ({employees.length}/10)</h3>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {employees.map((employee, index) => (
+                    <div key={index} className="flex items-center justify-between bg-white p-2 rounded border">
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900 font-['Poppins'] text-sm">{employee.name}</p>
+                        <p className="text-xs text-gray-600 font-['Poppins']">{employee.type}</p>
+                      </div>
+                      <button
+                        onClick={() => removeEmployee(index)}
+                        className="text-red-500 hover:text-red-700 transition-colors ml-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Add New Employee Form */}
+            {employees.length < 10 && (
+              <div className="border border-gray-200 rounded-lg p-3 space-y-3">
+                <h3 className="text-base font-semibold text-gray-900 font-['Poppins']">Add Employee</h3>
+
+                {renderSelect('employeeType', 'Select Employee Type', ['Veterinary Officer', 'Assistant Veterinary Officer', 'Livestock Inspector', 'Animal Attendant', 'Lab Technician', 'Field Assistant', 'Data Entry Operator'])}
+
+                {renderInput('employeeName', 'Employee Name', 'text')}
+
+                {renderInput('employeeMobile', 'Mobile Number', 'tel')}
+
+                {renderInput('employeeEmail', 'Email Address (Optional)', 'email')}
+
+                <button
+                  onClick={addEmployee}
+                  disabled={!formData.employeeName || !formData.employeeMobile}
+                  className="w-full bg-yellow-500 text-white py-2 px-4 rounded-lg font-semibold font-['Poppins'] text-sm hover:bg-yellow-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200"
+                >
+                  Add Employee
+                </button>
+              </div>
+            )}
+
+            {employees.length === 10 && (
+              <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                <p className="text-yellow-800 font-['Poppins']">Maximum of 10 employees reached</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {currentStep === 4 && (
+          <div className="space-y-4">
+            <div className="text-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 font-['Poppins'] mb-1">Animal Population</h2>
+              <p className="text-gray-600 font-['Poppins'] text-sm">Provide animal population data for your area</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <h3 className="text-base font-semibold text-gray-900 font-['Poppins'] mb-2">Large Animals</h3>
+                <div className="space-y-3">
+                  {renderInput('buffaloesPopulation', 'Buffaloes Population', 'number')}
+                  {renderInput('cowsPopulation', 'Cows Population', 'number')}
+                  {renderInput('equinePopulation', 'Equine (Horses, Donkeys)', 'number')}
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-3">
+                <h3 className="text-base font-semibold text-gray-900 font-['Poppins'] mb-2">Small Animals</h3>
+                <div className="space-y-3">
+                  {renderInput('goatPopulation', 'Goat Population', 'number')}
+                  {renderInput('sheepPopulation', 'Sheep Population', 'number')}
+                  {renderInput('pigsPopulation', 'Pigs Population', 'number')}
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-3">
+                <h3 className="text-base font-semibold text-gray-900 font-['Poppins'] mb-2">Poultry</h3>
+                <div className="space-y-3">
+                  {renderInput('poultryLayersPopulation', 'Layers Population', 'number')}
+                  {renderInput('poultryBroilersPopulation', 'Broilers Population', 'number')}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Navigation Buttons */}
+      <div className="mt-4 flex gap-4">
+        {currentStep > 1 && (
+          <button
+            onClick={handlePrevious}
+            className="flex-1 bg-gray-100 text-gray-700 py-2.5 px-4 rounded-lg font-semibold text-base font-['Poppins'] hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200"
+          >
+            Previous
+          </button>
+        )}
+
+        {currentStep < totalSteps ? (
+          <button
+            onClick={handleNext}
+            className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white py-2.5 px-4 rounded-lg font-semibold text-base font-['Poppins'] hover:from-yellow-500 hover:to-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
+            Next
+          </button>
+        ) : (
+          <button
+            onClick={handleRegister}
+            className="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-2.5 px-4 rounded-lg font-semibold text-base font-['Poppins'] hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
+            Complete Registration
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
