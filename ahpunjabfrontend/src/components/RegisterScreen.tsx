@@ -366,16 +366,16 @@ export default function RegisterScreen() {
 
             {/* Current Employees List */}
             {employees.length > 0 && (
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100 shadow-sm">
+              <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-4 border border-orange-100 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-base font-semibold text-gray-900 font-['Poppins']">Team Members</h3>
-                  <div className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium font-['Poppins']">
+                  <div className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs font-medium font-['Poppins']">
                     {employees.length}/10
                   </div>
                 </div>
                 <div className="space-y-3 max-h-40 overflow-y-auto">
                   {employees.map((employee, index) => (
-                    <div key={index} className="group bg-white rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all duration-200">
+                    <div key={index} className="group bg-white rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow-md hover:border-yellow-200 transition-all duration-200">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3 flex-1">
                           {/* Avatar */}
@@ -385,7 +385,7 @@ export default function RegisterScreen() {
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-gray-900 font-['Poppins'] text-sm truncate">{employee.name}</p>
                             <div className="flex items-center space-x-2 mt-1">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 font-['Poppins']">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700 font-['Poppins']">
                                 {employee.type}
                               </span>
                               <span className="text-xs text-gray-500 font-['Poppins']">•</span>
@@ -411,9 +411,9 @@ export default function RegisterScreen() {
 
             {/* Add New Employee Form */}
             {employees.length < 10 && (
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4 space-y-4">
+              <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-4 space-y-4">
                 <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
                     <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
@@ -432,7 +432,7 @@ export default function RegisterScreen() {
                 <button
                   onClick={addEmployee}
                   disabled={!formData.employeeName || !formData.employeeMobile}
-                  className="w-full bg-gradient-to-r from-green-500 to-blue-600 text-white py-3 px-4 rounded-lg font-semibold font-['Poppins'] text-sm hover:from-green-600 hover:to-blue-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none flex items-center justify-center space-x-2"
+                  className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-3 px-4 rounded-lg font-semibold font-['Poppins'] text-sm hover:from-yellow-600 hover:to-orange-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none flex items-center justify-center space-x-2"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
