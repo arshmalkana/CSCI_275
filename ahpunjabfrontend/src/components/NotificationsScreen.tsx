@@ -69,9 +69,9 @@ export default function NotificationsScreen() {
   }
 
   const clearAllNotifications = () => {
-    if (window.confirm('Are you sure you want to delete all notifications? This action cannot be undone.')) {
+    // if (window.confirm('Are you sure you want to delete all notifications? This action cannot be undone.')) {
       setNotifications([])
-    }
+    // }
   }
 
   const getNotificationIcon = (type: string) => {
