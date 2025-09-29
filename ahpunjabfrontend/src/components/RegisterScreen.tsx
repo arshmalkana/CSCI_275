@@ -200,11 +200,11 @@ export default function RegisterScreen() {
       value={formData[field as keyof typeof formData] as string}
       error={errors[field]}
       onChange={handleInputChange}
-      onBlur={(fieldName, value) => validateField(fieldName, value)}
+      onBlur={(fieldName) => validateField(fieldName, formData[fieldName as keyof typeof formData] as string)}
     />
   )
 
-  const renderSelect = (field: string, placeholder: string, options: string[] = [], required: boolean = false) => (
+  const renderSelect = (field: string, placeholder: string, options: string[] = []) => (
     <div className="space-y-2">
       <div className="relative">
         <select
@@ -319,11 +319,11 @@ export default function RegisterScreen() {
               <p className="text-gray-600 font-['Poppins'] text-sm">Tell us about your veterinary institute</p>
             </div>
 
-            {renderSelect('district', 'Select Your District', ['Amritsar', 'Ludhiana', 'Jalandhar', 'Patiala', 'Bathinda', 'Ferozepur', 'Gurdaspur', 'Hoshiarpur'], true)}
+            {renderSelect('district', 'Select Your District', ['Amritsar', 'Ludhiana', 'Jalandhar', 'Patiala', 'Bathinda', 'Ferozepur', 'Gurdaspur', 'Hoshiarpur'])}
 
-            {renderSelect('tehsil', 'Select Your Tehsil', ['Ajnala', 'Amritsar I', 'Amritsar II', 'Tarn Taran', 'Patti', 'Khadoor Sahib', 'Baba Bakala', 'Jandiala Guru'], true)}
+            {renderSelect('tehsil', 'Select Your Tehsil', ['Ajnala', 'Amritsar I', 'Amritsar II', 'Tarn Taran', 'Patti', 'Khadoor Sahib', 'Baba Bakala', 'Jandiala Guru'])}
 
-            {renderSelect('village', 'Village of Establishment', ['Ajnala', 'Attari', 'Beas', 'Bhikhiwind', 'Budha Theh', 'Chogawan', 'Dalla', 'Fatehabad', 'Ghalib Kalan', 'Harike'], true)}
+            {renderSelect('village', 'Village of Establishment', ['Ajnala', 'Attari', 'Beas', 'Bhikhiwind', 'Budha Theh', 'Chogawan', 'Dalla', 'Fatehabad', 'Ghalib Kalan', 'Harike'])}
 
             {renderSelect('serviceVillages', 'Other Villages of Service (Optional)', ['Jandiala Guru', 'Kathunangal', 'Lopoke', 'Majitha', 'Naushera Pannuan', 'Ramdass', 'Rayya', 'Sultanwind'])}
 
@@ -347,7 +347,7 @@ export default function RegisterScreen() {
               <p className="text-gray-600 font-['Poppins'] text-sm">Information about the institute incharge</p>
             </div>
 
-            {renderSelect('inchargeType', 'Select Incharge Type', ['Veterinary Officer', 'Assistant Veterinary Officer', 'Livestock Inspector', 'Senior Veterinary Officer', 'Chief Veterinary Officer'], true)}
+            {renderSelect('inchargeType', 'Select Incharge Type', ['Veterinary Officer', 'Assistant Veterinary Officer', 'Livestock Inspector', 'Senior Veterinary Officer', 'Chief Veterinary Officer'])}
 
             {renderInput('inchargeName', 'Incharge Name', 'text', true)}
 
