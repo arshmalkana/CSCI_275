@@ -23,11 +23,16 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Status Bar Spacer for iOS PWA */}
-      {isStandalone && <div className="h-safe-top bg-blue-600"></div>}
+      {isStandalone && (
+        <div 
+          className="bg-yellow-500" 
+          style={{ height: 'env(safe-area-inset-top)' }}
+        ></div>
+      )}
 
       {/* Header - only show in PWA mode */}
       {isStandalone && (
-        <div className="bg-blue-600 text-white px-4 py-3 shadow-md">
+        <div className="bg-yellow-500 text-white px-4 py-3 shadow-md">
           <div className="flex items-center justify-between">
             <h1 className="text-lg font-semibold">AH Punjab</h1>
             <div className={`flex items-center px-2 py-1 rounded-full text-xs ${
@@ -43,12 +48,22 @@ function App() {
           </div>
         </div>
       )}
-
+      {/* Install prompt for browsers */}
+      {!isStandalone && (
+        <div className="mb-4 p-3 m-20 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-yellow-700 text-xl font-bold mb-2">
+            The app will only work after installing it
+          </p>
+          <p className="text-yellow-600 text-xs">
+            Goto: Menu then "Install app" or "Share" then "Add to Home Screen"
+          </p>
+        </div>
+      )}
       {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center p-4">
+      {isStandalone && (<div className="flex-1 flex flex-col items-center justify-center p-4">
         <div className="max-w-sm w-full bg-white rounded-lg shadow-md p-6">
           <div className="text-center">
-            <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-yellow-500 rounded-full place-self-center flex items-center justify-center mx-auto mb-4">
               <span className="text-white font-bold text-xl">AH</span>
             </div>
 
@@ -59,23 +74,11 @@ function App() {
               Animal Husbandry Department<br />Punjab Reporting System
             </p>
 
-            {/* Install prompt for browsers */}
-            {!isStandalone && (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-blue-700 text-xs mb-2">
-                  📱 Install this app for the best experience
-                </p>
-                <p className="text-blue-600 text-xs">
-                  Chrome: Menu → "Install app" or "Add to Home Screen"
-                </p>
-              </div>
-            )}
-
             <div className="space-y-3">
-              <button className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium active:bg-blue-700 transition duration-200 touch-manipulation">
+              <button className="w-full bg-yellow-500 text-white py-3 px-4 rounded-lg font-medium active:bg-yellow-600 transition duration-200 touch-manipulation">
                 Login
               </button>
-              <button className="w-full bg-white border border-blue-600 text-blue-600 py-3 px-4 rounded-lg font-medium active:bg-blue-50 transition duration-200 touch-manipulation">
+              <button className="w-full bg-white border border-yellow-500 text-yellow-600 py-3 px-4 rounded-lg font-medium active:bg-yellow-50 transition duration-200 touch-manipulation">
                 Register
               </button>
             </div>
@@ -87,6 +90,8 @@ function App() {
           </div>
         </div>
       </div>
+      
+      )}
 
       {/* Bottom Safe Area for iOS PWA */}
       {isStandalone && <div className="h-safe-bottom bg-gray-50"></div>}
