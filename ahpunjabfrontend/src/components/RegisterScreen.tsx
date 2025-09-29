@@ -384,12 +384,10 @@ export default function RegisterScreen() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-gray-900 font-['Poppins'] text-sm truncate">{employee.name}</p>
-                            <div className="flex items-center space-x-2 mt-1">
+                            <div className="mt-1">
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700 font-['Poppins']">
                                 {employee.type}
                               </span>
-                              <span className="text-xs text-gray-500 font-['Poppins']">•</span>
-                              <span className="text-xs text-gray-600 font-['Poppins'] truncate">{employee.mobile}</span>
                             </div>
                           </div>
                         </div>
