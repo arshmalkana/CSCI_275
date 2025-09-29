@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { FloatingLabelField } from './FloatingLabelField'
 
 export default function RegisterScreen() {
   const [currentStep, setCurrentStep] = useState(1)
@@ -84,7 +85,26 @@ export default function RegisterScreen() {
   }
 
   const addEmployee = () => {
-    if (formData.employeeName && formData.employeeMobile && employees.length < 10) {
+    // Validate employee data before adding
+    const newErrors: {[key: string]: string} = {}
+
+    if (!formData.employeeType) newErrors.employeeType = 'Employee type is required'
+    if (!formData.employeeName) newErrors.employeeName = 'Employee name is required'
+    if (!formData.employeeMobile) {
+      newErrors.employeeMobile = 'Mobile number is required'
+    } else if (!validatePhone(formData.employeeMobile)) {
+      newErrors.employeeMobile = 'Please enter a valid 10-digit mobile number'
+    }
+    if (formData.employeeEmail && !validateEmail(formData.employeeEmail)) {
+      newErrors.employeeEmail = 'Please enter a valid email address'
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(prev => ({ ...prev, ...newErrors }))
+      return
+    }
+
+    if (employees.length < 10) {
       setEmployees([...employees, {
         type: formData.employeeType,
         name: formData.employeeName,
@@ -98,6 +118,15 @@ export default function RegisterScreen() {
         employeeMobile: '',
         employeeEmail: ''
       }))
+      // Clear employee-related errors
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors.employeeType
+        delete newErrors.employeeName
+        delete newErrors.employeeMobile
+        delete newErrors.employeeEmail
+        return newErrors
+      })
     }
   }
 
@@ -136,23 +165,43 @@ export default function RegisterScreen() {
     'Animal Population'
   ]
 
-  const renderInput = (field: string, placeholder: string, type: string = 'text', required: boolean = false) => (
-    <div className="space-y-2">
-      <div className="relative">
-        <input
-          type={type}
-          value={formData[field as keyof typeof formData] as string}
-          onChange={(e) => handleInputChange(field, e.target.value)}
-          placeholder={placeholder}
-          className={`w-full px-4 py-3 border ${
-            errors[field] ? 'border-red-300' : 'border-gray-300'
-          } rounded-lg bg-gray-50 text-gray-900 text-base font-['Poppins'] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200`}
-        />
-      </div>
-      {errors[field] && (
-        <p className="text-sm text-red-600 font-['Poppins']">{errors[field]}</p>
-      )}
-    </div>
+  const validateField = (field: string, value: string) => {
+    const newErrors = { ...errors }
+
+    if (field.includes('Mobile') || field.includes('mobile')) {
+      if (value && !validatePhone(value)) {
+        newErrors[field] = 'Please enter a valid 10-digit mobile number'
+      } else {
+        delete newErrors[field]
+      }
+    } else if (field.includes('Email') || field.includes('email')) {
+      if (value && !validateEmail(value)) {
+        newErrors[field] = 'Please enter a valid email address'
+      } else {
+        delete newErrors[field]
+      }
+    } else if (field.includes('Name') || field.includes('name')) {
+      if (value && value.length < 2) {
+        newErrors[field] = 'Name must be at least 2 characters'
+      } else {
+        delete newErrors[field]
+      }
+    }
+
+    setErrors(newErrors)
+  }
+
+  const renderInput = (field: string, label: string, type: string = 'text', required: boolean = false) => (
+    <FloatingLabelField
+      field={field}
+      label={label}
+      type={type}
+      required={required}
+      value={formData[field as keyof typeof formData] as string}
+      error={errors[field]}
+      onChange={handleInputChange}
+      onBlur={validateField}
+    />
   )
 
   const renderSelect = (field: string, placeholder: string, options: string[] = [], required: boolean = false) => (
@@ -300,7 +349,7 @@ export default function RegisterScreen() {
 
             {renderSelect('inchargeType', 'Select Incharge Type', ['Veterinary Officer', 'Assistant Veterinary Officer', 'Livestock Inspector', 'Senior Veterinary Officer', 'Chief Veterinary Officer'], true)}
 
-            {renderInput('inchargeName', 'Name of Incharge', 'text', true)}
+            {renderInput('inchargeName', 'Incharge Name', 'text', true)}
 
             {renderInput('inchargeMobile', 'Mobile Number', 'tel', true)}
 
@@ -384,7 +433,7 @@ export default function RegisterScreen() {
                 <div className="space-y-3">
                   {renderInput('buffaloesPopulation', 'Buffaloes Population', 'number')}
                   {renderInput('cowsPopulation', 'Cows Population', 'number')}
-                  {renderInput('equinePopulation', 'Equine (Horses, Donkeys)', 'number')}
+                  {renderInput('equinePopulation', 'Equine Population', 'number')}
                 </div>
               </div>
 

@@ -1,9 +1,20 @@
 import { useState } from 'react'
+import { FloatingLabelField } from './FloatingLabelField'
 
 export default function ForgetPasswordScreen() {
-  const [email, setEmail] = useState('')
+  const [formData, setFormData] = useState({
+    email: ''
+  })
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [errors, setErrors] = useState<{[key: string]: string}>({})
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }))
+    }
+  }
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -13,9 +24,9 @@ export default function ForgetPasswordScreen() {
   const handleResetPassword = () => {
     const newErrors: {[key: string]: string} = {}
 
-    if (!email) {
+    if (!formData.email) {
       newErrors.email = 'Email address is required'
-    } else if (!validateEmail(email)) {
+    } else if (!validateEmail(formData.email)) {
       newErrors.email = 'Please enter a valid email address'
     }
 
@@ -23,7 +34,7 @@ export default function ForgetPasswordScreen() {
 
     if (Object.keys(newErrors).length === 0) {
       // Add reset password logic here
-      console.log('Reset password for:', email)
+      console.log('Reset password for:', formData.email)
       setIsSubmitted(true)
     }
   }
@@ -35,12 +46,12 @@ export default function ForgetPasswordScreen() {
 
   const handleResendEmail = () => {
     // Resend reset email
-    console.log('Resend reset email for:', email)
+    console.log('Resend reset email for:', formData.email)
   }
 
   const handleBackToLogin = () => {
     setIsSubmitted(false)
-    setEmail('')
+    setFormData({ email: '' })
     setErrors({})
     handleBack()
   }
@@ -80,7 +91,7 @@ export default function ForgetPasswordScreen() {
               We've sent a password reset link to
             </p>
             <p className="text-yellow-600 font-medium font-['Poppins']">
-              {email}
+              {formData.email}
             </p>
             <p className="text-gray-600 font-['Poppins'] leading-relaxed">
               Click the link in the email to reset your password. If you don't see the email, check your spam folder.
@@ -144,28 +155,20 @@ export default function ForgetPasswordScreen() {
       <div className="space-y-6">
 
         {/* Email Input */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700 font-['Poppins']">
-            Email Address
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-              </svg>
-            </div>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email address"
-              className={`w-full pl-10 pr-4 py-3 border ${errors.email ? 'border-red-300' : 'border-gray-300'} rounded-lg bg-gray-50 text-gray-900 text-base font-['Poppins'] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200`}
-            />
-          </div>
-          {errors.email && (
-            <p className="text-sm text-red-600 font-['Poppins']">{errors.email}</p>
-          )}
-        </div>
+        <FloatingLabelField
+          field="email"
+          label="Email Address"
+          type="email"
+          required
+          value={formData.email}
+          error={errors.email}
+          onChange={handleInputChange}
+          icon={
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+            </svg>
+          }
+        />
 
         {/* Info Box */}
         <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
