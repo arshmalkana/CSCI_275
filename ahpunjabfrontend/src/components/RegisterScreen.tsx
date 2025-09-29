@@ -200,7 +200,7 @@ export default function RegisterScreen() {
       value={formData[field as keyof typeof formData] as string}
       error={errors[field]}
       onChange={handleInputChange}
-      onBlur={validateField}
+      onBlur={(fieldName, value) => validateField(fieldName, value)}
     />
   )
 
@@ -266,7 +266,7 @@ export default function RegisterScreen() {
   )
 
   return (
-    <div className="RegisterScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col px-8 py-4 overflow-hidden">
+    <div className="RegisterScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col px-10 py-4 overflow-hidden">
 
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
@@ -366,23 +366,43 @@ export default function RegisterScreen() {
 
             {/* Current Employees List */}
             {employees.length > 0 && (
-              <div className="bg-gray-50 rounded-lg p-3">
-                <h3 className="text-base font-semibold text-gray-900 font-['Poppins'] mb-2">Added Employees ({employees.length}/10)</h3>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-base font-semibold text-gray-900 font-['Poppins']">Team Members</h3>
+                  <div className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium font-['Poppins']">
+                    {employees.length}/10
+                  </div>
+                </div>
+                <div className="space-y-3 max-h-40 overflow-y-auto">
                   {employees.map((employee, index) => (
-                    <div key={index} className="flex items-center justify-between bg-white p-2 rounded border">
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900 font-['Poppins'] text-sm">{employee.name}</p>
-                        <p className="text-xs text-gray-600 font-['Poppins']">{employee.type}</p>
+                    <div key={index} className="group bg-white rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all duration-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3 flex-1">
+                          {/* Avatar */}
+                          <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                            {employee.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-gray-900 font-['Poppins'] text-sm truncate">{employee.name}</p>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 font-['Poppins']">
+                                {employee.type}
+                              </span>
+                              <span className="text-xs text-gray-500 font-['Poppins']">•</span>
+                              <span className="text-xs text-gray-600 font-['Poppins'] truncate">{employee.mobile}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => removeEmployee(index)}
+                          className="opacity-0 group-hover:opacity-100 ml-3 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                          title="Remove employee"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
                       </div>
-                      <button
-                        onClick={() => removeEmployee(index)}
-                        className="text-red-500 hover:text-red-700 transition-colors ml-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
                     </div>
                   ))}
                 </div>
@@ -391,8 +411,15 @@ export default function RegisterScreen() {
 
             {/* Add New Employee Form */}
             {employees.length < 10 && (
-              <div className="border border-gray-200 rounded-lg p-3 space-y-3">
-                <h3 className="text-base font-semibold text-gray-900 font-['Poppins']">Add Employee</h3>
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4 space-y-4">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </div>
+                  <h3 className="text-base font-semibold text-gray-900 font-['Poppins']">Add Team Member</h3>
+                </div>
 
                 {renderSelect('employeeType', 'Select Employee Type', ['Veterinary Officer', 'Assistant Veterinary Officer', 'Livestock Inspector', 'Animal Attendant', 'Lab Technician', 'Field Assistant', 'Data Entry Operator'])}
 
@@ -405,16 +432,27 @@ export default function RegisterScreen() {
                 <button
                   onClick={addEmployee}
                   disabled={!formData.employeeName || !formData.employeeMobile}
-                  className="w-full bg-yellow-500 text-white py-2 px-4 rounded-lg font-semibold font-['Poppins'] text-sm hover:bg-yellow-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200"
+                  className="w-full bg-gradient-to-r from-green-500 to-blue-600 text-white py-3 px-4 rounded-lg font-semibold font-['Poppins'] text-sm hover:from-green-600 hover:to-blue-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none flex items-center justify-center space-x-2"
                 >
-                  Add Employee
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  </svg>
+                  <span>Add Team Member</span>
                 </button>
               </div>
             )}
 
             {employees.length === 10 && (
-              <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                <p className="text-yellow-800 font-['Poppins']">Maximum of 10 employees reached</p>
+              <div className="text-center p-4 bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-xl">
+                <div className="flex items-center justify-center space-x-2 mb-2">
+                  <div className="w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <p className="text-amber-800 font-semibold font-['Poppins']">Team Complete!</p>
+                </div>
+                <p className="text-amber-700 text-sm font-['Poppins']">You've reached the maximum of 10 team members</p>
               </div>
             )}
           </div>
