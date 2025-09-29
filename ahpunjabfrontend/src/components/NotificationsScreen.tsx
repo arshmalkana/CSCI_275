@@ -58,8 +58,20 @@ export default function NotificationsScreen() {
     console.log('Notification clicked:', notification.id)
   }
 
+  const deleteNotification = (notificationId: number, event: React.MouseEvent) => {
+    // Prevent the notification click event from firing
+    event.stopPropagation()
+    setNotifications(prev => prev.filter(n => n.id !== notificationId))
+  }
+
   const markAllAsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
+  }
+
+  const clearAllNotifications = () => {
+    if (window.confirm('Are you sure you want to delete all notifications? This action cannot be undone.')) {
+      setNotifications([])
+    }
   }
 
   const getNotificationIcon = (type: string) => {
@@ -122,12 +134,24 @@ export default function NotificationsScreen() {
             </div>
           )}
         </div>
-        <button
-          onClick={markAllAsRead}
-          className="text-yellow-600 hover:text-yellow-700 font-medium text-sm font-['Poppins'] transition-colors duration-200"
-        >
-          Mark all read
-        </button>
+        <div className="flex items-center space-x-2">
+          {notifications.length > 0 && (
+            <button
+              onClick={clearAllNotifications}
+              className="text-red-600 hover:text-red-700 font-medium text-sm font-['Poppins'] transition-colors duration-200"
+            >
+              Clear all
+            </button>
+          )}
+          {unreadCount > 0 && (
+            <button
+              onClick={markAllAsRead}
+              className="text-yellow-600 hover:text-yellow-700 font-medium text-sm font-['Poppins'] transition-colors duration-200"
+            >
+              Mark all read
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Notifications Summary */}
@@ -176,9 +200,21 @@ export default function NotificationsScreen() {
                     }`}>
                       {notification.heading}
                     </h3>
-                    {!notification.isRead && (
-                      <div className="w-2 h-2 bg-yellow-500 rounded-full ml-2 mt-2 flex-shrink-0"></div>
-                    )}
+                    <div className="flex items-center space-x-2 ml-2 flex-shrink-0">
+                      {!notification.isRead && (
+                        <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                      )}
+                      {/* Delete Button */}
+                      <button
+                        onClick={(e) => deleteNotification(notification.id, e)}
+                        className="w-6 h-6 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center text-red-400 hover:text-red-600 transition-all duration-200 md:opacity-0 md:group-hover:opacity-100"
+                        title="Delete notification"
+                      >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
 
                   <p className={`font-['Poppins'] text-sm leading-relaxed mb-3 ${
