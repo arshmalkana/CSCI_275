@@ -58,7 +58,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
 
       {/* Side Menu */}
       <div
-        className={`fixed left-0 top-0 h-full w-80 bg-white z-50 shadow-2xl transform transition-all duration-500 ease-in-out ${
+        className={`fixed left-0 top-[var(--safe-area-inset-top)] h-full w-80 bg-white z-50 shadow-2xl transform transition-all duration-500 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{
