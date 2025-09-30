@@ -107,7 +107,7 @@ export default function NotificationsScreen() {
   const unreadCount = notifications.filter(n => !n.isRead).length
 
   return (
-    <div className="NotificationsScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col px-6 py-4 overflow-hidden">
+    <div className="NotificationsScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col px-6 py-4 overflow-y-auto">
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
@@ -165,7 +165,7 @@ export default function NotificationsScreen() {
       )}
 
       {/* Notifications List */}
-      <div className="flex-1 overflow-y-auto space-y-3">
+      <div className="flex-1 ">
         {notifications.length > 0 ? (
           notifications.map((notification) => (
             <div
