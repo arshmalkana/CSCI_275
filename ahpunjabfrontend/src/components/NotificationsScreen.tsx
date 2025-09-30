@@ -107,25 +107,29 @@ export default function NotificationsScreen() {
   const unreadCount = notifications.filter(n => !n.isRead).length
 
   return (
-    <div className="NotificationsScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col px-6 py-4 overflow-hidden">
+    <div className="NotificationsScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col overflow-y-auto">
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <button
-          onClick={handleBack}
-          className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors duration-200"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <div className="flex items-center space-x-3">
-          <h1 className="text-xl font-semibold text-gray-900 font-['Poppins']">Notifications</h1>
-          {unreadCount > 0 && (
-            <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[20px] text-center">
-              {unreadCount}
-            </div>
-          )}
+      {/* Header - Sticky */}
+      <div className="sticky top-0 z-10 bg-white px-6 py-4 border-b border-gray-100 safe-top">
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={handleBack}
+            className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors duration-200"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div className="flex items-center space-x-3">
+            <h1 className="text-xl font-semibold text-gray-900 font-['Poppins']">Notifications</h1>
+            {unreadCount > 0 && (
+              <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[20px] text-center">
+                {unreadCount}
+              </div>
+            )}
+          </div>
+          <div className="w-10"></div>
         </div>
-        <div className="flex items-center space-x-2">
+
+        <div className="flex items-center justify-end space-x-2">
           {notifications.length > 0 && (
             <button
               onClick={clearAllNotifications}
@@ -145,27 +149,29 @@ export default function NotificationsScreen() {
         </div>
       </div>
 
-      {/* Notifications Summary */}
-      {unreadCount > 0 && (
-        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-4 mb-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-              <Bell className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <p className="text-yellow-800 font-semibold font-['Poppins']">
-                {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
-              </p>
-              <p className="text-yellow-700 text-sm font-['Poppins']">
-                Stay updated with important department information
-              </p>
+      {/* Notifications Content */}
+      <div className="px-6 py-4">
+        {/* Notifications Summary */}
+        {unreadCount > 0 && (
+          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-4 mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
+                <Bell className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <p className="text-yellow-800 font-semibold font-['Poppins']">
+                  {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
+                </p>
+                <p className="text-yellow-700 text-sm font-['Poppins']">
+                  Stay updated with important department information
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Notifications List */}
-      <div className="flex-1 overflow-y-auto space-y-3">
+        {/* Notifications List */}
+        <div className="space-y-3 pb-6">
         {notifications.length > 0 ? (
           notifications.map((notification) => (
             <div
