@@ -323,7 +323,7 @@ export default function RegisterScreen() {
       </div>
 
       {/* Form Content */}
-      <div className="flex-1 overflow-y-auto space-y-4">
+      <div className="flex-1 space-y-4">
 
         {currentStep === 1 && (
           <div className="space-y-4">
