@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { FloatingLabelField } from './FloatingLabelField'
+import { ArrowLeft, ChevronRight, UserPlus, Trash2, Plus } from 'lucide-react'
 
 export default function RegisterScreen() {
   const [currentStep, setCurrentStep] = useState(1)
@@ -274,9 +275,7 @@ export default function RegisterScreen() {
           onClick={handleBack}
           className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors duration-200"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 12H5M12 19L5 12L12 5" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <ArrowLeft size={20} />
         </button>
         <h1 className="text-xl font-semibold text-gray-900 font-['Poppins']">
           {stepTitles[currentStep - 1]}
@@ -396,9 +395,7 @@ export default function RegisterScreen() {
                           className="ml-3 p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all duration-200 bg-red-50/50 border border-red-200"
                           title="Remove employee"
                         >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </div>
@@ -412,9 +409,7 @@ export default function RegisterScreen() {
               <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-4 space-y-4">
                 <div className="flex items-center space-x-2">
                   <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
+                    <Plus className="w-4 h-4 text-white" />
                   </div>
                   <h3 className="text-base font-semibold text-gray-900 font-['Poppins']">Add Team Member</h3>
                 </div>
@@ -432,9 +427,7 @@ export default function RegisterScreen() {
                   disabled={!formData.employeeName || !formData.employeeMobile}
                   className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-3 px-4 rounded-lg font-semibold font-['Poppins'] text-sm hover:from-yellow-600 hover:to-orange-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none flex items-center justify-center space-x-2"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                  </svg>
+                  <UserPlus size={16} />
                   <span>Add Team Member</span>
                 </button>
               </div>
@@ -444,9 +437,7 @@ export default function RegisterScreen() {
               <div className="text-center p-4 bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-xl">
                 <div className="flex items-center justify-center space-x-2 mb-2">
                   <div className="w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
-                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
+                    <ChevronRight className="w-3 h-3 text-white" />
                   </div>
                   <p className="text-amber-800 font-semibold font-['Poppins']">Team Complete!</p>
                 </div>

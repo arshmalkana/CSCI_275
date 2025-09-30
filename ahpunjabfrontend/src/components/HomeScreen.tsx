@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import SideMenu from './SideMenu'
+import { Menu, Bell, User } from 'lucide-react'
 
 export default function HomeScreen() {
   const [notifications] = useState(5) // Temproray notification count, use api to update
@@ -47,9 +48,7 @@ export default function HomeScreen() {
             className="w-6 h-6"
             onClick={() => setIsSideMenuOpen(true)}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 12H21M3 6H21M3 18H21" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <Menu size={24} />
           </button>
 
           {/* App Title */}
@@ -61,9 +60,7 @@ export default function HomeScreen() {
           <div className="flex items-center gap-3">
             {/* Notification Bell */}
             <button className="relative">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <Bell size={24} />
               {notifications > 0 && (
                 <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">
                   {notifications}
@@ -73,9 +70,7 @@ export default function HomeScreen() {
 
             {/* Profile Icon */}
             <button className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <User size={16} />
             </button>
           </div>
         </div>

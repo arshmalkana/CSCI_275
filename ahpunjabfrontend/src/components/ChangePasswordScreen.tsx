@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { FloatingLabelField } from './FloatingLabelField'
+import { ArrowLeft, Lock, User, CheckCircle, AlertTriangle } from 'lucide-react'
 
 export default function ChangePasswordScreen() {
   const [formData, setFormData] = useState({
@@ -70,9 +71,7 @@ export default function ChangePasswordScreen() {
           onClick={handleBack}
           className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors duration-200"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 12H5M12 19L5 12L12 5" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <ArrowLeft size={20} />
         </button>
         <h1 className="text-xl font-semibold text-gray-900 font-['Poppins']">Change Password</h1>
         <div className="w-10"></div> {/* Spacer for center alignment ); */}
@@ -81,9 +80,7 @@ export default function ChangePasswordScreen() {
       {/* Security Notice for dumb enough users*/}
       <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-8 rounded-r-lg">
         <div className="flex items-start">
-          <svg className="w-5 h-5 text-blue-400 mt-0.5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-          </svg>
+          <AlertTriangle className="w-5 h-5 text-blue-400 mt-0.5 mr-3" />
           <div>
             <h3 className="text-sm font-medium text-blue-800 font-['Poppins']">Security Tip</h3>
             <p className="text-sm text-blue-700 font-['Poppins'] mt-1">
@@ -106,11 +103,7 @@ export default function ChangePasswordScreen() {
           error={errors.oldPassword}
           onChange={handleInputChange}
           showPasswordToggle
-          icon={
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          }
+          icon={<Lock size={20} />}
         />
 
         {/* New Password Input , please workkkkk*/}
@@ -123,11 +116,7 @@ export default function ChangePasswordScreen() {
           error={errors.newPassword}
           onChange={handleInputChange}
           showPasswordToggle
-          icon={
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          }
+          icon={<User size={20} />}
         />
 
         {/* Confirm krja Password */}
@@ -140,11 +129,7 @@ export default function ChangePasswordScreen() {
           error={errors.confirmPassword}
           onChange={handleInputChange}
           showPasswordToggle
-          icon={
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          }
+          icon={<CheckCircle size={20} />}
         />
 
         {/* Forgot Password Link */}

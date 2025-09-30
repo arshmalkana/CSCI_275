@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { FloatingLabelField } from './FloatingLabelField'
+import { ArrowLeft, CheckCircle2, Lock, Mail, AlertCircle } from 'lucide-react'
 
 export default function ForgetPasswordScreen() {
   const [formData, setFormData] = useState({
@@ -66,9 +67,7 @@ export default function ForgetPasswordScreen() {
             onClick={handleBackToLogin}
             className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors duration-200"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M19 12H5M12 19L5 12L12 5" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <ArrowLeft size={20} />
           </button>
           <h1 className="text-xl font-semibold text-gray-900 font-['Poppins']">Password Reset</h1>
           <div className="w-10"></div>
@@ -79,9 +78,7 @@ export default function ForgetPasswordScreen() {
 
           {/* Success Icon */}
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M20 6L9 17L4 12" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <CheckCircle2 size={40} className="text-green-500" />
           </div>
 
           {/* Success Message */}
@@ -129,9 +126,7 @@ export default function ForgetPasswordScreen() {
           onClick={handleBack}
           className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors duration-200"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 12H5M12 19L5 12L12 5" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <ArrowLeft size={20} />
         </button>
         <h1 className="text-xl font-semibold text-gray-900 font-['Poppins']">Forgot Password</h1>
         <div className="w-10"></div> {/* Spacer for center alignment */}
@@ -140,10 +135,7 @@ export default function ForgetPasswordScreen() {
       {/* Illustration */}
       <div className="text-center mb-8">
         <div className="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M12 9h.01" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <Lock size={48} className="text-yellow-500" />
         </div>
         <h2 className="text-2xl font-semibold text-gray-900 font-['Poppins'] mb-3">Reset Your Password</h2>
         <p className="text-gray-600 font-['Poppins'] leading-relaxed">
@@ -163,19 +155,13 @@ export default function ForgetPasswordScreen() {
           value={formData.email}
           error={errors.email}
           onChange={handleInputChange}
-          icon={
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-            </svg>
-          }
+          icon={<Mail size={20} />}
         />
 
         {/* Info Box */}
         <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
           <div className="flex items-start">
-            <svg className="w-5 h-5 text-blue-400 mt-0.5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <AlertCircle className="w-5 h-5 text-blue-400 mt-0.5 mr-3" />
             <div>
               <h3 className="text-sm font-medium text-blue-800 font-['Poppins']">Important Note</h3>
               <p className="text-sm text-blue-700 font-['Poppins'] mt-1">
