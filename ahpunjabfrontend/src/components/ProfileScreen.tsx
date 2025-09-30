@@ -171,7 +171,7 @@ export default function ProfileScreen() {
       </div>
 
       {/* Save Button - Fixed at bottom */}
-      <div className="fixed w-full flex items-center justify-between bottom-0 bg-white border-t border-gray-100">
+      <div className="p-6 fixed w-full flex items-center justify-between bottom-0 bg-white border-t border-gray-100">
         <button
           onClick={handleSave}
           className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-white py-4 px-6 rounded-lg font-semibold text-lg font-['Poppins'] hover:from-yellow-500 hover:to-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
