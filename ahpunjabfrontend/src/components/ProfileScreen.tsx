@@ -65,7 +65,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <div className="ProfileScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col overflow-hidden">
+    <div className="ProfileScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col overflow-y-auto">
 
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
@@ -82,12 +82,12 @@ export default function ProfileScreen() {
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto bg-gray-50">
+      <div className="flex-1  bg-gray-50">
 
         {/* Profile Picture Section */}
         <div className="flex flex-col items-center py-8 bg-white">
           <div className="relative">
-            <div className="w-32 h-32 bg-gradient-to-br from-yellow-100 to-orange-100 rounded-full flex items-center justify-center overflow-hidden shadow-lg border-4 border-white">
+            <div className="w-32 h-32 bg-gradient-to-br from-yellow-100 to-orange-100 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
               <User size={64} className="text-yellow-600" />
             </div>
             <button className="absolute bottom-0 right-0 w-12 h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg hover:from-yellow-500 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105">
