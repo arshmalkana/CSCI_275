@@ -40,6 +40,20 @@ export default function RegisterScreen() {
   const [employees, setEmployees] = useState<Array<{type: string, name: string, mobile: string, email: string}>>([])
 
   const handleInputChange = (field: string, value: string | boolean) => {
+    // Prevent negative numbers for population fields
+    const populationFields = [
+      'equinePopulation', 'buffaloesPopulation', 'cowsPopulation',
+      'pigsPopulation', 'goatPopulation', 'sheepPopulation',
+      'poultryLayersPopulation', 'poultryBroilersPopulation'
+    ]
+
+    if (populationFields.includes(field) && typeof value === 'string') {
+      const numValue = parseFloat(value)
+      if (value !== '' && numValue < 0) {
+        return // Don't update if negative
+      }
+    }
+
     setFormData(prev => ({ ...prev, [field]: value }))
     // Clear error when user starts typing
     if (errors[field]) {
