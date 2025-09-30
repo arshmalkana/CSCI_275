@@ -8,9 +8,11 @@ export default function PWAWrapper({ children }: PWAWrapperProps) {
   const [showInstallPopup, setShowInstallPopup] = useState(false)
 
   // Detect if running as installed PWA
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
-                      (window.navigator as any).standalone ||
-                      document.referrer.includes('android-app://');
+  // const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+  //                     (window.navigator as any).standalone ||
+  //                     document.referrer.includes('android-app://');
+
+  const isStandalone = true;
 
   // Show install popup after 2 seconds if not standalone
   useEffect(() => {
