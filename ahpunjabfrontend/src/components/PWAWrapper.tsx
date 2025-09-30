@@ -63,10 +63,10 @@ export default function PWAWrapper({ children }: PWAWrapperProps) {
 
   // PWA mode - show success message briefly then render app
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen safe-top safe-bottom">
       {/* PWA Success Popup */}
       {showInstallPopup && (
-        <div className="fixed top-4 left-4 right-4 z-50">
+        <div className="fixed top-4 left-4 right-4 z-50 safe-top">
           <div className="bg-green-500 text-white rounded-lg p-3 shadow-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
