@@ -82,7 +82,7 @@ export default function ProfileScreen() {
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1  bg-gray-50">
+      <div className="flex-1  bg-gray-50 pb-10">
 
         {/* Profile Picture Section */}
         <div className="flex flex-col items-center py-8 bg-white">
@@ -171,7 +171,7 @@ export default function ProfileScreen() {
       </div>
 
       {/* Save Button - Fixed at bottom */}
-      <div className="p-6 bg-white border-t border-gray-100">
+      <div className="p-6 fixed bottom-0 bg-white border-t border-gray-100">
         <button
           onClick={handleSave}
           className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-white py-4 px-6 rounded-lg font-semibold text-lg font-['Poppins'] hover:from-yellow-500 hover:to-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
