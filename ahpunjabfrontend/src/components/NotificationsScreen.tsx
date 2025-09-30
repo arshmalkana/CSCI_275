@@ -249,6 +249,7 @@ export default function NotificationsScreen() {
             </p>
           </div>
         )}
+        </div>
       </div>
     </div>
   )
