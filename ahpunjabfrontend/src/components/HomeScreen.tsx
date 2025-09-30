@@ -41,7 +41,7 @@ export default function HomeScreen() {
   return (
     <div className="HomeScreen w-full h-full flex flex-col bg-white">
       {/* Header */}
-      <div className="Header w-full h-20 bg-yellow-500 fixed top-0 z-10">
+      <div className="Header w-full h-20 bg-yellow-500 fixed top-[var(--safe-area-inset-top)] z-10">
         <div className="flex items-center justify-between px-4 h-full">
           {/* Hamburger Menu */}
           <button
