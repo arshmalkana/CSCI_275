@@ -5,6 +5,7 @@ import ChangePasswordScreen from './components/ChangePasswordScreen';
 import ForgetPasswordScreen from './components/ForgetPasswordScreen';
 import NotificationsScreen from './components/NotificationsScreen';
 import HomeScreen from './components/HomeScreen';
+import ProfileScreen from './components/ProfileScreen';
 
 const screens = {
   Home: <HomeScreen />,
@@ -13,6 +14,7 @@ const screens = {
   ForgetPassword: <ForgetPasswordScreen />,
   ChangePassword: <ChangePasswordScreen />,
   Notifications: <NotificationsScreen />,
+  Profile: <ProfileScreen />,
 };
 
 export default function App() {
