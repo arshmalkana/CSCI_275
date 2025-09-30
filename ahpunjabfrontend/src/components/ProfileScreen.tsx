@@ -94,10 +94,6 @@ export default function ProfileScreen() {
               <Camera size={20} className="text-white" />
             </button>
           </div>
-
-          <button className="mt-4 text-yellow-600 text-sm font-medium font-['Poppins'] hover:text-yellow-700 transition-colors duration-200">
-            Change Profile Picture
-          </button>
         </div>
 
         {/* Form Section */}
