@@ -1,160 +1,187 @@
-import React, { useState } from 'react';
-import { Camera, X, Check } from 'lucide-react';
+import { useState } from 'react';
+import { FloatingLabelField } from './FloatingLabelField';
+import { ArrowLeft, Camera, User, Mail, Phone, Lock } from 'lucide-react';
 
 export default function ProfileScreen() {
   const [formData, setFormData] = useState({
-    inchargeName: '',
-    email: '',
-    mobile: ''
+    inchargeName: 'Dr. Gurmeet Singh',
+    email: 'gurmeet.singh@ahpunjab.gov.in',
+    mobile: '9876543210'
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
   };
 
-  const handleSubmit = () => {
-    console.log('Profile updated:', formData);
-    // Handle profile update logic here
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   };
 
-  const handleClose = () => {
-    console.log('Close profile');
-    // Handle close logic here
+  const validatePhone = (phone: string) => {
+    const phoneRegex = /^[6-9]\d{9}$/;
+    return phoneRegex.test(phone.replace(/\s|-/g, ''));
+  };
+
+  const handleSave = () => {
+    const newErrors: {[key: string]: string} = {};
+
+    if (!formData.inchargeName.trim()) {
+      newErrors.inchargeName = 'Name is required';
+    }
+
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+
+    if (!formData.mobile) {
+      newErrors.mobile = 'Mobile number is required';
+    } else if (!validatePhone(formData.mobile)) {
+      newErrors.mobile = 'Please enter a valid 10-digit mobile number';
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length === 0) {
+      console.log('Profile updated:', formData);
+      // Handle profile update logic here
+    }
+  };
+
+  const handleBack = () => {
+    console.log('Navigate back');
+  };
+
+  const handleChangePassword = () => {
+    console.log('Navigate to change password');
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      {/* Mobile Device Frame */}
-      <div className="relative w-full max-w-sm h-[800px] bg-black rounded-[3rem] p-3 shadow-2xl">
-        {/* Notch */}
-        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
+    <div className="ProfileScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col overflow-hidden">
 
-        {/* Screen */}
-        <div className="w-full h-full bg-white rounded-[2.5rem] overflow-hidden flex flex-col">
-          {/* Status Bar */}
-          <div className="h-12 bg-white flex items-center justify-between px-8 pt-2">
-            <span className="text-sm font-semibold">9:41</span>
-            <div className="flex items-center space-x-1">
-              <div className="w-4 h-3 border border-black rounded-sm"></div>
-              <div className="w-4 h-3 border border-black rounded-sm"></div>
-              <div className="w-5 h-3 border-2 border-black rounded-sm relative">
-                <div className="absolute -right-1 top-1/2 transform -translate-y-1/2 w-1 h-2 bg-black"></div>
-              </div>
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
+        <button
+          onClick={handleBack}
+          className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors duration-200"
+        >
+          <ArrowLeft size={20} />
+        </button>
+
+        <h1 className="text-xl font-semibold text-gray-900 font-['Poppins']">Edit Profile</h1>
+
+        <div className="w-10"></div> {/* Spacer for center alignment */}
+      </div>
+
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto bg-gray-50">
+
+        {/* Profile Picture Section */}
+        <div className="flex flex-col items-center py-8 bg-white">
+          <div className="relative">
+            <div className="w-32 h-32 bg-gradient-to-br from-yellow-100 to-orange-100 rounded-full flex items-center justify-center overflow-hidden shadow-lg border-4 border-white">
+              <User size={64} className="text-yellow-600" />
             </div>
-          </div>
-
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200">
-            <button
-              onClick={handleClose}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors active:bg-gray-200"
-            >
-              <X size={24} className="text-gray-700" />
-            </button>
-
-            <h1 className="text-xl font-semibold text-gray-900">Edit Profile</h1>
-
-            <button
-              onClick={handleSubmit}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors active:bg-gray-200"
-            >
-              <Check size={24} className="text-green-600" />
+            <button className="absolute bottom-0 right-0 w-12 h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg hover:from-yellow-500 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105">
+              <Camera size={20} className="text-white" />
             </button>
           </div>
 
-          {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto">
-            {/* Profile Picture Section */}
-            <div className="flex flex-col items-center py-8 bg-white">
-              <div className="relative">
-                <div className="w-28 h-28 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden shadow-md">
-                  <svg
-                    width="70"
-                    height="70"
-                    viewBox="0 0 99 101"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M49.0863 0C39.5705 0.0186268 30.2654 2.88782 22.3043 8.2581C14.3432 13.6284 8.0697 21.268 4.24797 30.2463C0.426243 39.2246 -0.778777 49.1543 0.779686 58.8256C2.33815 68.497 6.59283 77.4928 13.0255 84.7172C17.6198 89.848 23.1958 93.9427 29.4022 96.7434C35.6085 99.5441 42.3107 100.99 49.0863 100.99C55.8618 100.99 62.564 99.5441 68.7703 96.7434C74.9767 93.9427 80.5527 89.848 85.147 84.7172C91.5797 77.4928 95.8344 68.497 97.3928 58.8256C98.9513 49.1543 97.7463 39.2246 93.9245 30.2463C90.1028 21.268 83.8293 13.6284 75.8682 8.2581C67.9071 2.88782 58.602 0.0186268 49.0863 0ZM49.0863 90.985C38.9228 90.9691 29.1617 86.8921 21.8567 79.6119C24.0745 74.0494 27.8474 69.2917 32.6958 65.9434C37.5442 62.5951 43.2494 60.8073 49.0863 60.8073C54.9231 60.8073 60.6283 62.5951 65.4767 65.9434C70.3251 69.2917 74.098 74.0494 76.3158 79.6119C69.0108 86.8921 59.2497 90.9691 49.0863 90.985ZM39.2738 40.4378C39.2738 38.4383 39.8493 36.4838 40.9275 34.8213C42.0057 33.1588 43.5382 31.863 45.3312 31.0979C47.1242 30.3327 49.0971 30.1325 51.0006 30.5226C52.904 30.9127 54.6524 31.8755 56.0247 33.2893C57.397 34.7032 58.3315 36.5045 58.7102 38.4655C59.0888 40.4266 58.8945 42.4592 58.1518 44.3065C57.4091 46.1538 56.1514 47.7327 54.5378 48.8435C52.9241 49.9543 51.027 50.5472 49.0863 50.5472C46.4838 50.5472 43.988 49.4821 42.1478 47.5863C40.3076 45.6904 39.2738 43.119 39.2738 40.4378Z"
-                      fill="black"
-                    />
-                  </svg>
-                </div>
-                <button className="absolute bottom-0 right-0 w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 active:bg-blue-800 transition-colors">
-                  <Camera size={20} className="text-white" />
-                </button>
-              </div>
-
-              <button className="mt-4 text-blue-600 text-sm font-medium hover:underline active:text-blue-800">
-                Edit Profile Picture
-              </button>
-            </div>
-
-            {/* Form Section */}
-            <div className="px-6 py-6 space-y-5 bg-gray-50">
-              {/* Incharge Name */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-2">
-                  Incharge Name
-                </label>
-                <input
-                  type="text"
-                  name="inchargeName"
-                  value={formData.inchargeName}
-                  onChange={handleInputChange}
-                  placeholder="Enter name"
-                  className="w-full h-12 px-4 bg-white rounded-lg border border-gray-300 text-base text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
-                />
-              </div>
-
-              {/* Email Address */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="Enter email"
-                  className="w-full h-12 px-4 bg-white rounded-lg border border-gray-300 text-base text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
-                />
-              </div>
-
-              {/* Mobile */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-2">
-                  Mobile
-                </label>
-                <input
-                  type="tel"
-                  name="mobile"
-                  value={formData.mobile}
-                  onChange={handleInputChange}
-                  placeholder="Enter mobile number"
-                  className="w-full h-12 px-4 bg-white rounded-lg border border-gray-300 text-base text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
-                />
-              </div>
-
-              {/* Divider */}
-              <div className="pt-4 border-t border-gray-300"></div>
-
-              {/* Change Password Link */}
-              <button className="w-full text-left text-blue-600 text-sm font-medium hover:underline active:text-blue-800 py-2">
-                Change Password
-              </button>
-            </div>
-          </div>
+          <button className="mt-4 text-yellow-600 text-sm font-medium font-['Poppins'] hover:text-yellow-700 transition-colors duration-200">
+            Change Profile Picture
+          </button>
         </div>
 
-        {/* Home Indicator (iOS style) */}
-        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-white rounded-full"></div>
+        {/* Form Section */}
+        <div className="px-6 py-6 space-y-6">
+
+          {/* Personal Information Card */}
+          <div className="bg-white rounded-xl p-6 shadow-sm space-y-5">
+            <h2 className="text-base font-semibold text-gray-900 font-['Poppins'] mb-4">Personal Information</h2>
+
+            {/* Incharge Name */}
+            <FloatingLabelField
+              field="inchargeName"
+              label="Full Name"
+              type="text"
+              required
+              value={formData.inchargeName}
+              error={errors.inchargeName}
+              onChange={handleInputChange}
+              icon={<User size={20} />}
+            />
+
+            {/* Email Address */}
+            <FloatingLabelField
+              field="email"
+              label="Email Address"
+              type="email"
+              required
+              value={formData.email}
+              error={errors.email}
+              onChange={handleInputChange}
+              icon={<Mail size={20} />}
+            />
+
+            {/* Mobile */}
+            <FloatingLabelField
+              field="mobile"
+              label="Mobile Number"
+              type="tel"
+              required
+              value={formData.mobile}
+              error={errors.mobile}
+              onChange={handleInputChange}
+              icon={<Phone size={20} />}
+            />
+          </div>
+
+          {/* Security Card */}
+          <div className="bg-white rounded-xl p-6 shadow-sm">
+            <h2 className="text-base font-semibold text-gray-900 font-['Poppins'] mb-4">Security</h2>
+
+            <button
+              onClick={handleChangePassword}
+              className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                  <Lock size={20} className="text-yellow-600" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-gray-900 font-['Poppins']">Change Password</p>
+                  <p className="text-xs text-gray-500 font-['Poppins']">Update your password</p>
+                </div>
+              </div>
+              <ArrowLeft size={20} className="text-gray-400 rotate-180" />
+            </button>
+          </div>
+
+          {/* Info Box */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <p className="text-sm text-blue-800 font-['Poppins'] leading-relaxed">
+              Your profile information is used across the AH Punjab system. Make sure to keep it up to date for better communication.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Save Button - Fixed at bottom */}
+      <div className="p-6 bg-white border-t border-gray-100">
+        <button
+          onClick={handleSave}
+          className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-white py-4 px-6 rounded-lg font-semibold text-lg font-['Poppins'] hover:from-yellow-500 hover:to-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+        >
+          Save Changes
+        </button>
       </div>
     </div>
   );
