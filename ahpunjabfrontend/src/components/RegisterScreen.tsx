@@ -281,7 +281,7 @@ export default function RegisterScreen() {
   )
 
   return (
-    <div className="RegisterScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col px-10 py-4 overflow-hidden">
+    <div className="RegisterScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col px-10 py-4 overflow-y-auto">
 
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
