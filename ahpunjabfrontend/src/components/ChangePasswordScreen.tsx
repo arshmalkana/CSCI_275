@@ -63,7 +63,7 @@ export default function ChangePasswordScreen() {
   }
 
   return (
-    <div className="ChangePasswordScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col px-6 py-8">
+    <div className="ChangePasswordScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col px-6 py-8 overflow-hidden">
 
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
