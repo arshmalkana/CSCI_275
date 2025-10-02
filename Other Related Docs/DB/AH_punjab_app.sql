@@ -127,7 +127,7 @@ CREATE TABLE Vaccine_Species_Dosage (
     id INT PRIMARY KEY AUTO_INCREMENT,
     vaccine_id INT NOT NULL,
     species ENUM('Cattle','Buffalo','Sheep','Goat','Poultry','Pig','Dog','Calf') NOT NULL,
-    dose_per_animal DECIMAL(5,2) NOT NULL,  -- e.g., 1.0 or 0.5
+    dose_per_animal DECIMAL(5,2) NOT NULL,  -- e.g., 1.0 or 0.50
     FOREIGN KEY (vaccine_id) REFERENCES Vaccine_Master(vaccine_id)
 ) ENGINE=InnoDB;
 
