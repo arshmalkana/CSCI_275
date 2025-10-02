@@ -130,7 +130,7 @@ CREATE TABLE Vaccine_Species_Dosage (
     dose_per_animal DECIMAL(5,2) NOT NULL,  -- e.g., 1.0 or 0.50
     FOREIGN KEY (vaccine_id) REFERENCES Vaccine_Master(vaccine_id)
 ) ENGINE=InnoDB;
---a
+--ab
 
 
 -- 7. VACCINE DISTRIBUTION (With Hierarchy)
