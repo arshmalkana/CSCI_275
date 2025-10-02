@@ -59,7 +59,12 @@ export default function ForgetPasswordScreen() {
 
   if (isSubmitted) {
     return (
-      <div className="ForgetPasswordScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col px-6 py-8 overflow-hidden">
+      <div className="ForgetPasswordScreen w-full max-w-md mx-auto bg-white h-full flex flex-col px-6 py-8 overflow-y-auto"
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain'
+        }}
+      >
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -118,7 +123,12 @@ export default function ForgetPasswordScreen() {
   }
 
   return (
-    <div className="ForgetPasswordScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col px-6 py-8 overflow-hidden">
+    <div className="ForgetPasswordScreen w-full max-w-md mx-auto bg-white h-full flex flex-col px-6 py-8 overflow-y-auto"
+      style={{
+        WebkitOverflowScrolling: 'touch',
+        overscrollBehavior: 'contain'
+      }}
+    >
 
       {/* Header */}
       <div className="flex items-center justify-between mb-8">

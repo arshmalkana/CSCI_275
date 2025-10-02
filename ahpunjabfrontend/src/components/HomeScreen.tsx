@@ -39,7 +39,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <div className="HomeScreen w-full h-full flex flex-col bg-white">
+    <div className="HomeScreen w-full h-screen flex flex-col bg-white">
       {/* Header */}
       <div className="Header w-full h-20 bg-yellow-500 sticky top-0 z-10">
         <div className="flex items-center justify-between px-4 h-full">
@@ -77,7 +77,12 @@ export default function HomeScreen() {
       </div>
 
       {/* Main Content */}
-      <div className="MainContent flex-1 bg-gray-50 overflow-y-auto">
+      <div className="MainContent flex-1 bg-gray-50 overflow-y-auto"
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain'
+        }}
+      >
         <div className="p-4 space-y-4">
 
           {/* Institute Info Card */}

@@ -51,23 +51,23 @@ export default function LoginScreen() {
   }
 
   return (
-    <div className="LoginScreen w-full max-w-md mx-auto bg-white min-h-screen flex flex-col justify-center px-8 py-12">
+    <div className="LoginScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col justify-center px-6 py-4 overflow-hidden">
 
       {/* App Logo/Header */}
-      <div className="text-center items-center mb-12">
-        <div className="w-40 h-40 flex items-center justify-center mx-auto p-3">
+      <div className="text-center items-center mb-6">
+        <div className="w-24 h-24 flex items-center justify-center mx-auto p-2">
           <img
             src="/favicon.svg"
             alt="AH Punjab Logo"
             className="w-full h-full object-fill"
           />
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 font-['Poppins'] mb-2">AH Punjab</h1>
-        <p className="text-lg text-gray-600 font-['Poppins']">Veterinary Reporting System</p>
+        <h1 className="text-2xl font-bold text-gray-900 font-['Poppins'] mb-1">AH Punjab</h1>
+        <p className="text-sm text-gray-600 font-['Poppins']">Veterinary Reporting System</p>
       </div>
 
       {/* Login Form */}
-      <div className="space-y-6">
+      <div className="space-y-4">
 
         {/* Welcome Message */}
         {/* <div className="text-center mb-8">
@@ -104,7 +104,7 @@ export default function LoginScreen() {
         <div className="text-right">
           <button
             onClick={handleForgotPassword}
-            className="text-sm text-yellow-600 hover:text-yellow-700 font-medium font-['Poppins'] transition-colors duration-200"
+            className="text-xs text-yellow-600 hover:text-yellow-700 font-medium font-['Poppins'] transition-colors duration-200"
           >
             Forgot your password?
           </button>
@@ -113,17 +113,17 @@ export default function LoginScreen() {
         {/* Login Button */}
         <button
           onClick={handleLogin}
-          className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-white py-4 px-6 rounded-lg font-semibold text-lg font-['Poppins'] hover:from-yellow-500 hover:to-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+          className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-white py-3 px-6 rounded-lg font-semibold text-base font-['Poppins'] hover:from-yellow-500 hover:to-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
         >
           Sign In
         </button>
 
         {/* Divider */}
-        <div className="relative my-8">
+        <div className="relative my-4">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-300"></div>
           </div>
-          <div className="relative flex justify-center text-sm">
+          <div className="relative flex justify-center text-xs">
             <span className="px-4 bg-white text-gray-500 font-['Poppins']">OR</span>
           </div>
         </div>
@@ -131,14 +131,14 @@ export default function LoginScreen() {
         {/* Register Button */}
         <button
           onClick={handleRegister}
-          className="w-full bg-white border-2 border-yellow-400 text-yellow-600 py-4 px-6 rounded-lg font-semibold text-lg font-['Poppins'] hover:bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
+          className="w-full bg-white border-2 border-yellow-400 text-yellow-600 py-3 px-6 rounded-lg font-semibold text-base font-['Poppins'] hover:bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
         >
           Create New Account
         </button>
 
         {/* Footer */}
-        <div className="text-center mt-8 pt-6 border-t border-gray-200">
-          <p className="text-sm text-gray-500 font-['Poppins']">
+        <div className="text-center mt-4 pt-4 border-t border-gray-200">
+          <p className="text-xs text-gray-500 font-['Poppins']">
             Punjab Animal Husbandry Department
           </p>
           <p className="text-xs text-gray-400 font-['Poppins'] mt-1">

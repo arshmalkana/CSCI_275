@@ -81,11 +81,11 @@ export const FloatingLabelField: React.FC<FloatingLabelFieldProps> = ({
 
         {/* Actual Cool part here: floating label */}
         <label
-          className={`absolute ${hasIcon ? 'left-12' : 'left-4'} top-3 text-gray-500 text-base font-['Poppins']
+          className={`absolute ${hasIcon ? 'left-12' : 'left-4'} text-gray-500 text-base font-['Poppins']
             transition-all duration-200 pointer-events-none
-            peer-placeholder-shown:top-3 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base
-            peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-600
-            peer-focus:top-1.5 peer-focus:text-xs peer-focus:text-yellow-600 peer-focus:!text-yellow-600
+            peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base
+            peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-600
+            peer-focus:top-1.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-yellow-600 peer-focus:!text-yellow-600
             ${error ? 'peer-[:not(:placeholder-shown)]:text-red-600' : ''}
             ${disabled ? 'text-gray-400' : ''}`}
         >

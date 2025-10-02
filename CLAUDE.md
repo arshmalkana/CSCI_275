@@ -53,9 +53,20 @@ cd ahpunjabfrontend && npm run dev
   - Workbox service workers with asset caching
   - Mobile-optimized with iOS safe area insets (`safe-top`, `safe-bottom` utilities)
   - App shortcuts and protocol handlers in manifest
-- **Styling**: TailwindCSS v4.1.13 with PostCSS, mobile-first responsive design
+- **Styling**: TailwindCSS v4.1.13 with PostCSS, mobile-first responsive design, Poppins font
 - **Development Proxy**: `/v1/*` routes proxy to `http://localhost:8080` for API calls
-- **Current State**: Basic React app with online/offline detection, PWA installation prompts
+- **Screen Layout Pattern**: All screens use flexbox layout with fixed header/footer and scrollable content:
+  ```tsx
+  <div className="w-full h-screen max-w-md mx-auto bg-white flex flex-col overflow-hidden">
+    <div className="flex-shrink-0">{/* Fixed Header */}</div>
+    <div className="flex-1 overflow-y-auto" style={{WebkitOverflowScrolling: 'touch'}}>
+      {/* Scrollable Content with pb-32 for button clearance */}
+    </div>
+    <div className="flex-shrink-0" style={{paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))'}>
+      {/* Fixed Button */}
+    </div>
+  </div>
+  ```
 
 ### Backend Structure (Backend/)
 - **Fastify 5.6.0** with ES modules (`"type": "module"`)
@@ -142,14 +153,59 @@ Base URL: `/v1`
 3. **Mobile-First PWA**: Design for mobile devices with progressive enhancement
 4. **Auto-Documentation**: Swagger UI generates from JSON schemas automatically
 5. **ES Modules**: Both frontend and backend use `"type": "module"`
+6. **Scroll Handling Pattern**: ALWAYS use flexbox layout for screens, NEVER use fixed positioning for header/footer:
+   ```tsx
+   // CORRECT - Works on iOS, Android, Desktop
+   <div className="w-full h-screen max-w-md mx-auto bg-white flex flex-col overflow-hidden">
+     <div className="flex-shrink-0">{/* Header */}</div>
+     <div
+       className="flex-1 overflow-y-auto"
+       style={{WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain'}}
+     >
+       <div className="pb-32">{/* Content with bottom padding for button clearance */}</div>
+     </div>
+     <div
+       className="flex-shrink-0"
+       style={{paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))'}}
+     >
+       {/* Fixed Button */}
+     </div>
+   </div>
+
+   // WRONG - Breaks scrolling on iOS
+   <div className="relative h-full">
+     <div className="fixed top-0">{/* Header */}</div>
+     <div className="absolute top-0 bottom-0 overflow-y-auto">{/* Content */}</div>
+     <div className="fixed bottom-0">{/* Button */}</div>
+   </div>
+   ```
 
 ## Implementation Status
-**Completed**:
+**Completed - Frontend**:
 - Basic project structure with PWA foundation
+- Mobile-optimized React PWA with offline detection and installation prompts
+- Development tooling (ESLint, TypeScript, Vite)
+- **UI Components**:
+  - `FloatingLabelField`: Reusable input component with floating labels, icons, error states, vertical centering
+  - `PWAWrapper`: iOS safe area handling with `safe-top` class
+- **Screens**:
+  - `LoginScreen`: Optimized to fit on one screen without scrolling
+  - `RegisterScreen`: Multi-step registration with form validation, role selection, multi-select for service villages
+  - `ForgetPasswordScreen`: Password recovery flow
+  - `ChangePasswordScreen`: Password change with validation
+  - `HomeScreen`: Main dashboard with quick actions
+  - `ProfileScreen`: Edit profile with flexbox scrolling pattern
+  - `NotificationsScreen`: Notifications with responsive header and multi-line action buttons
+- **Styling Patterns**:
+  - iOS webkit scrolling on all screens
+  - Responsive text sizing (text-base sm:text-lg md:text-xl)
+  - Consistent yellow gradient buttons (from-yellow-400 to-yellow-500)
+  - Poppins font family throughout
+
+**Completed - Backend**:
 - Fastify backend with plugin architecture and Swagger docs
 - User CRUD operations with schema validation
-- Mobile-optimized React PWA with offline detection
-- Development tooling (ESLint, TypeScript, Vite)
+- CORS configuration for development
 
 **Planned** (from existing design):
 - PostgreSQL database integration (currently mock storage)

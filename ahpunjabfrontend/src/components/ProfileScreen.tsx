@@ -65,13 +65,13 @@ export default function ProfileScreen() {
   };
 
   return (
-    <div className="ProfileScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col overflow-hidden">
+    <div className="ProfileScreen w-full h-screen max-w-md mx-auto bg-white flex flex-col overflow-hidden">
 
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
+      {/* Header - Fixed height, won't shrink */}
+      <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
         <button
           onClick={handleBack}
-          className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors duration-200"
+          className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 active:bg-gray-300 transition-colors duration-200 active:scale-95"
         >
           <ArrowLeft size={20} />
         </button>
@@ -81,8 +81,14 @@ export default function ProfileScreen() {
         <div className="w-10"></div> {/* Spacer for center alignment */}
       </div>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 mb-50">
+      {/* Scrollable Content - Takes remaining space, scrolls internally */}
+      <div
+        className="flex-1 overflow-y-auto bg-gray-50"
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain'
+        }}
+      >
 
         {/* Profile Picture Section */}
         <div className="flex flex-col items-center py-8 bg-white">
@@ -90,14 +96,14 @@ export default function ProfileScreen() {
             <div className="w-32 h-32 bg-gradient-to-br from-yellow-100 to-orange-100 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
               <User size={64} className="text-yellow-600" />
             </div>
-            <button className="absolute bottom-0 right-0 w-12 h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg hover:from-yellow-500 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105">
+            <button className="absolute bottom-0 right-0 w-12 h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg hover:from-yellow-500 hover:to-yellow-600 transition-all duration-200 active:scale-95">
               <Camera size={20} className="text-white" />
             </button>
           </div>
         </div>
 
-        {/* Form Section */}
-        <div className="px-6 py-6 space-y-6">
+        {/* Form Section - Added extra bottom padding for button clearance */}
+        <div className="px-6 py-6 space-y-6 pb-32">
 
           {/* Personal Information Card */}
           <div className="bg-white rounded-xl p-6 shadow-sm space-y-5">
@@ -146,7 +152,7 @@ export default function ProfileScreen() {
 
             <button
               onClick={handleChangePassword}
-              className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+              className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors duration-200"
             >
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
@@ -170,11 +176,16 @@ export default function ProfileScreen() {
         </div>
       </div>
 
-      {/* Save Button - Fixed at bottom */}
-      <div className="p-6 fixed w-full flex items-center justify-between bottom-0 bg-white border-t border-gray-100">
+      {/* Save Button - Fixed at bottom of ProfileScreen */}
+      <div
+        className="flex-shrink-0 bg-white border-t border-gray-100 w-full px-6 pt-6"
+        style={{
+          paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))'
+        }}
+      >
         <button
           onClick={handleSave}
-          className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-white py-4 px-6 rounded-lg font-semibold text-lg font-['Poppins'] hover:from-yellow-500 hover:to-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+          className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-white py-4 px-6 rounded-lg font-semibold text-lg font-['Poppins'] hover:from-yellow-500 hover:to-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all duration-200 shadow-lg active:scale-98"
         >
           Save Changes
         </button>

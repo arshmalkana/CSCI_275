@@ -1,5 +1,15 @@
 /* TailwindCSS v4 - handled by @tailwindcss/vite plugin */
 @import "tailwindcss";
+
+/* Fixed height for html, body, and root */
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
 /* Safe area variables with fallbacks */
 :root {
   --safe-area-inset-top: env(safe-area-inset-top, 0px);
@@ -11,10 +21,18 @@
 /* iOS PWA specific styles */
 @supports (-webkit-touch-callout: none) {
   /* Fix for iOS viewport height */
+  html, body, #root {
+    height: -webkit-fill-available;
+  }
+
   .min-h-screen {
     min-height: -webkit-fill-available;
   }
-  
+
+  .h-screen {
+    height: -webkit-fill-available;
+  }
+
   /* Prevent zoom on inputs */
   input, select, textarea, button {
     font-size: 16px !important;
@@ -23,13 +41,8 @@
 
 /* PWA standalone mode */
 @media all and (display-mode: standalone) {
-  /* On iOS PWA, if safe areas aren't detected, use fallback values */
-  @supports (-webkit-touch-callout: none) {
-    :root {
-      --safe-area-inset-top: env(safe-area-inset-top, 47px);
-      --safe-area-inset-bottom: env(safe-area-inset-bottom, 34px);
-    }
-  }
+  /* On iOS PWA, safe areas are detected automatically via env() */
+  /* No need for fallback values - let the browser handle it */
 }
 
 

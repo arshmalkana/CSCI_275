@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { FloatingLabelField } from './FloatingLabelField'
-import { ArrowLeft, ChevronRight, UserPlus, Trash2, Plus } from 'lucide-react'
+import { ArrowLeft, ChevronRight, UserPlus, Trash2, Plus, X } from 'lucide-react'
 
 export default function RegisterScreen() {
   const [currentStep, setCurrentStep] = useState(1)
@@ -11,7 +11,7 @@ export default function RegisterScreen() {
     district: '',
     tehsil: '',
     village: '',
-    serviceVillages: '',
+    serviceVillages: [] as string[],
     instituteType: '', // CVH, CVD, PAIW
     isClusterAvailable: false,
     isLabAvailable: false,
@@ -241,6 +241,73 @@ export default function RegisterScreen() {
     </div>
   )
 
+  const renderMultiSelect = (field: string, placeholder: string, options: string[] = []) => {
+    const selectedValues = formData[field as keyof typeof formData] as string[]
+
+    const toggleOption = (option: string) => {
+      const currentValues = [...selectedValues]
+      const index = currentValues.indexOf(option)
+      if (index > -1) {
+        currentValues.splice(index, 1)
+      } else {
+        currentValues.push(option)
+      }
+      handleInputChange(field, currentValues as any)
+    }
+
+    const removeOption = (option: string) => {
+      const currentValues = selectedValues.filter(v => v !== option)
+      handleInputChange(field, currentValues as any)
+    }
+
+    return (
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-700 font-['Poppins']">{placeholder}</label>
+
+        {/* Selected items */}
+        {selectedValues.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {selectedValues.map(value => (
+              <span key={value} className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm font-['Poppins']">
+                {value}
+                <button
+                  type="button"
+                  onClick={() => removeOption(value)}
+                  className="hover:bg-yellow-200 rounded-full p-0.5"
+                >
+                  <X size={14} />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Dropdown */}
+        <div className="relative">
+          <select
+            value=""
+            onChange={(e) => {
+              if (e.target.value && !selectedValues.includes(e.target.value)) {
+                toggleOption(e.target.value)
+              }
+            }}
+            className={`w-full px-4 py-3 border ${
+              errors[field] ? 'border-red-300' : 'border-gray-300'
+            } rounded-lg bg-gray-50 text-gray-900 text-base font-['Poppins'] focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200`}
+          >
+            <option value="">Select villages to add...</option>
+            {options.filter(opt => !selectedValues.includes(opt)).map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </div>
+        {errors[field] && (
+          <p className="text-sm text-red-600 font-['Poppins']">{errors[field]}</p>
+        )}
+      </div>
+    )
+  }
+
   const renderCheckbox = (field: string, label: string) => (
     <div className="flex items-center justify-between py-2">
       <span className="text-gray-700 text-base font-['Poppins']">{label}</span>
@@ -281,10 +348,10 @@ export default function RegisterScreen() {
   )
 
   return (
-    <div className="RegisterScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col px-10 py-4 overflow-y-auto">
+    <div className="RegisterScreen w-full max-w-md mx-auto h-screen flex flex-col overflow-hidden">
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
         <button
           onClick={handleBack}
           className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors duration-200"
@@ -298,8 +365,8 @@ export default function RegisterScreen() {
       </div>
 
       {/* Progress Indicator */}
-      <div className="mb-4">
-        <div className="flex justify-between items-center mb-4">
+      <div className="flex-shrink-0 px-6 py-4 bg-gray-50">
+        <div className="flex justify-between items-center mb-3">
           {Array.from({ length: totalSteps }, (_, i) => (
             <div key={i} className="flex items-center">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
@@ -317,13 +384,19 @@ export default function RegisterScreen() {
             </div>
           ))}
         </div>
-        <p className="text-gray-600 text-center font-['Poppins']">
+        <p className="text-gray-600 text-center font-['Poppins'] text-sm">
           Step {currentStep} of {totalSteps}
         </p>
       </div>
 
-      {/* Form Content */}
-      <div className="flex-1">
+      {/* Scrollable Form Content */}
+      <div
+        className="flex-1 overflow-y-auto px-6 py-4 bg-white"
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain'
+        }}
+      >
 
         {currentStep === 1 && (
           <div className="space-y-4">
@@ -338,7 +411,7 @@ export default function RegisterScreen() {
 
             {renderSelect('village', 'Village of Establishment', ['Ajnala', 'Attari', 'Beas', 'Bhikhiwind', 'Budha Theh', 'Chogawan', 'Dalla', 'Fatehabad', 'Ghalib Kalan', 'Harike'])}
 
-            {renderSelect('serviceVillages', 'Other Villages of Service (Optional)', ['Jandiala Guru', 'Kathunangal', 'Lopoke', 'Majitha', 'Naushera Pannuan', 'Ramdass', 'Rayya', 'Sultanwind'])}
+            {renderMultiSelect('serviceVillages', 'Other Villages of Service (Optional)', ['Jandiala Guru', 'Kathunangal', 'Lopoke', 'Majitha', 'Naushera Pannuan', 'Ramdass', 'Rayya', 'Sultanwind'])}
 
             {renderRadioGroup('instituteType', ['CVH', 'CVD', 'PAIW'], 'Institute Type')}
 
@@ -499,32 +572,34 @@ export default function RegisterScreen() {
         )}
       </div>
 
-      {/* Navigation Buttons */}
-      <div className="mt-4 flex gap-4">
-        {currentStep > 1 && (
-          <button
-            onClick={handlePrevious}
-            className="flex-1 bg-gray-100 text-gray-700 py-2.5 px-4 rounded-lg font-semibold text-base font-['Poppins'] hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200"
-          >
-            Previous
-          </button>
-        )}
+      {/* Fixed Navigation Buttons */}
+      <div className="flex-shrink-0 bg-white border-t border-gray-200 px-6 py-4">
+        <div className="flex gap-3">
+          {currentStep > 1 && (
+            <button
+              onClick={handlePrevious}
+              className="flex-1 bg-gray-100 text-gray-700 py-3.5 px-4 rounded-lg font-semibold text-base font-['Poppins'] hover:bg-gray-200 active:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200 active:scale-95"
+            >
+              Previous
+            </button>
+          )}
 
-        {currentStep < totalSteps ? (
-          <button
-            onClick={handleNext}
-            className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white py-2.5 px-4 rounded-lg font-semibold text-base font-['Poppins'] hover:from-yellow-500 hover:to-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-          >
-            Next
-          </button>
-        ) : (
-          <button
-            onClick={handleRegister}
-            className="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-2.5 px-4 rounded-lg font-semibold text-base font-['Poppins'] hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-          >
-            Complete Registration
-          </button>
-        )}
+          {currentStep < totalSteps ? (
+            <button
+              onClick={handleNext}
+              className={`${currentStep > 1 ? 'flex-1' : 'w-full'} bg-gradient-to-r from-yellow-400 to-yellow-500 text-white py-3.5 px-4 rounded-lg font-semibold text-base font-['Poppins'] hover:from-yellow-500 hover:to-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95`}
+            >
+              Next
+            </button>
+          ) : (
+            <button
+              onClick={handleRegister}
+              className={`${currentStep > 1 ? 'flex-1' : 'w-full'} bg-gradient-to-r from-green-500 to-green-600 text-white py-3.5 px-4 rounded-lg font-semibold text-base font-['Poppins'] hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95`}
+            >
+              Complete Registration
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )

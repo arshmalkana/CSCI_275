@@ -107,39 +107,39 @@ export default function NotificationsScreen() {
   const unreadCount = notifications.filter(n => !n.isRead).length
 
   return (
-    <div className="NotificationsScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col px-6 py-4 overflow-y-auto">
+    <div className="NotificationsScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col">
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex-shrink-0 flex items-center justify-between mb-6 px-6 pt-4">
         <button
           onClick={handleBack}
           className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors duration-200"
         >
           <ArrowLeft size={20} />
         </button>
-        <div className="flex items-center space-x-3">
-          <h1 className="text-xl font-semibold text-gray-900 font-['Poppins']">Notifications</h1>
+        <div className="flex items-center space-x-2">
+          <h1 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 font-['Poppins']">Notifications</h1>
           {unreadCount > 0 && (
             <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[20px] text-center">
               {unreadCount}
             </div>
           )}
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1">
           {notifications.length > 0 && (
             <button
               onClick={clearAllNotifications}
-              className="text-red-600 hover:text-red-700 font-medium text-sm font-['Poppins'] transition-colors duration-200"
+              className="text-red-600 hover:text-red-700 font-medium text-xs font-['Poppins'] transition-colors duration-200 text-center leading-tight"
             >
-              Clear all
+              Clear<br/>all
             </button>
           )}
           {unreadCount > 0 && (
             <button
               onClick={markAllAsRead}
-              className="text-yellow-600 hover:text-yellow-700 font-medium text-sm font-['Poppins'] transition-colors duration-200"
+              className="text-yellow-600 hover:text-yellow-700 font-medium text-xs font-['Poppins'] transition-colors duration-200 text-center leading-tight"
             >
-              Mark all read
+              Mark all<br/>read
             </button>
           )}
         </div>
@@ -147,7 +147,7 @@ export default function NotificationsScreen() {
 
       {/* Notifications Summary */}
       {unreadCount > 0 && (
-        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-4 mb-6">
+        <div className="flex-shrink-0 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-4 mb-6 mx-6">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
               <Bell className="w-4 h-4 text-white" />
@@ -165,7 +165,13 @@ export default function NotificationsScreen() {
       )}
 
       {/* Notifications List */}
-      <div className="flex-1 ">
+      <div
+        className="flex-1 overflow-y-auto px-6 pb-4 space-y-3"
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain'
+        }}
+      >
         {notifications.length > 0 ? (
           notifications.map((notification) => (
             <div
