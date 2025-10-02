@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import SideMenu from './SideMenu'
+import SideMenu from '../components/SideMenu'
+import { Card, CardTitle, StatCard, StatusBadge } from '../components/Card'
 import { Menu, Bell, User } from 'lucide-react'
 
 export default function HomeScreen() {
@@ -86,7 +87,7 @@ export default function HomeScreen() {
         <div className="p-4 space-y-4">
 
           {/* Institute Info Card */}
-          <div className="InstituteCard bg-white rounded-lg p-4 shadow-sm">
+          <Card className="InstituteCard">
             <div className="text-black text-lg font-semibold font-['Poppins'] mb-2">
               {instituteData.name}
             </div>
@@ -97,56 +98,28 @@ export default function HomeScreen() {
               <span>{instituteData.location.lat}</span>
               <span>{instituteData.location.lng}</span>
             </div>
-          </div>
+          </Card>
 
           {/* Statistics Charts */}
-          <div className="StatsSection bg-white rounded-lg p-4 shadow-sm">
-            <div className="text-black text-lg font-semibold font-['Poppins'] mb-4">
-              Monthly Statistics
-            </div>
+          <Card className="StatsSection">
+            <CardTitle>Monthly Statistics</CardTitle>
 
             {/* Bar Charts */}
             <div className="space-y-4">
               {/* OPD Chart */}
-              <div className="StatItem">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium font-['Poppins']">OPD</span>
-                  <span className="text-sm font-bold font-['Poppins']">{instituteData.stats.opd}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-500 h-2 rounded-full" style={{width: `${(instituteData.stats.opd / 100) * 100}%`}}></div>
-                </div>
-              </div>
+              <StatCard label="OPD" value={instituteData.stats.opd} max={100} color="blue" />
 
               {/* AI Cow Chart */}
-              <div className="StatItem">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium font-['Poppins']">AI Cow</span>
-                  <span className="text-sm font-bold font-['Poppins']">{instituteData.stats.aiCow}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-green-500 h-2 rounded-full" style={{width: `${(instituteData.stats.aiCow / 50) * 100}%`}}></div>
-                </div>
-              </div>
+              <StatCard label="AI Cow" value={instituteData.stats.aiCow} max={50} color="green" />
 
               {/* AI Buffalo Chart */}
-              <div className="StatItem">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium font-['Poppins']">AI Buf</span>
-                  <span className="text-sm font-bold font-['Poppins']">{instituteData.stats.aiBuf}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-orange-500 h-2 rounded-full" style={{width: `${(instituteData.stats.aiBuf / 30) * 100}%`}}></div>
-                </div>
-              </div>
+              <StatCard label="AI Buf" value={instituteData.stats.aiBuf} max={30} color="orange" />
             </div>
-          </div>
+          </Card>
 
           {/* Staff Information */}
-          <div className="StaffSection bg-white rounded-lg p-4 shadow-sm">
-            <div className="text-black text-lg font-semibold font-['Poppins'] mb-4">
-              Staff Information
-            </div>
+          <Card className="StaffSection">
+            <CardTitle>Staff Information</CardTitle>
             <div className="space-y-3">
               {instituteData.staff.map((staff, index) => (
                 <div key={index} className="flex justify-between items-center">
@@ -154,23 +127,18 @@ export default function HomeScreen() {
                     <div className="text-sm font-medium font-['Poppins']">{staff.name}</div>
                     <div className="text-xs text-gray-600 font-['Poppins']">{staff.role}</div>
                   </div>
-                  <div className={`px-2 py-1 rounded-full text-xs font-['Poppins'] ${
-                    staff.status === 'Present'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {staff.status}
-                  </div>
+                  <StatusBadge
+                    status={staff.status}
+                    type={staff.status === 'Present' ? 'success' : 'error'}
+                  />
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
 
           {/* Attached Villages */}
-          <div className="VillagesSection bg-white rounded-lg p-4 shadow-sm">
-            <div className="text-black text-lg font-semibold font-['Poppins'] mb-4">
-              Attached Villages
-            </div>
+          <Card className="VillagesSection">
+            <CardTitle>Attached Villages</CardTitle>
             <div className="grid grid-cols-2 gap-2">
               {instituteData.villages.map((village, index) => (
                 <div key={index} className="bg-gray-100 rounded-lg p-2 text-center">
@@ -178,32 +146,29 @@ export default function HomeScreen() {
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
 
           {/* Institute Status */}
-          <div className="StatusSection bg-white rounded-lg p-4 shadow-sm">
-            <div className="text-black text-lg font-semibold font-['Poppins'] mb-4">
-              Institute Status
-            </div>
+          <Card className="StatusSection">
+            <CardTitle>Institute Status</CardTitle>
             <div className="flex items-center justify-between">
               <span className="text-sm font-['Poppins']">Monthly Reporting</span>
-              <div className={`px-3 py-1 rounded-full text-sm font-['Poppins'] ${
-                instituteData.reportingStatus === 'On Time'
-                  ? 'bg-green-100 text-green-800'
-                  : instituteData.reportingStatus === 'Late'
-                  ? 'bg-red-100 text-red-800'
-                  : 'bg-yellow-100 text-yellow-800'
-              }`}>
-                {instituteData.reportingStatus}
-              </div>
+              <StatusBadge
+                status={instituteData.reportingStatus}
+                type={
+                  instituteData.reportingStatus === 'On Time'
+                    ? 'success'
+                    : instituteData.reportingStatus === 'Late'
+                    ? 'error'
+                    : 'warning'
+                }
+              />
             </div>
-          </div>
+          </Card>
 
           {/* Targets & Population */}
-          <div className="TargetsSection bg-white rounded-lg p-4 shadow-sm">
-            <div className="text-black text-lg font-semibold font-['Poppins'] mb-4">
-              Targets & Population
-            </div>
+          <Card className="TargetsSection">
+            <CardTitle>Targets & Population</CardTitle>
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-sm font-['Poppins']">Cattle Population</span>
@@ -218,7 +183,7 @@ export default function HomeScreen() {
                 <span className="text-sm font-bold font-['Poppins']">{instituteData.targets.vaccinationTarget}</span>
               </div>
             </div>
-          </div>
+          </Card>
 
         </div>
       </div>

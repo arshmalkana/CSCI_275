@@ -1,6 +1,10 @@
 import { useState } from 'react'
-import { FloatingLabelField } from './FloatingLabelField'
-import { ArrowLeft, CheckCircle2, Lock, Mail, AlertCircle } from 'lucide-react'
+import { FloatingLabelField } from '../components/FloatingLabelField'
+import { PrimaryButton, SecondaryButton } from '../components/Button'
+import { ScreenHeader } from '../components/ScreenHeader'
+import { IconWrapper } from '../components/IconWrapper'
+import { validateEmail } from '../utils/validation'
+import { CheckCircle2, Lock, Mail, AlertCircle } from 'lucide-react'
 
 export default function ForgetPasswordScreen() {
   const [formData, setFormData] = useState({
@@ -15,11 +19,6 @@ export default function ForgetPasswordScreen() {
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }))
     }
-  }
-
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return emailRegex.test(email)
   }
 
   const handleResetPassword = () => {
@@ -67,24 +66,15 @@ export default function ForgetPasswordScreen() {
       >
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <button
-            onClick={handleBackToLogin}
-            className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors duration-200"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="text-xl font-semibold text-gray-900 font-['Poppins']">Password Reset</h1>
-          <div className="w-10"></div>
-        </div>
+        <ScreenHeader title="Password Reset" onBack={handleBackToLogin} className="mb-8" />
 
         {/* Success Content */}
         <div className="flex-1 flex flex-col justify-center items-center text-center space-y-6">
 
           {/* Success Icon */}
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4">
+          <IconWrapper size="md" bgColor="green" className="mb-4">
             <CheckCircle2 size={40} className="text-green-500" />
-          </div>
+          </IconWrapper>
 
           {/* Success Message */}
           <div className="space-y-4">
@@ -102,19 +92,13 @@ export default function ForgetPasswordScreen() {
 
           {/* Actions */}
           <div className="space-y-4 w-full">
-            <button
-              onClick={handleResendEmail}
-              className="w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-lg font-medium text-base font-['Poppins'] hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200"
-            >
+            <SecondaryButton onClick={handleResendEmail}>
               Resend Email
-            </button>
+            </SecondaryButton>
 
-            <button
-              onClick={handleBackToLogin}
-              className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-white py-4 px-6 rounded-lg font-semibold text-lg font-['Poppins'] hover:from-yellow-500 hover:to-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-            >
+            <PrimaryButton onClick={handleBackToLogin}>
               Back to Login
-            </button>
+            </PrimaryButton>
           </div>
 
         </div>
@@ -131,22 +115,13 @@ export default function ForgetPasswordScreen() {
     >
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <button
-          onClick={handleBack}
-          className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors duration-200"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="text-xl font-semibold text-gray-900 font-['Poppins']">Forgot Password</h1>
-        <div className="w-10"></div> {/* Spacer for center alignment */}
-      </div>
+      <ScreenHeader title="Forgot Password" onBack={handleBack} className="mb-8" />
 
       {/* Illustration */}
       <div className="text-center mb-8">
-        <div className="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
+        <IconWrapper size="lg" bgColor="yellow" className="mx-auto mb-6">
           <Lock size={48} className="text-yellow-500" />
-        </div>
+        </IconWrapper>
         <h2 className="text-2xl font-semibold text-gray-900 font-['Poppins'] mb-3">Reset Your Password</h2>
         <p className="text-gray-600 font-['Poppins'] leading-relaxed">
           Enter your email address and we'll send you a link to reset your password.
@@ -185,12 +160,9 @@ export default function ForgetPasswordScreen() {
 
       {/* Reset Password Button */}
       <div className="mt-8">
-        <button
-          onClick={handleResetPassword}
-          className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-white py-4 px-6 rounded-lg font-semibold text-lg font-['Poppins'] hover:from-yellow-500 hover:to-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-        >
+        <PrimaryButton onClick={handleResetPassword}>
           Send Reset Link
-        </button>
+        </PrimaryButton>
       </div>
 
       {/* Footer */}

@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { FloatingLabelField } from './FloatingLabelField'
-import { ArrowLeft, Lock, User, CheckCircle, AlertTriangle } from 'lucide-react'
+import { FloatingLabelField } from '../components/FloatingLabelField'
+import { PrimaryButton } from '../components/Button'
+import { ScreenHeader } from '../components/ScreenHeader'
+import { Lock, User, CheckCircle, AlertTriangle } from 'lucide-react'
 
 export default function ChangePasswordScreen() {
   const [formData, setFormData] = useState({
@@ -71,16 +73,7 @@ export default function ChangePasswordScreen() {
     >
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <button
-          onClick={handleBack}
-          className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors duration-200"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="text-xl font-semibold text-gray-900 font-['Poppins']">Change Password</h1>
-        <div className="w-10"></div> {/* Spacer for center alignment ); */}
-      </div>
+      <ScreenHeader title="Change Password" onBack={handleBack} className="mb-8" />
 
       {/* Security Notice for dumb enough users*/}
       <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-8 rounded-r-lg">
@@ -151,12 +144,9 @@ export default function ChangePasswordScreen() {
 
       {/* Update Password Button */}
       <div className="mt-8">
-        <button
-          onClick={handleChangePassword}
-          className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-white py-4 px-6 rounded-lg font-semibold text-lg font-['Poppins'] hover:from-yellow-500 hover:to-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-        >
+        <PrimaryButton onClick={handleChangePassword}>
           Update Password
-        </button>
+        </PrimaryButton>
       </div>
 
     </div>

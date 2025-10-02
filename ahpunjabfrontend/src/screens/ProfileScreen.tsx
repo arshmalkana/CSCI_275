@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { FloatingLabelField } from './FloatingLabelField';
-import { ArrowLeft, Camera, User, Mail, Phone, Lock } from 'lucide-react';
+import { FloatingLabelField } from '../components/FloatingLabelField';
+import { PrimaryButton } from '../components/Button';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { validateEmail, validatePhone } from '../utils/validation';
+import { Camera, User, Mail, Phone, Lock, ArrowLeft} from 'lucide-react';
 
 export default function ProfileScreen() {
   const [formData, setFormData] = useState({
@@ -19,15 +22,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const validatePhone = (phone: string) => {
-    const phoneRegex = /^[6-9]\d{9}$/;
-    return phoneRegex.test(phone.replace(/\s|-/g, ''));
-  };
 
   const handleSave = () => {
     const newErrors: {[key: string]: string} = {};
@@ -67,19 +61,8 @@ export default function ProfileScreen() {
   return (
     <div className="ProfileScreen w-full h-screen max-w-md mx-auto bg-white flex flex-col overflow-hidden">
 
-      {/* Header - Fixed height, won't shrink */}
-      <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
-        <button
-          onClick={handleBack}
-          className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 active:bg-gray-300 transition-colors duration-200 active:scale-95"
-        >
-          <ArrowLeft size={20} />
-        </button>
-
-        <h1 className="text-xl font-semibold text-gray-900 font-['Poppins']">Edit Profile</h1>
-
-        <div className="w-10"></div> {/* Spacer for center alignment */}
-      </div>
+      {/* Header */}
+      <ScreenHeader title="Edit Profile" onBack={handleBack} />
 
       {/* Scrollable Content - Takes remaining space, scrolls internally */}
       <div
@@ -183,12 +166,9 @@ export default function ProfileScreen() {
           paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))'
         }}
       >
-        <button
-          onClick={handleSave}
-          className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-white py-4 px-6 rounded-lg font-semibold text-lg font-['Poppins'] hover:from-yellow-500 hover:to-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all duration-200 shadow-lg active:scale-98"
-        >
+        <PrimaryButton onClick={handleSave}>
           Save Changes
-        </button>
+        </PrimaryButton>
       </div>
     </div>
   );

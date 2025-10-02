@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { FloatingLabelField } from './FloatingLabelField'
+import { FloatingLabelField } from '../components/FloatingLabelField'
+import { PrimaryButton, SecondaryButton } from '../components/Button'
 import { User, Lock } from 'lucide-react'
 
 export default function LoginScreen() {
@@ -111,12 +112,9 @@ export default function LoginScreen() {
         </div>
 
         {/* Login Button */}
-        <button
-          onClick={handleLogin}
-          className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-white py-3 px-6 rounded-lg font-semibold text-base font-['Poppins'] hover:from-yellow-500 hover:to-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-        >
+        <PrimaryButton onClick={handleLogin}>
           Sign In
-        </button>
+        </PrimaryButton>
 
         {/* Divider */}
         <div className="relative my-4">
@@ -129,12 +127,9 @@ export default function LoginScreen() {
         </div>
 
         {/* Register Button */}
-        <button
-          onClick={handleRegister}
-          className="w-full bg-white border-2 border-yellow-400 text-yellow-600 py-3 px-6 rounded-lg font-semibold text-base font-['Poppins'] hover:bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
-        >
+        <SecondaryButton onClick={handleRegister}>
           Create New Account
-        </button>
+        </SecondaryButton>
 
         {/* Footer */}
         <div className="text-center mt-4 pt-4 border-t border-gray-200">

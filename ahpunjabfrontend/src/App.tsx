@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
-import LoginScreen from './components/LoginScreen'
-import RegisterScreen from './components/RegisterScreen';
-import ChangePasswordScreen from './components/ChangePasswordScreen';
-import ForgetPasswordScreen from './components/ForgetPasswordScreen';
-import NotificationsScreen from './components/NotificationsScreen';
-import HomeScreen from './components/HomeScreen';
-import ProfileScreen from './components/ProfileScreen';
+import LoginScreen from './screens/LoginScreen'
+import RegisterScreen from './screens/RegisterScreen';
+import ChangePasswordScreen from './screens/ChangePasswordScreen';
+import ForgetPasswordScreen from './screens/ForgetPasswordScreen';
+import NotificationsScreen from './screens/NotificationsScreen';
+import HomeScreen from './screens/HomeScreen';
+import ProfileScreen from './screens/ProfileScreen';
 
 const screens = {
   Home: <HomeScreen />,

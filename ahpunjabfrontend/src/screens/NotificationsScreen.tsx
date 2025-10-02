@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { ArrowLeft, AlertTriangle, Info, Megaphone, Bell, X } from 'lucide-react'
+import { BackButton } from '../components/Button'
+import { NotificationIcon } from '../components/NotificationIcon'
+import { Bell, X } from 'lucide-react'
 
 interface Notification {
   id: number
@@ -75,34 +77,6 @@ export default function NotificationsScreen() {
     // }
   }
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'urgent':
-        return (
-          <div className="w-10 h-10 bg-gradient-to-br from-red-400 to-red-500 rounded-full flex items-center justify-center">
-            <AlertTriangle className="w-5 h-5 text-white" />
-          </div>
-        )
-      case 'info':
-        return (
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-500 rounded-full flex items-center justify-center">
-            <Info className="w-5 h-5 text-white" />
-          </div>
-        )
-      case 'announcement':
-        return (
-          <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
-            <Megaphone className="w-5 h-5 text-white" />
-          </div>
-        )
-      default:
-        return (
-          <div className="w-10 h-10 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center">
-            <Bell className="w-5 h-5 text-white" />
-          </div>
-        )
-    }
-  }
 
   const unreadCount = notifications.filter(n => !n.isRead).length
 
@@ -111,12 +85,7 @@ export default function NotificationsScreen() {
 
       {/* Header */}
       <div className="flex-shrink-0 flex items-center justify-between mb-6 px-6 pt-4">
-        <button
-          onClick={handleBack}
-          className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors duration-200"
-        >
-          <ArrowLeft size={20} />
-        </button>
+        <BackButton onClick={handleBack} />
         <div className="flex items-center space-x-2">
           <h1 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 font-['Poppins']">Notifications</h1>
           {unreadCount > 0 && (
@@ -185,7 +154,7 @@ export default function NotificationsScreen() {
             >
               <div className="flex items-start space-x-3">
                 {/* Notification Icon */}
-                {getNotificationIcon(notification.type)}
+                <NotificationIcon type={notification.type as 'urgent' | 'info' | 'announcement' | 'default'} />
 
                 {/* Notification Content */}
                 <div className="flex-1 min-w-0">

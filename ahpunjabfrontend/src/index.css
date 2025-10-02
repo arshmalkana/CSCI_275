@@ -8,6 +8,7 @@ html, body, #root {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  font-family: 'Poppins', sans-serif;
 }
 
 /* Safe area variables with fallbacks */
@@ -16,6 +17,11 @@ html, body, #root {
   --safe-area-inset-right: env(safe-area-inset-right, 0px);
   --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-inset-left: env(safe-area-inset-left, 0px);
+
+  /* App colors */
+  --color-yellow-primary: #FBBF24;
+  --color-yellow-secondary: #F59E0B;
+  --color-yellow-hover: #D97706;
 }
 
 /* iOS PWA specific styles */

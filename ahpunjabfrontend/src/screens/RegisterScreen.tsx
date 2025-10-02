@@ -1,6 +1,11 @@
 import { useState } from 'react'
-import { FloatingLabelField } from './FloatingLabelField'
-import { ArrowLeft, ChevronRight, UserPlus, Trash2, Plus, X } from 'lucide-react'
+import { FloatingLabelField } from '../components/FloatingLabelField'
+import { SearchableSelect, SearchableMultiSelect } from '../components/SearchableSelect'
+import { PrimaryButton, SecondaryButton } from '../components/Button'
+import { ScreenHeader } from '../components/ScreenHeader'
+import { ProgressIndicator } from '../components/ProgressIndicator'
+import { RadioGroup, Checkbox } from '../components/FormControls'
+import { ChevronRight, UserPlus, Trash2, Plus } from 'lucide-react'
 
 export default function RegisterScreen() {
   const [currentStep, setCurrentStep] = useState(1)
@@ -39,7 +44,7 @@ export default function RegisterScreen() {
   const [errors, setErrors] = useState<{[key: string]: string}>({})
   const [employees, setEmployees] = useState<Array<{type: string, name: string, mobile: string, email: string}>>([])
 
-  const handleInputChange = (field: string, value: string | boolean) => {
+  const handleInputChange = (field: string, value: string | boolean | string[]) => {
     // Prevent negative numbers for population fields
     const populationFields = [
       'equinePopulation', 'buffaloesPopulation', 'cowsPopulation',
@@ -219,175 +224,42 @@ export default function RegisterScreen() {
     />
   )
 
-  const renderSelect = (field: string, placeholder: string, options: string[] = []) => (
-    <div className="space-y-2">
-      <div className="relative">
-        <select
-          value={formData[field as keyof typeof formData] as string}
-          onChange={(e) => handleInputChange(field, e.target.value)}
-          className={`w-full px-4 py-3 border ${
-            errors[field] ? 'border-red-300' : 'border-gray-300'
-          } rounded-lg bg-gray-50 text-gray-900 text-base font-['Poppins'] focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200`}
-        >
-          <option value="">{placeholder}</option>
-          {options.map(option => (
-            <option key={option} value={option}>{option}</option>
-          ))}
-        </select>
-      </div>
-      {errors[field] && (
-        <p className="text-sm text-red-600 font-['Poppins']">{errors[field]}</p>
-      )}
-    </div>
+  const renderSelect = (field: string, placeholder: string, options: string[] = [], withSearch: boolean = false) => (
+    <SearchableSelect
+      value={formData[field as keyof typeof formData] as string}
+      onChange={(value) => handleInputChange(field, value)}
+      options={options}
+      placeholder={placeholder}
+      error={errors[field]}
+      withSearch={withSearch}
+    />
   )
 
-  const renderMultiSelect = (field: string, placeholder: string, options: string[] = []) => {
-    const selectedValues = formData[field as keyof typeof formData] as string[]
-
-    const toggleOption = (option: string) => {
-      const currentValues = [...selectedValues]
-      const index = currentValues.indexOf(option)
-      if (index > -1) {
-        currentValues.splice(index, 1)
-      } else {
-        currentValues.push(option)
-      }
-      handleInputChange(field, currentValues as any)
-    }
-
-    const removeOption = (option: string) => {
-      const currentValues = selectedValues.filter(v => v !== option)
-      handleInputChange(field, currentValues as any)
-    }
-
-    return (
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700 font-['Poppins']">{placeholder}</label>
-
-        {/* Selected items */}
-        {selectedValues.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-2">
-            {selectedValues.map(value => (
-              <span key={value} className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm font-['Poppins']">
-                {value}
-                <button
-                  type="button"
-                  onClick={() => removeOption(value)}
-                  className="hover:bg-yellow-200 rounded-full p-0.5"
-                >
-                  <X size={14} />
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Dropdown */}
-        <div className="relative">
-          <select
-            value=""
-            onChange={(e) => {
-              if (e.target.value && !selectedValues.includes(e.target.value)) {
-                toggleOption(e.target.value)
-              }
-            }}
-            className={`w-full px-4 py-3 border ${
-              errors[field] ? 'border-red-300' : 'border-gray-300'
-            } rounded-lg bg-gray-50 text-gray-900 text-base font-['Poppins'] focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200`}
-          >
-            <option value="">Select villages to add...</option>
-            {options.filter(opt => !selectedValues.includes(opt)).map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </div>
-        {errors[field] && (
-          <p className="text-sm text-red-600 font-['Poppins']">{errors[field]}</p>
-        )}
-      </div>
-    )
-  }
-
-  const renderCheckbox = (field: string, label: string) => (
-    <div className="flex items-center justify-between py-2">
-      <span className="text-gray-700 text-base font-['Poppins']">{label}</span>
-      <label className="relative inline-flex items-center cursor-pointer">
-        <input
-          type="checkbox"
-          checked={formData[field as keyof typeof formData] as boolean}
-          onChange={(e) => handleInputChange(field, e.target.checked)}
-          className="sr-only peer"
-        />
-        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
-      </label>
-    </div>
+  const renderMultiSelect = (field: string, placeholder: string, options: string[] = []) => (
+    <SearchableMultiSelect
+      values={formData[field as keyof typeof formData] as string[]}
+      onChange={(values) => handleInputChange(field, values)}
+      options={options}
+      placeholder={placeholder}
+      error={errors[field]}
+    />
   )
 
-  const renderRadioGroup = (field: string, options: string[], label?: string) => (
-    <div className="space-y-3">
-      {label && <label className="block text-base font-medium text-gray-700 font-['Poppins']">{label}</label>}
-      <div className="flex flex-wrap gap-4">
-        {options.map(option => (
-          <label key={option} className="flex items-center space-x-2 cursor-pointer">
-            <input
-              type="radio"
-              name={field}
-              value={option}
-              checked={formData[field as keyof typeof formData] === option}
-              onChange={(e) => handleInputChange(field, e.target.value)}
-              className="w-4 h-4 text-yellow-500 border-gray-300 focus:ring-yellow-500"
-            />
-            <span className="text-gray-700 text-base font-['Poppins']">{option}</span>
-          </label>
-        ))}
-      </div>
-      {errors[field] && (
-        <p className="text-sm text-red-600 font-['Poppins']">{errors[field]}</p>
-      )}
-    </div>
-  )
 
   return (
     <div className="RegisterScreen w-full max-w-md mx-auto h-screen flex flex-col overflow-hidden">
 
       {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
-        <button
-          onClick={handleBack}
-          className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors duration-200"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="text-xl font-semibold text-gray-900 font-['Poppins']">
-          {stepTitles[currentStep - 1]}
-        </h1>
-        <div className="w-10"></div>
-      </div>
+      <ScreenHeader
+        title={stepTitles[currentStep - 1]}
+        onBack={handleBack}
+      />
 
       {/* Progress Indicator */}
-      <div className="flex-shrink-0 px-6 py-4 bg-gray-50">
-        <div className="flex justify-between items-center mb-3">
-          {Array.from({ length: totalSteps }, (_, i) => (
-            <div key={i} className="flex items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                i < currentStep ? 'bg-yellow-500 text-white' :
-                i === currentStep - 1 ? 'bg-yellow-500 text-white' :
-                'bg-gray-200 text-gray-500'
-              }`}>
-                {i + 1}
-              </div>
-              {i < totalSteps - 1 && (
-                <div className={`flex-1 h-1 mx-2 ${
-                  i < currentStep - 1 ? 'bg-yellow-500' : 'bg-gray-200'
-                }`}></div>
-              )}
-            </div>
-          ))}
-        </div>
-        <p className="text-gray-600 text-center font-['Poppins'] text-sm">
-          Step {currentStep} of {totalSteps}
-        </p>
-      </div>
+      <ProgressIndicator
+        currentStep={currentStep}
+        totalSteps={totalSteps}
+      />
 
       {/* Scrollable Form Content */}
       <div
@@ -409,17 +281,39 @@ export default function RegisterScreen() {
 
             {renderSelect('tehsil', 'Select Your Tehsil', ['Ajnala', 'Amritsar I', 'Amritsar II', 'Tarn Taran', 'Patti', 'Khadoor Sahib', 'Baba Bakala', 'Jandiala Guru'])}
 
-            {renderSelect('village', 'Village of Establishment', ['Ajnala', 'Attari', 'Beas', 'Bhikhiwind', 'Budha Theh', 'Chogawan', 'Dalla', 'Fatehabad', 'Ghalib Kalan', 'Harike'])}
+            {renderSelect('village', 'Village of Establishment', ['Ajnala', 'Attari', 'Beas', 'Bhikhiwind', 'Budha Theh', 'Chogawan', 'Dalla', 'Fatehabad', 'Ghalib Kalan', 'Harike'], true)}
 
             {renderMultiSelect('serviceVillages', 'Other Villages of Service (Optional)', ['Jandiala Guru', 'Kathunangal', 'Lopoke', 'Majitha', 'Naushera Pannuan', 'Ramdass', 'Rayya', 'Sultanwind'])}
 
-            {renderRadioGroup('instituteType', ['CVH', 'CVD', 'PAIW'], 'Institute Type')}
+            <RadioGroup
+              field="instituteType"
+              options={['CVH', 'CVD', 'PAIW']}
+              value={formData.instituteType}
+              onChange={handleInputChange}
+              label="Institute Type"
+              error={errors.instituteType}
+            />
 
             <div className="bg-gray-50 rounded-lg p-3 space-y-2">
               <h3 className="text-base font-semibold text-gray-900 font-['Poppins']">Institute Features</h3>
-              {renderCheckbox('isClusterAvailable', 'Is Cluster Available?')}
-              {renderCheckbox('isLabAvailable', 'Is Lab Available?')}
-              {renderCheckbox('isTehsilHQ', 'Is Tehsil HQ?')}
+              <Checkbox
+                field="isClusterAvailable"
+                label="Is Cluster Available?"
+                checked={formData.isClusterAvailable}
+                onChange={handleInputChange}
+              />
+              <Checkbox
+                field="isLabAvailable"
+                label="Is Lab Available?"
+                checked={formData.isLabAvailable}
+                onChange={handleInputChange}
+              />
+              <Checkbox
+                field="isTehsilHQ"
+                label="Is Tehsil HQ?"
+                checked={formData.isTehsilHQ}
+                onChange={handleInputChange}
+              />
             </div>
 
             {renderSelect('parentInstitute', 'Your Reporting/Parent Institute', ['District Veterinary Hospital Amritsar', 'Regional Veterinary Hospital Tarn Taran', 'Veterinary College Ludhiana', 'Animal Husbandry Department Punjab'])}
@@ -576,28 +470,19 @@ export default function RegisterScreen() {
       <div className="flex-shrink-0 bg-white border-t border-gray-200 px-6 py-4">
         <div className="flex gap-3">
           {currentStep > 1 && (
-            <button
-              onClick={handlePrevious}
-              className="flex-1 bg-gray-100 text-gray-700 py-3.5 px-4 rounded-lg font-semibold text-base font-['Poppins'] hover:bg-gray-200 active:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200 active:scale-95"
-            >
+            <SecondaryButton onClick={handlePrevious} className="flex-1">
               Previous
-            </button>
+            </SecondaryButton>
           )}
 
           {currentStep < totalSteps ? (
-            <button
-              onClick={handleNext}
-              className={`${currentStep > 1 ? 'flex-1' : 'w-full'} bg-gradient-to-r from-yellow-400 to-yellow-500 text-white py-3.5 px-4 rounded-lg font-semibold text-base font-['Poppins'] hover:from-yellow-500 hover:to-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95`}
-            >
+            <PrimaryButton onClick={handleNext} className={currentStep > 1 ? 'flex-1' : ''}>
               Next
-            </button>
+            </PrimaryButton>
           ) : (
-            <button
-              onClick={handleRegister}
-              className={`${currentStep > 1 ? 'flex-1' : 'w-full'} bg-gradient-to-r from-green-500 to-green-600 text-white py-3.5 px-4 rounded-lg font-semibold text-base font-['Poppins'] hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95`}
-            >
+            <PrimaryButton onClick={handleRegister} className={currentStep > 1 ? 'flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 focus:ring-green-500' : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 focus:ring-green-500'}>
               Complete Registration
-            </button>
+            </PrimaryButton>
           )}
         </div>
       </div>
