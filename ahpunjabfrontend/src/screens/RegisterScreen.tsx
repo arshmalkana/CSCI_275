@@ -5,7 +5,8 @@ import { PrimaryButton, SecondaryButton } from '../components/Button'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { ProgressIndicator } from '../components/ProgressIndicator'
 import { RadioGroup, Checkbox } from '../components/FormControls'
-import { ChevronRight, UserPlus, Trash2, Plus } from 'lucide-react'
+import { ChevronRight, UserPlus, Trash2, Plus, MapPin } from 'lucide-react'
+import { MapPicker } from '../components/MapPicker'
 
 export default function RegisterScreen() {
   const [currentStep, setCurrentStep] = useState(1)
@@ -22,6 +23,8 @@ export default function RegisterScreen() {
     isLabAvailable: false,
     isTehsilHQ: false,
     parentInstitute: '',
+    latitude: '',
+    longitude: '',
     inchargeType: '',
     inchargeName: '',
     inchargeMobile: '',
@@ -29,41 +32,94 @@ export default function RegisterScreen() {
     employeeType: '',
     employeeName: '',
     employeeMobile: '',
-    employeeEmail: '',
-    // Animal populations
-    equinePopulation: '',
-    buffaloesPopulation: '',
-    cowsPopulation: '',
-    pigsPopulation: '',
-    goatPopulation: '',
-    sheepPopulation: '',
-    poultryLayersPopulation: '',
-    poultryBroilersPopulation: ''
+    employeeEmail: ''
   })
+
+
+  // Village populations - separate state for each village
+  const [villagePopulations, setVillagePopulations] = useState<{
+    [villageName: string]: {
+      equine: string
+      buffaloes: string
+      cows: string
+      pigs: string
+      goat: string
+      sheep: string
+      poultryLayers: string
+      poultryBroilers: string
+    }
+  }>({})
 
   const [errors, setErrors] = useState<{[key: string]: string}>({})
   const [employees, setEmployees] = useState<Array<{type: string, name: string, mobile: string, email: string}>>([])
+  const [selectedVillageForPopulation, setSelectedVillageForPopulation] = useState<string>('')
+
+  // Get all villages (establishment + service villages)
+  const allVillages = formData.village
+    ? [formData.village, ...formData.serviceVillages]
+    : formData.serviceVillages
 
   const handleInputChange = (field: string, value: string | boolean | string[]) => {
-    // Prevent negative numbers for population fields
-    const populationFields = [
-      'equinePopulation', 'buffaloesPopulation', 'cowsPopulation',
-      'pigsPopulation', 'goatPopulation', 'sheepPopulation',
-      'poultryLayersPopulation', 'poultryBroilersPopulation'
-    ]
+    setFormData(prev => ({ ...prev, [field]: value }))
 
-    if (populationFields.includes(field) && typeof value === 'string') {
-      const numValue = parseFloat(value)
-      if (value !== '' && numValue < 0) {
-        return // Don't update if negative
+    // Initialize population data for new villages
+    if (field === 'village' && typeof value === 'string' && value) {
+      if (!villagePopulations[value]) {
+        setVillagePopulations(prev => ({
+          ...prev,
+          [value]: {
+            equine: '',
+            buffaloes: '',
+            cows: '',
+            pigs: '',
+            goat: '',
+            sheep: '',
+            poultryLayers: '',
+            poultryBroilers: ''
+          }
+        }))
       }
     }
 
-    setFormData(prev => ({ ...prev, [field]: value }))
+    if (field === 'serviceVillages' && Array.isArray(value)) {
+      // Initialize population data for all service villages
+      const newPopulations = { ...villagePopulations }
+      value.forEach(village => {
+        if (!newPopulations[village]) {
+          newPopulations[village] = {
+            equine: '',
+            buffaloes: '',
+            cows: '',
+            pigs: '',
+            goat: '',
+            sheep: '',
+            poultryLayers: '',
+            poultryBroilers: ''
+          }
+        }
+      })
+      setVillagePopulations(newPopulations)
+    }
+
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }))
     }
+  }
+
+  const handleVillagePopulationChange = (village: string, field: string, value: string) => {
+    const numValue = parseFloat(value)
+    if (value !== '' && numValue < 0) {
+      return // Don't update if negative
+    }
+
+    setVillagePopulations(prev => ({
+      ...prev,
+      [village]: {
+        ...prev[village],
+        [field]: value
+      }
+    }))
   }
 
   const validateEmail = (email: string) => {
@@ -84,6 +140,9 @@ export default function RegisterScreen() {
       if (!formData.district) newErrors.district = 'District is required'
       if (!formData.tehsil) newErrors.tehsil = 'Tehsil is required'
       if (!formData.village) newErrors.village = 'Village is required'
+      if (!formData.latitude || !formData.longitude) {
+        newErrors.location = 'Please select institute location on map'
+      }
       if (!formData.instituteType) newErrors.instituteType = 'Institute type is required'
     } else if (step === 2) {
       if (!formData.inchargeType) newErrors.inchargeType = 'Incharge type is required'
@@ -98,6 +157,22 @@ export default function RegisterScreen() {
       } else if (!validateEmail(formData.inchargeEmail)) {
         newErrors.inchargeEmail = 'Please enter a valid email address'
       }
+    } else if (step === 4) {
+      // Validate population data for all villages
+      allVillages.forEach(village => {
+        const popData = villagePopulations[village]
+        if (!popData) {
+          newErrors[`${village}_population`] = `Please enter population data for ${village}`
+          return
+        }
+
+        const fields = ['equine', 'buffaloes', 'cows', 'pigs', 'goat', 'sheep', 'poultryLayers', 'poultryBroilers']
+        fields.forEach(field => {
+          if (!popData[field as keyof typeof popData] || popData[field as keyof typeof popData] === '') {
+            newErrors[`${village}_${field}`] = `${field} population is required for ${village}`
+          }
+        })
+      })
     }
 
     setErrors(newErrors)
@@ -285,6 +360,17 @@ export default function RegisterScreen() {
 
             {renderMultiSelect('serviceVillages', 'Other Villages of Service (Optional)', ['Jandiala Guru', 'Kathunangal', 'Lopoke', 'Majitha', 'Naushera Pannuan', 'Ramdass', 'Rayya', 'Sultanwind'])}
 
+            {/* Location Selection - Accordion Style */}
+            <MapPicker
+              latitude={formData.latitude}
+              longitude={formData.longitude}
+              onLocationSelect={(lat, lng) => {
+                handleInputChange('latitude', lat.toString())
+                handleInputChange('longitude', lng.toString())
+              }}
+              onClose={() => {}}
+            />
+
             <RadioGroup
               field="instituteType"
               options={['CVH', 'CVD', 'PAIW']}
@@ -431,37 +517,231 @@ export default function RegisterScreen() {
         {currentStep === 4 && (
           <div className="space-y-4">
             <div className="text-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 font-['Poppins'] mb-1">Animal Population</h2>
-              <p className="text-gray-600 font-['Poppins'] text-sm">Provide animal population data for your area</p>
+              <h2 className="text-xl font-semibold text-gray-900 font-['Poppins'] mb-1">Animal Population by Village</h2>
+              <p className="text-gray-600 font-['Poppins'] text-sm">Provide animal population data for each village</p>
             </div>
 
-            <div className="grid grid-cols-1 gap-3">
-              <div className="bg-gray-50 rounded-lg p-3">
-                <h3 className="text-base font-semibold text-gray-900 font-['Poppins'] mb-2">Large Animals</h3>
-                <div className="space-y-3">
-                  {renderInput('buffaloesPopulation', 'Buffaloes Population', 'number')}
-                  {renderInput('cowsPopulation', 'Cows Population', 'number')}
-                  {renderInput('equinePopulation', 'Equine Population', 'number')}
-                </div>
+            {allVillages.length === 0 ? (
+              <div className="text-center p-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                <p className="text-gray-500 font-['Poppins']">Please add villages in Step 1 to enter population data</p>
               </div>
+            ) : (
+              <div className="space-y-4">
+                {allVillages.map((village, index) => (
+                  <div key={village} className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                    {/* Village Header */}
+                    <div
+                      className="bg-gradient-to-r from-yellow-50 to-orange-50 p-4 cursor-pointer hover:from-yellow-100 hover:to-orange-100 transition-all"
+                      onClick={() => setSelectedVillageForPopulation(selectedVillageForPopulation === village ? '' : village)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                          <ChevronRight
+                            size={20}
+                            className={`text-yellow-600 transition-transform duration-200 ${
+                              selectedVillageForPopulation === village ? 'rotate-90' : ''
+                            }`}
+                          />
+                          <div>
+                            <h3 className="text-base font-semibold text-gray-900 font-['Poppins']">{village}</h3>
+                            <p className="text-xs text-gray-600 font-['Poppins']">
+                              {index === 0 ? 'Village of Establishment' : 'Service Village'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-xs font-medium text-yellow-700 font-['Poppins']">
+                          {Object.values(villagePopulations[village] || {}).filter(v => v !== '').length} / 8 filled
+                        </div>
+                      </div>
+                    </div>
 
-              <div className="bg-gray-50 rounded-lg p-3">
-                <h3 className="text-base font-semibold text-gray-900 font-['Poppins'] mb-2">Small Animals</h3>
-                <div className="space-y-3">
-                  {renderInput('goatPopulation', 'Goat Population', 'number')}
-                  {renderInput('sheepPopulation', 'Sheep Population', 'number')}
-                  {renderInput('pigsPopulation', 'Pigs Population', 'number')}
-                </div>
-              </div>
+                    {/* Expanded Population Form */}
+                    <div
+                      className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                        selectedVillageForPopulation === village ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
+                      }`}
+                    >
+                      <div className="p-4 bg-white border-t border-gray-200">
+                        <div className="space-y-4">
+                          {/* Large Animals */}
+                          <div className="bg-blue-50 rounded-lg p-3">
+                            <h4 className="text-sm font-semibold text-blue-900 font-['Poppins'] mb-3">Large Animals</h4>
+                            <div className="space-y-3">
+                              <div>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    value={villagePopulations[village]?.buffaloes || ''}
+                                    onChange={(e) => handleVillagePopulationChange(village, 'buffaloes', e.target.value)}
+                                    placeholder=" "
+                                    className={`peer w-full px-4 pt-5 pb-2 border ${
+                                      errors[`${village}_buffaloes`] ? 'border-red-300' : 'border-gray-300'
+                                    } rounded-lg bg-white text-gray-900 text-base font-['Poppins'] focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent`}
+                                  />
+                                  <label className="absolute left-4 text-gray-500 text-base font-['Poppins'] transition-all duration-200 pointer-events-none peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-xs peer-focus:top-1.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-yellow-600">
+                                    Buffaloes *
+                                  </label>
+                                </div>
+                                {errors[`${village}_buffaloes`] && (
+                                  <p className="text-xs text-red-600 font-['Poppins'] mt-1">Required</p>
+                                )}
+                              </div>
+                              <div>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    value={villagePopulations[village]?.cows || ''}
+                                    onChange={(e) => handleVillagePopulationChange(village, 'cows', e.target.value)}
+                                    placeholder=" "
+                                    className={`peer w-full px-4 pt-5 pb-2 border ${
+                                      errors[`${village}_cows`] ? 'border-red-300' : 'border-gray-300'
+                                    } rounded-lg bg-white text-gray-900 text-base font-['Poppins'] focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent`}
+                                  />
+                                  <label className="absolute left-4 text-gray-500 text-base font-['Poppins'] transition-all duration-200 pointer-events-none peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-xs peer-focus:top-1.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-yellow-600">
+                                    Cows *
+                                  </label>
+                                </div>
+                                {errors[`${village}_cows`] && (
+                                  <p className="text-xs text-red-600 font-['Poppins'] mt-1">Required</p>
+                                )}
+                              </div>
+                              <div>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    value={villagePopulations[village]?.equine || ''}
+                                    onChange={(e) => handleVillagePopulationChange(village, 'equine', e.target.value)}
+                                    placeholder=" "
+                                    className={`peer w-full px-4 pt-5 pb-2 border ${
+                                      errors[`${village}_equine`] ? 'border-red-300' : 'border-gray-300'
+                                    } rounded-lg bg-white text-gray-900 text-base font-['Poppins'] focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent`}
+                                  />
+                                  <label className="absolute left-4 text-gray-500 text-base font-['Poppins'] transition-all duration-200 pointer-events-none peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-xs peer-focus:top-1.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-yellow-600">
+                                    Equine *
+                                  </label>
+                                </div>
+                                {errors[`${village}_equine`] && (
+                                  <p className="text-xs text-red-600 font-['Poppins'] mt-1">Required</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
 
-              <div className="bg-gray-50 rounded-lg p-3">
-                <h3 className="text-base font-semibold text-gray-900 font-['Poppins'] mb-2">Poultry</h3>
-                <div className="space-y-3">
-                  {renderInput('poultryLayersPopulation', 'Layers Population', 'number')}
-                  {renderInput('poultryBroilersPopulation', 'Broilers Population', 'number')}
-                </div>
+                          {/* Small Animals */}
+                          <div className="bg-green-50 rounded-lg p-3">
+                            <h4 className="text-sm font-semibold text-green-900 font-['Poppins'] mb-3">Small Animals</h4>
+                            <div className="space-y-3">
+                              <div>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    value={villagePopulations[village]?.goat || ''}
+                                    onChange={(e) => handleVillagePopulationChange(village, 'goat', e.target.value)}
+                                    placeholder=" "
+                                    className={`peer w-full px-4 pt-5 pb-2 border ${
+                                      errors[`${village}_goat`] ? 'border-red-300' : 'border-gray-300'
+                                    } rounded-lg bg-white text-gray-900 text-base font-['Poppins'] focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent`}
+                                  />
+                                  <label className="absolute left-4 text-gray-500 text-base font-['Poppins'] transition-all duration-200 pointer-events-none peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-xs peer-focus:top-1.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-yellow-600">
+                                    Goats *
+                                  </label>
+                                </div>
+                                {errors[`${village}_goat`] && (
+                                  <p className="text-xs text-red-600 font-['Poppins'] mt-1">Required</p>
+                                )}
+                              </div>
+                              <div>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    value={villagePopulations[village]?.sheep || ''}
+                                    onChange={(e) => handleVillagePopulationChange(village, 'sheep', e.target.value)}
+                                    placeholder=" "
+                                    className={`peer w-full px-4 pt-5 pb-2 border ${
+                                      errors[`${village}_sheep`] ? 'border-red-300' : 'border-gray-300'
+                                    } rounded-lg bg-white text-gray-900 text-base font-['Poppins'] focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent`}
+                                  />
+                                  <label className="absolute left-4 text-gray-500 text-base font-['Poppins'] transition-all duration-200 pointer-events-none peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-xs peer-focus:top-1.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-yellow-600">
+                                    Sheep *
+                                  </label>
+                                </div>
+                                {errors[`${village}_sheep`] && (
+                                  <p className="text-xs text-red-600 font-['Poppins'] mt-1">Required</p>
+                                )}
+                              </div>
+                              <div>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    value={villagePopulations[village]?.pigs || ''}
+                                    onChange={(e) => handleVillagePopulationChange(village, 'pigs', e.target.value)}
+                                    placeholder=" "
+                                    className={`peer w-full px-4 pt-5 pb-2 border ${
+                                      errors[`${village}_pigs`] ? 'border-red-300' : 'border-gray-300'
+                                    } rounded-lg bg-white text-gray-900 text-base font-['Poppins'] focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent`}
+                                  />
+                                  <label className="absolute left-4 text-gray-500 text-base font-['Poppins'] transition-all duration-200 pointer-events-none peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-xs peer-focus:top-1.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-yellow-600">
+                                    Pigs *
+                                  </label>
+                                </div>
+                                {errors[`${village}_pigs`] && (
+                                  <p className="text-xs text-red-600 font-['Poppins'] mt-1">Required</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Poultry */}
+                          <div className="bg-amber-50 rounded-lg p-3">
+                            <h4 className="text-sm font-semibold text-amber-900 font-['Poppins'] mb-3">Poultry</h4>
+                            <div className="space-y-3">
+                              <div>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    value={villagePopulations[village]?.poultryLayers || ''}
+                                    onChange={(e) => handleVillagePopulationChange(village, 'poultryLayers', e.target.value)}
+                                    placeholder=" "
+                                    className={`peer w-full px-4 pt-5 pb-2 border ${
+                                      errors[`${village}_poultryLayers`] ? 'border-red-300' : 'border-gray-300'
+                                    } rounded-lg bg-white text-gray-900 text-base font-['Poppins'] focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent`}
+                                  />
+                                  <label className="absolute left-4 text-gray-500 text-base font-['Poppins'] transition-all duration-200 pointer-events-none peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-xs peer-focus:top-1.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-yellow-600">
+                                    Layers *
+                                  </label>
+                                </div>
+                                {errors[`${village}_poultryLayers`] && (
+                                  <p className="text-xs text-red-600 font-['Poppins'] mt-1">Required</p>
+                                )}
+                              </div>
+                              <div>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    value={villagePopulations[village]?.poultryBroilers || ''}
+                                    onChange={(e) => handleVillagePopulationChange(village, 'poultryBroilers', e.target.value)}
+                                    placeholder=" "
+                                    className={`peer w-full px-4 pt-5 pb-2 border ${
+                                      errors[`${village}_poultryBroilers`] ? 'border-red-300' : 'border-gray-300'
+                                    } rounded-lg bg-white text-gray-900 text-base font-['Poppins'] focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent`}
+                                  />
+                                  <label className="absolute left-4 text-gray-500 text-base font-['Poppins'] transition-all duration-200 pointer-events-none peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-xs peer-focus:top-1.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-yellow-600">
+                                    Broilers *
+                                  </label>
+                                </div>
+                                {errors[`${village}_poultryBroilers`] && (
+                                  <p className="text-xs text-red-600 font-['Poppins'] mt-1">Required</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>
@@ -486,6 +766,7 @@ export default function RegisterScreen() {
           )}
         </div>
       </div>
+
     </div>
   )
 }
