@@ -44,12 +44,14 @@ export function StatCard({ label, value, max, color }: StatCardProps) {
 
   return (
     <div className="StatItem">
-      <div className="flex justify-between items-center mb-2">
-        <span className="text-sm font-medium font-['Poppins']">{label}</span>
-        <span className="text-sm font-bold font-['Poppins']">{value}</span>
-      </div>
+      {label && (
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm font-medium font-['Poppins']">{label}</span>
+          <span className="text-sm font-bold font-['Poppins']">{value}</span>
+        </div>
+      )}
       <div className="w-full bg-gray-200 rounded-full h-2">
-        <div className={`${colorClasses[color]} h-2 rounded-full`} style={{width: `${percentage}%`}}></div>
+        <div className={`${colorClasses[color]} h-2 rounded-full transition-all duration-300`} style={{width: `${percentage}%`}}></div>
       </div>
     </div>
   )
