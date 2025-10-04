@@ -15,8 +15,8 @@ L.Icon.Default.mergeOptions({
 interface MapPickerProps {
   latitude: string
   longitude: string
+  title: string
   onLocationSelect: (lat: number, lng: number) => void
-  onClose: () => void
 }
 
 function LocationMarker({ position, onPositionChange }: {
@@ -56,7 +56,7 @@ function LocationMarker({ position, onPositionChange }: {
   )
 }
 
-export function MapPicker({ latitude, longitude, onLocationSelect, onClose }: MapPickerProps) {
+export function MapPicker({ latitude, longitude, title, onLocationSelect }: MapPickerProps) {
   const [position, setPosition] = useState<[number, number] | null>(null)
   const [isLocating, setIsLocating] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
@@ -122,9 +122,9 @@ export function MapPicker({ latitude, longitude, onLocationSelect, onClose }: Ma
               <MapPin size={20} className="text-white" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 font-['Poppins']">Institute Location</h3>
+              <h3 className="text-sm font-semibold text-gray-900 font-['Poppins']">{title}</h3>
               {position ? (
-                <p className="text-xs text-gray-600 font-['Poppins'] font-mono mt-0.5">
+                <p className="text-xs text-gray-600 font-['Poppins'] mt-0.5">
                   {position[0].toFixed(6)}, {position[1].toFixed(6)}
                 </p>
               ) : (
