@@ -52,19 +52,40 @@ export function SearchableSelect({
     <div className="space-y-2">
       <label className="text-sm font-medium text-gray-700 font-['Poppins']">{placeholder}</label>
 
-      {/* Combined search/select input */}
-      <div className="relative">
-        <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10" />
-        <input
-          type="text"
-          placeholder={value || 'Type to search...'}
-          value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
-          className={`w-full pl-10 pr-4 py-3 border ${
+      {/* Display selected value or search input */}
+      {!searchValue && value ? (
+        <div
+          onClick={() => setSearchValue('')}
+          className={`w-full px-4 py-3 border ${
             error ? 'border-red-300' : 'border-gray-300'
-          } rounded-lg bg-white text-gray-900 text-base font-['Poppins'] focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200`}
-        />
-      </div>
+          } rounded-lg bg-white text-gray-900 text-base font-['Poppins'] cursor-text flex items-center justify-between`}
+        >
+          <span className="font-medium">{value}</span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onChange('')
+            }}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      ) : (
+        <div className="relative">
+          <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10" />
+          <input
+            type="text"
+            placeholder="Type to search..."
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            className={`w-full pl-10 pr-4 py-3 border ${
+              error ? 'border-red-300' : 'border-gray-300'
+            } rounded-lg bg-white text-gray-900 text-base font-['Poppins'] focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200`}
+          />
+        </div>
+      )}
 
       {/* Dropdown results */}
       {searchValue && (

@@ -7,6 +7,9 @@ import NotificationsScreen from './screens/NotificationsScreen';
 import HomeScreen from './screens/HomeScreen';
 import ProfileScreen from './screens/ProfileScreen';
 
+// forget pass/change pass header fix
+
+
 const screens = {
   Home: <HomeScreen />,
   Login: <LoginScreen />,
