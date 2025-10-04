@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import SideMenu from '../components/SideMenu'
 import { Card, CardTitle, StatCard, StatusBadge } from '../components/Card'
-import { Menu, Bell, User, ChevronDown, ChevronRight, BellRing, Phone, Mail, MessageCircle } from 'lucide-react'
+import { Menu, Bell, User, ChevronDown, ChevronRight, BellRing, Phone, Mail } from 'lucide-react'
 import { getStorageItem, setStorageItem } from '../utils/storage'
 
 export default function HomeScreen() {
@@ -39,153 +39,149 @@ export default function HomeScreen() {
   const vaccineData = {
     'FMD': {
       name: 'FMD',
-      monthly: { completed: 350, target: 500 },
+      monthly: { completed: 350},
       annual: { completed: 3850, target: 6000 }
     },
     'HS': {
       name: 'HS',
-      monthly: { completed: 280, target: 300 },
+      monthly: { completed: 280 },
       annual: { completed: 3120, target: 3600 }
     },
     'BQ': {
       name: 'Black Quarter',
-      monthly: { completed: 150, target: 200 },
+      monthly: { completed: 150 },
       annual: { completed: 1650, target: 2400 }
     },
     'BRUC': {
       name: 'Brucellosis',
-      monthly: { completed: 120, target: 150 },
+      monthly: { completed: 120 },
       annual: { completed: 1320, target: 1800 }
     },
     'THEI': {
       name: 'Theilaria',
-      monthly: { completed: 95, target: 100 },
+      monthly: { completed: 95},
       annual: { completed: 1045, target: 1200 }
     },
     'RABIES': {
       name: 'Rabies',
-      monthly: { completed: 70, target: 80 },
+      monthly: { completed: 70},
       annual: { completed: 770, target: 960 }
     },
     'ETV': {
       name: 'Entero Toximia',
-      monthly: { completed: 100, target: 120 },
+      monthly: { completed: 100},
       annual: { completed: 1100, target: 1440 }
     }
   }
 
   // Sample data for the dashboard
   const instituteData = {
-    name: "Veterinary Dispensary Malkana",
-    welcomeMessage: "Welcome Dr. Gurmeet Singh",
+    name: "Veterinary Dispensary Kotra Kalan",
+    welcomeMessage: "Welcome Dr. Rajdeep Sandhu",
     location: {
       lat: "30.4681° N",
       lng: "72.6503° E"
     },
     stats: {
       opd: {
-        monthly: { completed: 45, target: 100 },
+        monthly: { completed: 45 },
         annual: { completed: 495, target: 1200 }
       },
       aiCow: {
-        monthly: { completed: 35, target: 50 },
+        monthly: { completed: 35},
         annual: { completed: 385, target: 600 }
       },
       aiBuf: {
-        monthly: { completed: 25, target: 30 },
+        monthly: { completed: 25},
         annual: { completed: 275, target: 360 }
       }
     },
     staff: [
       {
-        name: "Dr. Gurmeet Singh",
+        name: "Dr. Rajdeep Sandhu",
         role: "Veterinary Officer",
-        phone: "+91 98765 43210",
-        email: "dr.gurmeet@ahpunjab.gov.in",
-        whatsapp: "+919876543210"
+        phone: "+91 98345 62107",
+        email: "rajdeep.sandhu@ahpunjab.gov.in",
+        whatsapp: "+919834562107"
       },
       {
-        name: "Kuldeep Singh",
+        name: "Manpreet Kaur",
         role: "Assistant",
-        phone: "+91 98765 43211",
-        email: "kuldeep.singh@ahpunjab.gov.in",
-        whatsapp: "+919876543211"
+        phone: "+91 98720 41356",
+        email: "manpreet.kaur@ahpunjab.gov.in",
+        whatsapp: "+919872041356"
       },
       {
-        name: "Harpreet Singh",
+        name: "Arvinder Singh",
         role: "Lab Technician",
-        phone: "+91 98765 43212",
-        email: "harpreet.singh@ahpunjab.gov.in",
-        whatsapp: "+919876543212"
+        phone: "+91 97981 25463",
+        email: "arvinder.singh@ahpunjab.gov.in",
+        whatsapp: "+919798125463"
       }
     ],
     villages: [
       {
-        name: "Malkana",
-        population: 3200,
+        name: "Kotra Kalan",
+        population: 3050,
         animalPopulation: {
-          equine: 45,
-          buffaloes: 320,
-          cows: 580,
-          pigs: 12,
-          goat: 240,
-          sheep: 180,
-          poultryLayers: 1500,
-          poultryBroilers: 800
+          equine: 28,
+          buffaloes: 295,
+          cows: 540,
+          pigs: 9,
+          goat: 225,
+          sheep: 165,
+          poultryLayers: 1320,
+          poultryBroilers: 710
         }
       },
       {
-        name: "Jajjal",
-        population: 2850,
+        name: "Bhucho Khurd",
+        population: 2740,
         animalPopulation: {
-          equine: 38,
-          buffaloes: 280,
-          cows: 520,
-          pigs: 8,
-          goat: 210,
-          sheep: 150,
-          poultryLayers: 1200,
-          poultryBroilers: 650
+          equine: 31,
+          buffaloes: 255,
+          cows: 510,
+          pigs: 7,
+          goat: 205,
+          sheep: 145,
+          poultryLayers: 1180,
+          poultryBroilers: 630
         }
       },
       {
-        name: "Teona Pujarian",
-        population: 1920,
+        name: "Lehra Mohabbat",
+        population: 2080,
         animalPopulation: {
-          equine: 22,
-          buffaloes: 180,
-          cows: 340,
-          pigs: 5,
-          goat: 140,
-          sheep: 95,
-          poultryLayers: 800,
-          poultryBroilers: 420
+          equine: 19,
+          buffaloes: 190,
+          cows: 360,
+          pigs: 6,
+          goat: 150,
+          sheep: 100,
+          poultryLayers: 860,
+          poultryBroilers: 450
         }
       },
       {
-        name: "Gatwali",
-        population: 2640,
+        name: "Ghuman Mandi",
+        population: 2510,
         animalPopulation: {
-          equine: 35,
-          buffaloes: 260,
-          cows: 480,
-          pigs: 10,
-          goat: 195,
-          sheep: 130,
-          poultryLayers: 1100,
-          poultryBroilers: 580
+          equine: 33,
+          buffaloes: 245,
+          cows: 470,
+          pigs: 11,
+          goat: 185,
+          sheep: 125,
+          poultryLayers: 1060,
+          poultryBroilers: 560
         }
       }
     ],
-    targets: {
-      cattlePopulation: 2500,
-      buffaloPopulation: 800
-    },
     reportingStatus: "On Time", // Could be "Late", "Pending", or maybe "Dead".
     attachedInstitutes: [
-      { name: "Veterinary Dispensary Jajjal", reportStatus: "Submitted", statusType: "success" },
-      { name: "Veterinary Dispensary Teona", reportStatus: "Pending", statusType: "warning" },
-      { name: "Veterinary Dispensary Gatwali", reportStatus: "Late", statusType: "error" }
+      { name: "Veterinary Dispensary Bhucho Khurd", reportStatus: "Submitted", statusType: "success" },
+      { name: "Veterinary Dispensary Lehra", reportStatus: "Late", statusType: "error" },
+      { name: "Veterinary Dispensary Ghuman", reportStatus: "Pending", statusType: "warning" }
     ]
   }
 
@@ -304,13 +300,15 @@ export default function HomeScreen() {
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-sm font-medium font-['Poppins']">OPD</span>
                   <span className="text-sm font-bold font-['Poppins']">
-                    {instituteData.stats.opd[statsMode].completed}/{instituteData.stats.opd[statsMode].target}
+                    {statsMode== 'annual' ? instituteData.stats.opd[statsMode].completed + "/" + instituteData.stats.opd[statsMode].target : instituteData.stats.opd[statsMode].completed}
+                    {/* {instituteData.stats.opd[statsMode].completed}/{instituteData.stats.opd[statsMode].target} */}
                   </span>
                 </div>
                 <StatCard
                   label=""
                   value={instituteData.stats.opd[statsMode].completed}
-                  max={instituteData.stats.opd[statsMode].target}
+                  // max={instituteData.stats.opd[statsMode].target}
+                  max={statsMode== 'annual' ? instituteData.stats.opd.annual.target : instituteData.stats.opd.annual.target/12}
                   color={getCategoryColor('opd')}
                 />
               </div>
@@ -320,13 +318,15 @@ export default function HomeScreen() {
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-sm font-medium font-['Poppins']">AI Cow</span>
                   <span className="text-sm font-bold font-['Poppins']">
-                    {instituteData.stats.aiCow[statsMode].completed}/{instituteData.stats.aiCow[statsMode].target}
+                    {statsMode== 'annual' ? instituteData.stats.aiCow[statsMode].completed + "/" + instituteData.stats.aiCow[statsMode].target : instituteData.stats.aiCow[statsMode].completed}
+                    {/* {instituteData.stats.aiCow[statsMode].completed}/{instituteData.stats.aiCow[statsMode].target} */}
                   </span>
                 </div>
                 <StatCard
                   label=""
                   value={instituteData.stats.aiCow[statsMode].completed}
-                  max={instituteData.stats.aiCow[statsMode].target}
+                  // max={instituteData.stats.aiCow[statsMode].target}
+                  max={statsMode== 'annual' ? instituteData.stats.aiCow.annual.target : instituteData.stats.aiCow.annual.target/12}
                   color={getCategoryColor('aiCow')}
                 />
               </div>
@@ -336,13 +336,15 @@ export default function HomeScreen() {
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-sm font-medium font-['Poppins']">AI Buffalo</span>
                   <span className="text-sm font-bold font-['Poppins']">
-                    {instituteData.stats.aiBuf[statsMode].completed}/{instituteData.stats.aiBuf[statsMode].target}
+                    {statsMode== 'annual' ? instituteData.stats.aiBuf[statsMode].completed + "/" + instituteData.stats.aiBuf[statsMode].target : instituteData.stats.aiBuf[statsMode].completed}
+                    {/* {instituteData.stats.aiBuf[statsMode].completed}/{instituteData.stats.aiBuf[statsMode].target} */}
                   </span>
                 </div>
                 <StatCard
                   label=""
                   value={instituteData.stats.aiBuf[statsMode].completed}
-                  max={instituteData.stats.aiBuf[statsMode].target}
+                  // max={instituteData.stats.aiBuf[statsMode].target}
+                  max={statsMode== 'annual' ? instituteData.stats.aiBuf.annual.target : instituteData.stats.aiBuf.annual.target/12}
                   color={getCategoryColor('aiBuf')}
                 />
               </div>
@@ -364,8 +366,9 @@ export default function HomeScreen() {
                     />
                   </div>
                   <span className="text-sm font-bold font-['Poppins']">
-                    {vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].completed}/
-                    {vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].target}
+                    {statsMode== 'annual' ? vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].completed + "/" + vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].target : vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].completed}
+                    {/* {vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].completed}/
+                    {vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].target} */}
                   </span>
                 </div>
 
@@ -393,7 +396,8 @@ export default function HomeScreen() {
                 <StatCard
                   label=""
                   value={vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].completed}
-                  max={vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].target}
+                  // max={vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].target}
+                  max={statsMode== 'annual' ? vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].target : vaccineData[selectedVaccine as keyof typeof vaccineData]["annual"].target/12}
                   color={getCategoryColor('vaccine')}
                 />
               </div>
@@ -504,7 +508,7 @@ export default function HomeScreen() {
                         <span className="text-sm font-medium font-['Poppins'] text-gray-800">{village.name}</span>
                       </div>
                       <span className="text-xs font-semibold font-['Poppins'] text-gray-600">
-                        Pop: {village.population.toLocaleString()}
+                        Population: {village.population.toLocaleString()}
                       </span>
                     </div>
                   </div>

@@ -5,7 +5,7 @@ import { PrimaryButton, SecondaryButton } from '../components/Button'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { ProgressIndicator } from '../components/ProgressIndicator'
 import { RadioGroup, Checkbox } from '../components/FormControls'
-import { ChevronRight, UserPlus, Trash2, Plus, MapPin } from 'lucide-react'
+import { ChevronRight, UserPlus, Trash2, Plus } from 'lucide-react'
 import { MapPicker } from '../components/MapPicker'
 
 export default function RegisterScreen() {
@@ -364,11 +364,11 @@ export default function RegisterScreen() {
             <MapPicker
               latitude={formData.latitude}
               longitude={formData.longitude}
+              title="Institute Location"
               onLocationSelect={(lat, lng) => {
                 handleInputChange('latitude', lat.toString())
                 handleInputChange('longitude', lng.toString())
               }}
-              onClose={() => {}}
             />
 
             <RadioGroup

@@ -4,12 +4,15 @@ import { PrimaryButton } from '../components/Button';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { validateEmail, validatePhone } from '../utils/validation';
 import { Camera, User, Mail, Phone, Lock, ArrowLeft} from 'lucide-react';
+import { MapPicker } from '../components/MapPicker';
 
 export default function ProfileScreen() {
   const [formData, setFormData] = useState({
-    inchargeName: 'Dr. Gurmeet Singh',
-    email: 'gurmeet.singh@ahpunjab.gov.in',
-    mobile: '9876543210'
+    inchargeName: 'Dr. Rajdeep Sandhu',
+    email: 'rajdeep.sandhu@ahpunjab.gov.in',
+    mobile: '9834562107',
+    latitude:"30.4681",
+    longitude: "72.6503"
   });
 
   const [errors, setErrors] = useState<{[key: string]: string}>({});
@@ -127,6 +130,36 @@ export default function ProfileScreen() {
               onChange={handleInputChange}
               icon={<Phone size={20} />}
             />
+          </div>
+
+          {/* Institute Details Card */}
+          <div className="bg-white rounded-xl p-6 shadow-sm">
+            <h2 className="text-base font-semibold text-gray-900 font-['Poppins'] mb-4">Institute Details</h2>
+            {/* Location Selection - Accordion Style */}
+            <MapPicker
+              latitude={formData.latitude}
+              longitude={formData.longitude}
+              title="Update Location"
+              onLocationSelect={(lat, lng) => {
+                handleInputChange('latitude', lat.toString())
+                handleInputChange('longitude', lng.toString())
+              }}
+            />
+            {/* <button
+              onClick={handleChangePassword}
+              className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors duration-200"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                  <Lock size={20} className="text-yellow-600" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-gray-900 font-['Poppins']">Change Password</p>
+                  <p className="text-xs text-gray-500 font-['Poppins']">Update your password</p>
+                </div>
+              </div>
+              <ArrowLeft size={20} className="text-gray-400 rotate-180" />
+            </button> */}
           </div>
 
           {/* Security Card */}
