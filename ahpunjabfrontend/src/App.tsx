@@ -6,6 +6,7 @@ import ForgetPasswordScreen from './screens/ForgetPasswordScreen';
 import NotificationsScreen from './screens/NotificationsScreen';
 import HomeScreen from './screens/HomeScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import VaccineDistribution from './screens/VaccineDistributionScreen';
 
 // forget pass/change pass header fix
 
@@ -18,6 +19,7 @@ const screens = {
   ChangePassword: <ChangePasswordScreen />,
   Notifications: <NotificationsScreen />,
   Profile: <ProfileScreen />,
+  VaccineDistribution: <VaccineDistribution/>
 };
 
 export default function App() {
