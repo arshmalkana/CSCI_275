@@ -107,16 +107,11 @@ export default function ForgetPasswordScreen() {
   }
 
   return (
-    <div className="ForgetPasswordScreen w-full max-w-md mx-auto bg-white h-full flex flex-col px-6 py-8 overflow-y-auto"
-      style={{
-        WebkitOverflowScrolling: 'touch',
-        overscrollBehavior: 'contain'
-      }}
-    >
+    <div className="ForgetPasswordScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col px-2 py-4 overflow-hidden">
 
       {/* Header */}
       <ScreenHeader title="Forgot Password" onBack={handleBack} className="mb-8" />
-
+      
       {/* Illustration */}
       <div className="text-center mb-8">
         <IconWrapper size="lg" bgColor="yellow" className="mx-auto mb-6">
