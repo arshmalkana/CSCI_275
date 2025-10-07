@@ -55,6 +55,7 @@ export default function ProfileScreen() {
 
   const handleBack = () => {
     console.log('Navigate back');
+    window.location.reload(); // This will take you back to the screen selection
   };
 
   const handleChangePassword = () => {

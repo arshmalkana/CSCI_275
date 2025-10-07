@@ -42,6 +42,7 @@ export default function ForgetPasswordScreen() {
   const handleBack = () => {
     // Navigate back to login but how!
     console.log('Navigate back to login')
+    window.location.reload(); // This will take you back to the screen selection
   }
 
   const handleResendEmail = () => {

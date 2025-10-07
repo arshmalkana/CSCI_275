@@ -2,7 +2,7 @@ import { useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-// Define TypeScript interface for props (optional - remove if using .jsx)
+
 interface ReactDatePickerProps {
   label?: string;
   onDateChange?: (date: Date | null) => void;

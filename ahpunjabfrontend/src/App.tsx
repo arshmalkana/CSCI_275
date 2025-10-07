@@ -8,22 +8,22 @@ import HomeScreen from './screens/HomeScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import VaccineDistribution from './screens/VaccineDistributionScreen';
 
-// forget pass/change pass header fix
-
-
-const screens = {
-  Home: <HomeScreen />,
-  Login: <LoginScreen />,
-  Register: <RegisterScreen />,
-  ForgetPassword: <ForgetPasswordScreen />,
-  ChangePassword: <ChangePasswordScreen />,
-  Notifications: <NotificationsScreen />,
-  Profile: <ProfileScreen />,
-  VaccineDistribution: <VaccineDistribution/>
-};
+type ScreenName = 'Home' | 'Login' | 'Register' | 'ForgetPassword' | 'ChangePassword' | 'Notifications' | 'Profile' | 'VaccineDistribution';
 
 export default function App() {
-  const [activeScreen, setActiveScreen] = useState<keyof typeof screens | null>(null);
+  const [activeScreen, setActiveScreen] = useState<ScreenName | null>(null);
+
+  // PASS onBack prop to VaccineDistribution
+  const screens = {
+    Home: <HomeScreen />,
+    Login: <LoginScreen />,
+    Register: <RegisterScreen />,
+    ForgetPassword: <ForgetPasswordScreen />,
+    ChangePassword: <ChangePasswordScreen />,
+    Notifications: <NotificationsScreen />,
+    Profile: <ProfileScreen />,
+    VaccineDistribution: <VaccineDistribution onBack={() => setActiveScreen(null)} /> // ✅ Add onBack here
+  };
 
   return (
     <div className="h-full w-full overflow-hidden bg-gray-100 font-sans">
@@ -31,10 +31,10 @@ export default function App() {
         <div className="p-6 overflow-y-auto h-full">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Select a Screen</h2>
           <div className="flex flex-wrap gap-4">
-            {Object.keys(screens).map((screenKey) => (
+            {(Object.keys(screens) as ScreenName[]).map((screenKey) => (
               <button
                 key={screenKey}
-                onClick={() => setActiveScreen(screenKey as keyof typeof screens)}
+                onClick={() => setActiveScreen(screenKey)}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
               >
                 {screenKey}
@@ -43,17 +43,8 @@ export default function App() {
           </div>
         </div>
       ) : (
-        <div className="relative w-full h-full overflow-hidden">
-          {/* Back button overlay */}
-          <button
-            onClick={() => setActiveScreen(null)}
-            className="absolute top-4 left-4 z-50 bg-gray-300 text-gray-800 px-4 py-2 rounded-lg shadow hover:bg-gray-400 transition"
-          >
-            ⬅ Back
-          </button>
-
-          {/* Screen fills the whole page */}
-          <div className="w-full h-full overflow-hidden">{screens[activeScreen]}</div>
+        <div className="w-full h-full overflow-hidden">
+          {screens[activeScreen]}
         </div>
       )}
     </div>
