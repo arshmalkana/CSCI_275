@@ -1,6 +1,6 @@
 import { ScreenHeader } from '../components/ScreenHeader'
 import {CircleChevronLeft} from 'lucide-react'
-
+import {ReactDatePicker} from '../components/Calendar'
 export default function VaccineDistribution(){
     const handleBack =()=>{
     }
@@ -9,7 +9,11 @@ export default function VaccineDistribution(){
             <CircleChevronLeft className="w-3 h-3 text-white" />
             {/* Header */}
             <ScreenHeader title="Vaccine Distribution" onBack={handleBack} />
-        
+
+        <div>
+            <ReactDatePicker label="Select Date" placeholderText="Click to select a date" required={true} />
+        </div>
+
         </div> 
         )
 }
