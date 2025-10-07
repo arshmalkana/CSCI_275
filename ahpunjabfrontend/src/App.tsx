@@ -22,7 +22,7 @@ export default function App() {
     ChangePassword: <ChangePasswordScreen />,
     Notifications: <NotificationsScreen />,
     Profile: <ProfileScreen />,
-    VaccineDistribution: <VaccineDistribution onBack={() => setActiveScreen(null)} /> // ✅ Add onBack here
+    VaccineDistribution: <VaccineDistribution /> 
   };
 
   return (
