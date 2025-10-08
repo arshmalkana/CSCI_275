@@ -8,7 +8,19 @@ import HomeScreen from './screens/HomeScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import VaccineDistribution from './screens/VaccineDistributionScreen';
 
-type ScreenName = 'Home' | 'Login' | 'Register' | 'ForgetPassword' | 'ChangePassword' | 'Notifications' | 'Profile' | 'VaccineDistribution';
+// forget pass/change pass header fix
+
+
+const screens = {
+  Home: <HomeScreen />,
+  Login: <LoginScreen />,
+  Register: <RegisterScreen />,
+  ForgetPassword: <ForgetPasswordScreen />,
+  ChangePassword: <ChangePasswordScreen />,
+  Notifications: <NotificationsScreen />,
+  Profile: <ProfileScreen />,
+  VaccineDistribution: <VaccineDistribution/>
+};
 
 export default function App() {
   const [activeScreen, setActiveScreen] = useState<ScreenName | null>(null);
