@@ -51,6 +51,8 @@ export default function NotificationsScreen() {
 
   const handleBack = () => {
     console.log('Navigate back')
+    // ADD THIS NAVIGATION LOGIC - same as VaccineDistribution
+    window.location.reload(); // This will take you back to the screen selection
   }
 
   const handleNotificationClick = (notification: Notification) => {
@@ -76,7 +78,6 @@ export default function NotificationsScreen() {
       setNotifications([])
     // }
   }
-
 
   const unreadCount = notifications.filter(n => !n.isRead).length
 

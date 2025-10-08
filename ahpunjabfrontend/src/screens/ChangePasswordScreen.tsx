@@ -57,6 +57,7 @@ export default function ChangePasswordScreen() {
   const handleBack = () => {
     // Navigate back to profile, will add it later
     console.log('Navigate back to profile')
+    window.location.reload(); // This will take you back to the screen selection
   }
 
   const handleForgetPassword = () => {
@@ -65,13 +66,12 @@ export default function ChangePasswordScreen() {
   }
 
   return (
-    <div className="ChangePasswordScreen w-full max-w-md mx-auto bg-white h-full flex flex-col px-6 py-8 overflow-hidden"
+    <div className="ChangePasswordScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col px-6 py-8 overflow-hidden"
       style={{
         WebkitOverflowScrolling: 'touch',
         overscrollBehavior: 'contain'
       }}
     >
-
       {/* Header */}
       <ScreenHeader title="Change Password" onBack={handleBack} className="mb-8" />
 
