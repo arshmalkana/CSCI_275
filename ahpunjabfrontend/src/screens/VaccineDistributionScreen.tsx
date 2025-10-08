@@ -1,11 +1,20 @@
-import ReactDatePicker from '../components/Calendar';
-import { BackButton } from '../components/Button';
-import { SearchableSelect } from '../components/SearchableSelect'; // Import the component
+import { DatePickerInput } from '../components/Calendar';
+import { PrimaryButton } from '../components/Button';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { SearchableSelect } from '../components/SearchableSelect';
 import { useState } from 'react';
 
 export default function VaccineDistribution() {
     const [selectedVaccine, setSelectedVaccine] = useState('');
-    const [vaccineError, setVaccineError] = useState('');
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    const [dosesIssued, setDosesIssued] = useState('');
+    const [selectedInstitute, setSelectedInstitute] = useState('');
+    const [errors, setErrors] = useState<{
+        vaccine?: string;
+        date?: string;
+        doses?: string;
+        institute?: string;
+    }>({});
 
     const handleBack = () => {
         console.log('Navigate back');
@@ -14,97 +23,191 @@ export default function VaccineDistribution() {
 
     const handleVaccineChange = (value: string) => {
         setSelectedVaccine(value);
-        if (vaccineError) setVaccineError('');
+        if (errors.vaccine) setErrors({ ...errors, vaccine: undefined });
+    };
+
+    const handleDateChange = (date: Date | null) => {
+        setSelectedDate(date);
+        if (errors.date) setErrors({ ...errors, date: undefined });
+    };
+
+    const handleDosesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        // Only allow numbers
+        if (value === '' || /^\d+$/.test(value)) {
+            setDosesIssued(value);
+            if (errors.doses) setErrors({ ...errors, doses: undefined });
+        }
+    };
+
+    const handleInstituteChange = (value: string) => {
+        setSelectedInstitute(value);
+        if (errors.institute) setErrors({ ...errors, institute: undefined });
     };
 
     const handleSubmit = () => {
+        const newErrors: typeof errors = {};
+
         if (!selectedVaccine) {
-            setVaccineError('Please select a vaccine to issue');
+            newErrors.vaccine = 'Please select a vaccine';
+        }
+        if (!selectedDate) {
+            newErrors.date = 'Please select distribution date';
+        }
+        if (!dosesIssued || parseInt(dosesIssued) <= 0) {
+            newErrors.doses = 'Please enter valid doses';
+        } else if (parseInt(dosesIssued) > selectedVaccineStock) {
+            newErrors.doses = `Cannot issue more than available stock (${selectedVaccineStock} doses)`;
+        }
+        if (!selectedInstitute) {
+            newErrors.institute = 'Please select an institute';
+        }
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
             return;
         }
-        console.log('Issuing vaccine:', selectedVaccine);
+
+        console.log('Issuing vaccine:', {
+            vaccine: selectedVaccine,
+            date: selectedDate?.toLocaleDateString('en-GB'),
+            doses: dosesIssued,
+            institute: selectedInstitute
+        });
         // Handle vaccine issuance logic here
     };
 
-    // Sample vaccine options - replace with your actual vaccine data
-    const vaccineOptions = [
-        "Foot and Mouth Disease (FMD) Vaccine",
-        "Hemorrhagic Septicemia (HS) Vaccine",
-        "Black Quarter (BQ) Vaccine",
-        "Brucellosis Vaccine",
-        "PPR (Peste des Petits Ruminants) Vaccine",
-        "Rabies Vaccine",
-        "Anthrax Vaccine",
-        "Theileriosis Vaccine",
-        "Mastitis Vaccine",
-        "Enterotoxaemia Vaccine"
+    // Vaccine options with stock data
+    const vaccineData: Record<string, { name: string; stock: number }> = {
+        "FMD": { name: "Foot and Mouth Disease (FMD)", stock: 850 },
+        "HS": { name: "Hemorrhagic Septicemia (HS)", stock: 620 },
+        "BQ": { name: "Black Quarter (BQ)", stock: 340 },
+        "BRUC": { name: "Brucellosis", stock: 280 },
+        "PPR": { name: "PPR (Peste des Petits Ruminants)", stock: 190 },
+        "RABIES": { name: "Rabies", stock: 450 },
+        "ANTHRAX": { name: "Anthrax", stock: 210 },
+        "THEI": { name: "Theileriosis", stock: 175 },
+        "MAST": { name: "Mastitis", stock: 95 },
+        "ETV": { name: "Enterotoxaemia", stock: 260 }
+    };
+
+    const vaccineOptions = Object.values(vaccineData).map(v => v.name);
+
+    // Get stock for selected vaccine
+    const selectedVaccineStock = selectedVaccine
+        ? Object.values(vaccineData).find(v => v.name === selectedVaccine)?.stock || 0
+        : 0;
+
+    // Sample attached institutes
+    const attachedInstitutes = [
+        "Veterinary Dispensary Bhucho Khurd",
+        "Veterinary Dispensary Lehra Mohabbat",
+        "Veterinary Dispensary Ghuman Mandi",
+        "Veterinary Hospital Kotra Kalan"
     ];
 
-    return ( 
-        <div className="VaccineDistribution w-full max-w-md mx-auto bg-white h-screen flex flex-col">
-            
-            {/* Header - Exact same styling as NotificationsScreen */}
-            <div className="flex-shrink-0 flex items-center justify-between mb-6 px-6 pt-4">
-                <BackButton onClick={handleBack} />
-                <h1 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 font-['Poppins']">
-                    Vaccine Distribution
-                </h1>
-                <div className="w-10"></div> {/* Spacer for balance */}
-            </div>
+    return (
+        <div className="w-full h-full max-w-md mx-auto bg-white flex flex-col overflow-hidden">
 
-            {/* Content Area - Same scrolling behavior as NotificationsScreen */}
-            <div 
-                className="flex-1 overflow-y-auto px-6 pb-4 space-y-4"
+            <ScreenHeader title="Vaccine Distribution" onBack={handleBack} />
+
+            {/* Scrollable Content */}
+            <div
+                className="flex-1 overflow-y-auto px-6"
                 style={{
                     WebkitOverflowScrolling: 'touch',
                     overscrollBehavior: 'contain'
                 }}
             >
-                {/* Vaccine Selection Section */}
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-                    <h3 className="font-semibold text-gray-900 font-['Poppins'] mb-4">
-                        Select Vaccine to Issue
-                    </h3>
-                    <SearchableSelect
-                        value={selectedVaccine}
-                        onChange={handleVaccineChange}
-                        options={vaccineOptions}
-                        placeholder="Select vaccine to issue"
-                        error={vaccineError}
-                        withSearch={true}
-                    />
-                </div>
+                <div className="space-y-4 pb-32">
 
-                {/* Date Picker Section */}
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-                    <ReactDatePicker 
-                        label="Distribution Date" 
-                        placeholderText="Choose distribution date" 
-                        required={true} 
-                    />
-                </div>
-
-                {/* Distribution Details Section */}
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-                    <h3 className="font-semibold text-gray-900 font-['Poppins'] mb-3">
-                        Distribution Details
-                    </h3>
-                    <div className="space-y-3">
-                        {/* You can add more form fields here */}
-                        <div className="text-sm text-gray-500 font-['Poppins']">
-                            <p>Additional distribution information fields will appear here...</p>
-                        </div>
+                    {/* Vaccine Selection */}
+                    <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                        <SearchableSelect
+                            value={selectedVaccine}
+                            onChange={handleVaccineChange}
+                            options={vaccineOptions}
+                            placeholder="Select vaccine"
+                            error={errors.vaccine}
+                            withSearch={true}
+                        />
                     </div>
-                </div>
 
-                {/* Submit Button - Matching your app's style */}
-                <button 
-                    onClick={handleSubmit}
-                    className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-semibold font-['Poppins'] py-3 px-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 active:scale-95"
-                >
-                    Press To Issue 
-                </button>
+                    {/* Stock Display */}
+                    {selectedVaccine && (
+                        <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                            <label className="block text-sm font-medium text-gray-700 font-['Poppins'] mb-2">
+                                Available Stock
+                            </label>
+                            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                <p className="text-2xl font-bold text-gray-900 font-['Poppins'] text-center">
+                                    {selectedVaccineStock} doses
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Date Picker */}
+                    <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                        <DatePickerInput
+                            label="Distribution Date"
+                            placeholderText="Select date"
+                            required={false}
+                            onDateChange={handleDateChange}
+                            initialDate={selectedDate}
+                        />
+                        {errors.date && (
+                            <p className="text-sm text-red-600 font-['Poppins'] mt-1">{errors.date}</p>
+                        )}
+                    </div>
+
+                    {/* Institute Selection */}
+                    <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                        <SearchableSelect
+                            value={selectedInstitute}
+                            onChange={handleInstituteChange}
+                            options={attachedInstitutes}
+                            placeholder="Issued to institute"
+                            error={errors.institute}
+                            withSearch={true}
+                        />
+                    </div>
+
+                    {/* Doses Issued Input */}
+                    <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                        <label className="block text-sm font-medium text-gray-700 font-['Poppins'] mb-2">
+                            Number of Doses
+                        </label>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            value={dosesIssued}
+                            onChange={handleDosesChange}
+                            placeholder="Enter number of doses"
+                            className={`w-full px-4 py-3 border ${
+                                errors.doses ? 'border-red-300' : 'border-gray-300'
+                            } rounded-lg bg-gray-50 text-gray-900 text-base font-['Poppins'] focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200`}
+                        />
+                        {errors.doses && (
+                            <p className="text-sm text-red-600 font-['Poppins'] mt-1">{errors.doses}</p>
+                        )}
+                    </div>
+
+                </div>
             </div>
-        </div> 
+
+            {/* Fixed Submit Button */}
+            <div
+                className="flex-shrink-0 px-6"
+                style={{
+                    paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))',
+                    paddingTop: '1rem'
+                }}
+            >
+                <PrimaryButton onClick={handleSubmit}>
+                    Issue Vaccine
+                </PrimaryButton>
+            </div>
+        </div>
     );
 }

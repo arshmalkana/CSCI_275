@@ -1,9 +1,9 @@
 import { useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { Calendar as CalendarIcon } from "lucide-react";
 
-
-interface ReactDatePickerProps {
+interface DatePickerProps {
   label?: string;
   onDateChange?: (date: Date | null) => void;
   initialDate?: Date | null;
@@ -14,74 +14,71 @@ interface ReactDatePickerProps {
   placeholderText?: string;
 }
 
-function ReactDatePicker({ 
-  label = "Select Date", 
-  onDateChange, 
+function DatePickerInput({
+  label = "Select Date",
+  onDateChange,
   initialDate = null,
   minDate = null,
   maxDate = null,
   required = false,
   disabled = false,
   placeholderText = "DD/MM/YYYY"
-}: ReactDatePickerProps) {
+}: DatePickerProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(initialDate);
 
   const handleDateChange = (date: Date | null) => {
     setSelectedDate(date);
-    // Call the parent component's callback if provided
     if (onDateChange) {
       onDateChange(date);
     }
   };
 
-  // Safe date calculations with proper null checks
   const today = new Date();
-  
-  // Only calculate default dates if no min/maxDate provided
+
   const getMinDate = () => {
     if (minDate !== null && minDate !== undefined) return minDate;
-    return new Date(today.getFullYear() - 10, 0, 1); // 10 years ago
+    return new Date(today.getFullYear() - 10, 0, 1);
   };
 
   const getMaxDate = () => {
     if (maxDate !== null && maxDate !== undefined) return maxDate;
-    return new Date(today.getFullYear() + 10, 11, 31); // 10 years future
+    return new Date(today.getFullYear() + 10, 11, 31);
   };
 
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-gray-700 font-['Poppins'] mb-2">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
-      
-      <DatePicker
-        selected={selectedDate}
-        onChange={handleDateChange}
-        dateFormat="dd/MM/yyyy"
-        isClearable
-        placeholderText={placeholderText}
-        minDate={getMinDate()}
-        maxDate={getMaxDate()}
-        disabled={disabled}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        showYearDropdown
-        showMonthDropdown
-        dropdownMode="select"
-        yearDropdownItemNumber={15}
-        scrollableYearDropdown
-      />
-      
-      {selectedDate && (
-        <p className="mt-2 text-sm text-gray-600">
-          Selected: {selectedDate.toLocaleDateString('en-GB')}
-        </p>
-      )}
+
+      <div className="relative">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10">
+          <CalendarIcon size={18} className="text-gray-400" />
+        </div>
+        <DatePicker
+          selected={selectedDate}
+          onChange={handleDateChange}
+          dateFormat="dd/MM/yyyy"
+          placeholderText={placeholderText}
+          minDate={getMinDate()}
+          maxDate={getMaxDate()}
+          disabled={disabled}
+          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 text-base font-['Poppins'] focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200"
+          showYearDropdown
+          showMonthDropdown
+          dropdownMode="select"
+          yearDropdownItemNumber={15}
+          scrollableYearDropdown
+          calendarClassName="ios-calendar"
+          wrapperClassName="w-full"
+        />
+      </div>
     </div>
   );
 }
 
-export default ReactDatePicker;
-export { ReactDatePicker };
+export default DatePickerInput;
+export { DatePickerInput };
