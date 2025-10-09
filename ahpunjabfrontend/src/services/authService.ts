@@ -1,5 +1,7 @@
 // API base URL (use proxy in development)
-const API_BASE_URL = '/v1'
+const API_BASE_URL = import.meta.env.PROD
+  ? 'https://api-ahpunjab.itsarsh.dev/v1'
+  : '/v1'
 
 export interface LoginCredentials {
   username: string
@@ -42,6 +44,16 @@ class AuthService {
         body: JSON.stringify(credentials),
       })
 
+      // Check if response has content
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Non-JSON response:', await response.text())
+        return {
+          success: false,
+          message: 'Server error. Please try again.',
+        }
+      }
+
       const data = await response.json()
 
       if (response.ok) {
@@ -53,6 +65,7 @@ class AuthService {
         }
         return data
       } else {
+        // This should now properly show the error message from backend
         return {
           success: false,
           message: data.message || 'Login failed',

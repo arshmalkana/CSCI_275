@@ -197,7 +197,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <div className="HomeScreen w-full h-screen flex flex-col bg-white">
+    <div className="HomeScreen w-full max-w-md mx-auto h-screen flex flex-col bg-white justify-center overflow-hidden">
       {/* Header */}
       <div className="Header w-full h-20 bg-yellow-500 sticky top-0 z-10">
         <div className="flex items-center justify-between px-4 h-full">
