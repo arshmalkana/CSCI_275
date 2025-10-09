@@ -19,6 +19,8 @@ services:
       - ./init/04-test-users.sql:/docker-entrypoint-initdb.d/04-test-users.sql
       # Comment out for dev to reseed every time, uncomment for production
       # - postgres_data:/var/lib/postgresql/data
+      # Persist data even when container stops
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ahpunjab -d ahpunjab_db"]
       interval: 10s
