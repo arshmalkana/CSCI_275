@@ -9,7 +9,7 @@ export default async function (fastify, opts) {
 
   // Load schemas
   fastify.addSchema(userSchema)
-
+  await fastify.register(import('./plugins/cors.js'))
   // Swagger generator
   await fastify.register(import('@fastify/swagger'), {
     openapi: {

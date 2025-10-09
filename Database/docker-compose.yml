@@ -16,6 +16,9 @@ services:
       - ./init/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
       - ./init/02-seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
       - ./init/03-villages-full.sql:/docker-entrypoint-initdb.d/03-villages-full.sql
+      - ./init/04-test-users.sql:/docker-entrypoint-initdb.d/04-test-users.sql
+      # Comment out for dev to reseed every time, uncomment for production
+      # - postgres_data:/var/lib/postgresql/data
       # Persist data even when container stops
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
