@@ -57,6 +57,7 @@ export default function ChangePasswordScreen() {
   const handleBack = () => {
     // Navigate back to profile, will add it later
     console.log('Navigate back to profile')
+    window.location.reload(); // This will take you back to the screen selection
   }
 
   const handleForgetPassword = () => {

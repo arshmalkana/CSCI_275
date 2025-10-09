@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { FloatingLabelField } from '../components/FloatingLabelField'
 import { PrimaryButton, SecondaryButton } from '../components/Button'
 import { User, Lock } from 'lucide-react'
+import authService from '../services/authService'
 
 export default function LoginScreen() {
   const [formData, setFormData] = useState({
@@ -9,6 +10,7 @@ export default function LoginScreen() {
     password: ''
   })
   const [errors, setErrors] = useState<{[key: string]: string}>({})
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -34,10 +36,60 @@ export default function LoginScreen() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleLogin = () => {
-    if (validateForm()) {
-      console.log('Login attempt:', formData)
-      // Add login logic
+  const handleLogin = async () => {
+    if (!validateForm()) return
+
+    setIsLoading(true)
+    setErrors({})
+
+    try {
+      const response = await authService.login({
+        username: formData.username,
+        password: formData.password
+      })
+
+      if (response.success && response.user) {
+        console.log('Login successful:', response.user)
+
+        // Create detailed success message
+        const user = response.user
+        let successMessage = `✅ Login Successful!\n\n`
+        successMessage += `Name: ${user.name || 'N/A'}\n`
+        successMessage += `Username: ${user.username || 'N/A'}\n`
+        successMessage += `Role: ${user.role || 'N/A'}\n`
+        successMessage += `Designation: ${user.designation || 'N/A'}\n`
+
+        if (user.institute) {
+          successMessage += `Institute: ${user.institute}\n`
+        }
+
+        if (user.district) {
+          successMessage += `District: ${user.district}\n`
+        }
+
+        if (user.mobile) {
+          successMessage += `Mobile: ${user.mobile}\n`
+        }
+
+        if (user.email) {
+          successMessage += `Email: ${user.email}\n`
+        }
+
+        successMessage += `\nToken Expiry: ${response.expiresIn || '15m'}`
+
+        if (user.isFirstTime) {
+          successMessage += '\n\n⚠️ First time login - Please change your password'
+        }
+
+        alert(successMessage)
+        // Navigation to home screen will be handled by App.tsx later
+      } else {
+        setErrors({ general: response.message })
+      }
+    } catch {
+      setErrors({ general: 'An unexpected error occurred' })
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -70,11 +122,12 @@ export default function LoginScreen() {
       {/* Login Form */}
       <div className="space-y-4">
 
-        {/* Welcome Message */}
-        {/* <div className="text-center mb-8">
-          <h2 className="text-2xl font-semibold text-gray-900 font-['Poppins'] mb-2">Welcome Back</h2>
-          <p className="text-gray-600 font-['Poppins']">Sign in to your account to continue</p>
-        </div> */}
+        {/* General Error Message */}
+        {errors.general && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <p className="text-sm text-red-600 font-['Poppins'] text-center">{errors.general}</p>
+          </div>
+        )}
 
         {/* Username Input */}
         <FloatingLabelField
@@ -112,8 +165,8 @@ export default function LoginScreen() {
         </div>
 
         {/* Login Button */}
-        <PrimaryButton onClick={handleLogin}>
-          Sign In
+        <PrimaryButton onClick={handleLogin} disabled={isLoading}>
+          {isLoading ? 'Signing In...' : 'Sign In'}
         </PrimaryButton>
 
         {/* Divider */}

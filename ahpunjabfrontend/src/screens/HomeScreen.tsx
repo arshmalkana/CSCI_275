@@ -268,7 +268,6 @@ export default function HomeScreen() {
                   style={{
                     left: statsMode === 'monthly' ? '4px' : '50%',
                     width: 'calc(50% - 4px)',
-                    transform: statsMode === 'annual' ? 'translateX(4px)' : 'translateX(0)'
                   }}
                 />
                 <button
