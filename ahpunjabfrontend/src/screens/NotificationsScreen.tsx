@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { BackButton } from '../components/Button'
 import { NotificationIcon } from '../components/NotificationIcon'
 import { Bell, X } from 'lucide-react'
@@ -13,6 +14,7 @@ interface Notification {
 }
 
 export default function NotificationsScreen() {
+  const navigate = useNavigate()
   // Chatgpt generated notifications data cuz m lazyyyyy
   const [notifications, setNotifications] = useState<Notification[]>([
     {
@@ -50,9 +52,7 @@ export default function NotificationsScreen() {
   ])
 
   const handleBack = () => {
-    console.log('Navigate back')
-    // ADD THIS NAVIGATION LOGIC - same as VaccineDistribution
-    window.location.reload(); // This will take you back to the screen selection
+    navigate('/home')
   }
 
   const handleNotificationClick = (notification: Notification) => {

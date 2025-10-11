@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import SideMenu from '../components/SideMenu'
 import { Card, CardTitle, StatCard, StatusBadge } from '../components/Card'
 import { Menu, Bell, User, ChevronDown, ChevronRight, BellRing, Phone, Mail } from 'lucide-react'
 import { getStorageItem, setStorageItem } from '../utils/storage'
 
 export default function HomeScreen() {
+  const navigate = useNavigate()
   const [notifications] = useState(5) // Temproray notification count, use api to update
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false)
   const [selectedVaccine, setSelectedVaccine] = useState(() => {
@@ -217,7 +219,10 @@ export default function HomeScreen() {
           {/* Right Icons */}
           <div className="flex items-center gap-3">
             {/* Notification Bell */}
-            <button className="relative">
+            <button
+              className="relative"
+              onClick={() => navigate('/notifications')}
+            >
               <Bell size={24} />
               {notifications > 0 && (
                 <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">
@@ -227,7 +232,10 @@ export default function HomeScreen() {
             </button>
 
             {/* Profile Icon */}
-            <button className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+            <button
+              className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center"
+              onClick={() => navigate('/profile')}
+            >
               <User size={16} />
             </button>
           </div>

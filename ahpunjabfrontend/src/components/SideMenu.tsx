@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { User, X } from 'lucide-react'
 
 interface SideMenuProps {
@@ -7,8 +8,9 @@ interface SideMenuProps {
 }
 
 export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
+  const navigate = useNavigate()
   const [isAnimating, setIsAnimating] = useState(false);
-//aiiiiiiiiiii
+
   const menuItems = [
     { name: "Home", icon: "🏠" },
     { name: "Monthly Reporting", icon: "📊" },
@@ -36,9 +38,15 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
   };
 
   const handleLogout = () => {
-    console.log('Logout clicked');
-    onClose();
-  };
+    localStorage.clear()
+    navigate('/login')
+    onClose()
+  }
+
+  const handleProfileClick = () => {
+    navigate('/profile')
+    onClose()
+  }
 
   if (!isAnimating && !isOpen) return null;
 
@@ -69,8 +77,8 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
 
         {/* Header with Close Button */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center">
+          <div className="flex items-center space-x-3 cursor-pointer" onClick={handleProfileClick}>
+            <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center hover:bg-yellow-600 transition-colors">
               <User size={24} className="text-white" />
             </div>
             <div>

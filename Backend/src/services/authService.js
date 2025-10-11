@@ -43,6 +43,45 @@ const authService = {
   },
 
   /**
+   * Find staff member by staff_id
+   * @param {number} staffId - The staff_id from staff table
+   * @returns {Promise<Object|null>} Staff member object or null
+   */
+  async findStaffById(staffId) {
+    const sql = `
+      SELECT
+        s.staff_id,
+        s.user_id,
+        s.full_name,
+        s.designation,
+        s.mobile,
+        s.email,
+        s.user_role,
+        s.current_institute_id,
+        s.is_first_time,
+        s.is_active,
+        s.passkey_enabled,
+        i.institute_name,
+        i.institute_type,
+        d.district_name,
+        t.tehsil_name
+      FROM staff s
+      LEFT JOIN institutes i ON s.current_institute_id = i.institute_id
+      LEFT JOIN districts d ON i.district_id = d.district_id
+      LEFT JOIN tehsils t ON i.tehsil_id = t.tehsil_id
+      WHERE s.staff_id = $1 AND s.is_active = true
+    `
+
+    try {
+      const result = await query(sql, [staffId])
+      return result.rows.length > 0 ? result.rows[0] : null
+    } catch (error) {
+      console.error('Error finding staff by staff_id:', error)
+      throw error
+    }
+  },
+
+  /**
    * Verify password (currently plain text, will be hashed with Argon2id later)
    * @param {string} plainPassword - Password entered by user
    * @param {string} storedHash - Password hash from database

@@ -3,8 +3,10 @@ import { PrimaryButton } from '../components/Button';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { SearchableSelect } from '../components/SearchableSelect';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function VaccineDistribution() {
+    const navigate = useNavigate()
     const [selectedVaccine, setSelectedVaccine] = useState('');
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [dosesIssued, setDosesIssued] = useState('');
@@ -17,8 +19,7 @@ export default function VaccineDistribution() {
     }>({});
 
     const handleBack = () => {
-        console.log('Navigate back');
-        window.location.reload();
+        navigate('/home')
     };
 
     const handleVaccineChange = (value: string) => {

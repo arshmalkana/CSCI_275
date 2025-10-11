@@ -1,12 +1,14 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FloatingLabelField } from '../components/FloatingLabelField';
 import { PrimaryButton } from '../components/Button';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { validateEmail, validatePhone } from '../utils/validation';
-import { Camera, User, Mail, Phone, Lock, ArrowLeft} from 'lucide-react';
+import { Camera, User, Mail, Phone, Lock, ArrowLeft, Fingerprint} from 'lucide-react';
 import { MapPicker } from '../components/MapPicker';
 
 export default function ProfileScreen() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     inchargeName: 'Dr. Rajdeep Sandhu',
     email: 'rajdeep.sandhu@ahpunjab.gov.in',
@@ -59,7 +61,11 @@ export default function ProfileScreen() {
   };
 
   const handleChangePassword = () => {
-    console.log('Navigate to change password');
+    navigate('/change-password');
+  };
+
+  const handleManagePasskeys = () => {
+    navigate('/manage-passkeys');
   };
 
   return (
@@ -167,21 +173,39 @@ export default function ProfileScreen() {
           <div className="bg-white rounded-xl p-6 shadow-sm">
             <h2 className="text-base font-semibold text-gray-900 font-['Poppins'] mb-4">Security</h2>
 
-            <button
-              onClick={handleChangePassword}
-              className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors duration-200"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-                  <Lock size={20} className="text-yellow-600" />
+            <div className="space-y-3">
+              <button
+                onClick={handleChangePassword}
+                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors duration-200"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <Lock size={20} className="text-yellow-600" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-gray-900 font-['Poppins']">Change Password</p>
+                    <p className="text-xs text-gray-500 font-['Poppins']">Update your password</p>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <p className="text-sm font-medium text-gray-900 font-['Poppins']">Change Password</p>
-                  <p className="text-xs text-gray-500 font-['Poppins']">Update your password</p>
+                <ArrowLeft size={20} className="text-gray-400 rotate-180" />
+              </button>
+
+              <button
+                onClick={handleManagePasskeys}
+                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors duration-200"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Fingerprint size={20} className="text-blue-600" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-gray-900 font-['Poppins']">Manage Passkeys</p>
+                    <p className="text-xs text-gray-500 font-['Poppins']">Setup biometric authentication</p>
+                  </div>
                 </div>
-              </div>
-              <ArrowLeft size={20} className="text-gray-400 rotate-180" />
-            </button>
+                <ArrowLeft size={20} className="text-gray-400 rotate-180" />
+              </button>
+            </div>
           </div>
 
           {/* Info Box */}

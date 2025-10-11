@@ -1,20 +1,45 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { FloatingLabelField } from '../components/FloatingLabelField'
 import { PrimaryButton, SecondaryButton } from '../components/Button'
-import { User, Lock } from 'lucide-react'
+import { User, Lock, Fingerprint } from 'lucide-react'
 import authService from '../services/authService'
+import webauthnService from '../services/webauthnService'
 
 export default function LoginScreen() {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     username: '',
     password: ''
   })
   const [errors, setErrors] = useState<{[key: string]: string}>({})
   const [isLoading, setIsLoading] = useState(false)
+  const [isPasskeyLoading, setIsPasskeyLoading] = useState(false)
+  const [showPasskeyOption, setShowPasskeyOption] = useState(false)
+  const [passkeySupported, setPasskeySupported] = useState(false)
+
+  useEffect(() => {
+    // Check if WebAuthn is supported
+    setPasskeySupported(webauthnService.isSupported())
+  }, [])
+
+  useEffect(() => {
+    // Check if user has passkeys when username is entered
+    const checkPasskeys = async () => {
+      if (formData.username.trim().length > 0 && passkeySupported) {
+        const hasCreds = await webauthnService.hasPasskeys(formData.username)
+        setShowPasskeyOption(hasCreds)
+      } else {
+        setShowPasskeyOption(false)
+      }
+    }
+
+    const timeout = setTimeout(checkPasskeys, 500)
+    return () => clearTimeout(timeout)
+  }, [formData.username, passkeySupported])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }))
     }
@@ -51,38 +76,13 @@ export default function LoginScreen() {
       if (response.success && response.user) {
         console.log('Login successful:', response.user)
 
-        // Create detailed success message
-        const user = response.user
-        let successMessage = `✅ Login Successful!\n\n`
-        successMessage += `Name: ${user.name || 'N/A'}\n`
-        successMessage += `Username: ${user.username || 'N/A'}\n`
-        successMessage += `Role: ${user.role || 'N/A'}\n`
-        successMessage += `Designation: ${user.designation || 'N/A'}\n`
-
-        if (user.institute) {
-          successMessage += `Institute: ${user.institute}\n`
+        // Check if first time login - redirect to passkey setup
+        if (response.user.isFirstTime && passkeySupported) {
+          alert(`✅ Welcome ${response.user.name}!\n\nFirst time login detected. Let's setup a passkey for faster login next time.`)
+          navigate('/setup-passkey')
+        } else {
+          navigate('/home')
         }
-
-        if (user.district) {
-          successMessage += `District: ${user.district}\n`
-        }
-
-        if (user.mobile) {
-          successMessage += `Mobile: ${user.mobile}\n`
-        }
-
-        if (user.email) {
-          successMessage += `Email: ${user.email}\n`
-        }
-
-        successMessage += `\nToken Expiry: ${response.expiresIn || '15m'}`
-
-        if (user.isFirstTime) {
-          successMessage += '\n\n⚠️ First time login - Please change your password'
-        }
-
-        alert(successMessage)
-        // Navigation to home screen will be handled by App.tsx later
       } else {
         setErrors({ general: response.message })
       }
@@ -93,14 +93,38 @@ export default function LoginScreen() {
     }
   }
 
+  const handlePasskeyLogin = async () => {
+    if (!formData.username.trim()) {
+      setErrors({ username: 'Username is required for passkey login' })
+      return
+    }
+
+    setIsPasskeyLoading(true)
+    setErrors({})
+
+    try {
+      const response = await webauthnService.loginWithPasskey(formData.username)
+
+      if (response.success && response.user) {
+        console.log('Passkey login successful:', response.user)
+        navigate('/home')
+      } else {
+        setErrors({ general: response.message })
+      }
+    } catch (err) {
+      console.error('Passkey login error:', err)
+      setErrors({ general: 'Passkey authentication failed' })
+    } finally {
+      setIsPasskeyLoading(false)
+    }
+  }
+
   const handleRegister = () => {
-    // Add register navigation
-    console.log('Navigate to register')
+    navigate('/register')
   }
 
   const handleForgotPassword = () => {
-    // Add forgot password navigation
-    console.log('Navigate to forgot password')
+    navigate('/forgot-password')
   }
 
   return (
@@ -141,6 +165,42 @@ export default function LoginScreen() {
           icon={<User size={20} />}
         />
 
+        {/* Passkey Login Button (shown when user has passkeys) */}
+        {showPasskeyOption && (
+          <button
+            onClick={handlePasskeyLogin}
+            disabled={isPasskeyLoading}
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-lg font-semibold font-['Poppins'] hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isPasskeyLoading ? (
+              <>
+                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Authenticating...
+              </>
+            ) : (
+              <>
+                <Fingerprint size={20} />
+                Login with Passkey
+              </>
+            )}
+          </button>
+        )}
+
+        {/* Divider (shown when passkey option is available) */}
+        {showPasskeyOption && (
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="px-4 bg-white text-gray-500 font-['Poppins']">OR USE PASSWORD</span>
+            </div>
+          </div>
+        )}
+
         {/* Password Input */}
         <FloatingLabelField
           field="password"
@@ -166,7 +226,7 @@ export default function LoginScreen() {
 
         {/* Login Button */}
         <PrimaryButton onClick={handleLogin} disabled={isLoading}>
-          {isLoading ? 'Signing In...' : 'Sign In'}
+          {isLoading ? 'Signing In...' : 'Sign In with Password'}
         </PrimaryButton>
 
         {/* Divider */}
@@ -190,6 +250,7 @@ export default function LoginScreen() {
             Punjab Animal Husbandry Department
           </p>
           <p className="text-xs text-gray-400 font-['Poppins'] mt-1">
+            
             {/* Government of Punjab, India */}
             CSCI 275 - Team 404
           </p>
