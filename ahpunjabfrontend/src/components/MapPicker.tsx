@@ -17,6 +17,7 @@ interface MapPickerProps {
   longitude: string
   title: string
   onLocationSelect: (lat: number, lng: number) => void
+  error?: string
 }
 
 function LocationMarker({ position, onPositionChange }: {
@@ -56,7 +57,7 @@ function LocationMarker({ position, onPositionChange }: {
   )
 }
 
-export function MapPicker({ latitude, longitude, title, onLocationSelect }: MapPickerProps) {
+export function MapPicker({ latitude, longitude, title, onLocationSelect, error }: MapPickerProps) {
   const [position, setPosition] = useState<[number, number] | null>(null)
   const [isLocating, setIsLocating] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
@@ -110,44 +111,47 @@ export function MapPicker({ latitude, longitude, title, onLocationSelect }: MapP
   }
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-lg overflow-hidden">
-      {/* Header - Always Visible */}
-      <div
-        className="p-4 cursor-pointer hover:bg-blue-100/50 transition-colors"
-        onClick={handleSelectOnMap}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center flex-shrink-0">
-              <MapPin size={20} className="text-white" />
+    <div>
+      <div className={`bg-gradient-to-br from-blue-50 to-cyan-50 border rounded-lg overflow-hidden ${
+        error ? 'border-red-300' : 'border-blue-200'
+      }`}>
+        {/* Header - Always Visible */}
+        <div
+          className="p-4 cursor-pointer hover:bg-blue-100/50 transition-colors"
+          onClick={handleSelectOnMap}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center flex-shrink-0">
+                <MapPin size={20} className="text-white" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 font-['Poppins']">{title}</h3>
+                {position ? (
+                  <p className="text-xs text-gray-600 font-['Poppins'] mt-0.5">
+                    {position[0].toFixed(6)}, {position[1].toFixed(6)}
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-500 font-['Poppins'] mt-0.5">
+                    Tap to select location on map
+                  </p>
+                )}
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 font-['Poppins']">{title}</h3>
-              {position ? (
-                <p className="text-xs text-gray-600 font-['Poppins'] mt-0.5">
-                  {position[0].toFixed(6)}, {position[1].toFixed(6)}
-                </p>
-              ) : (
-                <p className="text-xs text-gray-500 font-['Poppins'] mt-0.5">
-                  Tap to select location on map
-                </p>
-              )}
-            </div>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              className={`text-gray-600 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
           </div>
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            className={`text-gray-600 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
-          >
-            <path d="M6 9l6 6 6-6" />
-          </svg>
         </div>
-      </div>
 
       {/* Map Container - Expandable */}
       <div
@@ -205,6 +209,10 @@ export function MapPicker({ latitude, longitude, title, onLocationSelect }: MapP
           )}
         </div>
       </div>
+      </div>
+      {error && (
+        <p className="text-xs text-red-600 font-['Poppins'] mt-1 ml-1">{error}</p>
+      )}
     </div>
   )
 }

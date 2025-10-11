@@ -197,7 +197,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <div className="HomeScreen w-full h-screen flex flex-col bg-white">
+    <div className="HomeScreen w-full max-w-md mx-auto h-screen flex flex-col bg-white justify-center overflow-hidden">
       {/* Header */}
       <div className="Header w-full h-20 bg-yellow-500 sticky top-0 z-10">
         <div className="flex items-center justify-between px-4 h-full">
@@ -268,7 +268,6 @@ export default function HomeScreen() {
                   style={{
                     left: statsMode === 'monthly' ? '4px' : '50%',
                     width: 'calc(50% - 4px)',
-                    transform: statsMode === 'annual' ? 'translateX(4px)' : 'translateX(0)'
                   }}
                 />
                 <button
