@@ -33,5 +33,4 @@ export default async function (fastify, opts) {
   // Routes
   await fastify.register(import('./routes/auth.js'), { prefix: '/v1/auth' })
   await fastify.register(import('./routes/webauthn.js'), { prefix: '/v1/auth/webauthn' })
-  await fastify.register(import('./routes/user.js'), { prefix: '/users' })
 }

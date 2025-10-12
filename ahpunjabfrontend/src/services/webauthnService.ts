@@ -1,9 +1,8 @@
 // WebAuthn/Passkey service for frontend
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser'
+import apiClient from '../utils/apiClient'
 
-const API_BASE_URL = import.meta.env.PROD
-  ? 'https://api-ahpunjab.itsarsh.dev/v1'
-  : '/v1'
+const API_BASE_URL = apiClient.getBaseUrl()
 
 export interface PasskeyCredential {
   id: string
@@ -46,20 +45,12 @@ class WebAuthnService {
    */
   async setupPasskey(deviceName?: string): Promise<SetupPasskeyResponse> {
     try {
-      // Get JWT token from localStorage
-      const token = localStorage.getItem('authToken')
-      if (!token) {
-        return { success: false, message: 'Not authenticated' }
-      }
-
       // Step 1: Get registration options from server
-      const optionsResponse = await fetch(`${API_BASE_URL}/auth/webauthn/register/options`, {
+      const optionsResponse = await apiClient.fetch(`${API_BASE_URL}/auth/webauthn/register/options`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
-        credentials: 'include',
         body: JSON.stringify({})
       })
 
@@ -89,13 +80,11 @@ class WebAuthnService {
       }
 
       // Step 3: Verify registration response with server
-      const verifyResponse = await fetch(`${API_BASE_URL}/auth/webauthn/register/verify`, {
+      const verifyResponse = await apiClient.fetch(`${API_BASE_URL}/auth/webauthn/register/verify`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
-        credentials: 'include',
         body: JSON.stringify({
           response: attResp,
           deviceName
@@ -211,18 +200,10 @@ class WebAuthnService {
    */
   async listPasskeys(): Promise<PasskeyCredential[]> {
     try {
-      const token = localStorage.getItem('authToken')
-      if (!token) return []
-
-      const response = await fetch(
+      const response = await apiClient.fetch(
         `${API_BASE_URL}/auth/webauthn/credentials`,
         {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          credentials: 'include'
+          method: 'GET'
         }
       )
 
@@ -243,18 +224,10 @@ class WebAuthnService {
    */
   async deletePasskey(credentialId: string): Promise<boolean> {
     try {
-      const token = localStorage.getItem('authToken')
-      if (!token) return false
-
-      const response = await fetch(
+      const response = await apiClient.fetch(
         `${API_BASE_URL}/auth/webauthn/credentials/${credentialId}`,
         {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          credentials: 'include'
+          method: 'DELETE'
         }
       )
 
