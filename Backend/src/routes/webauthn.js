@@ -1,18 +1,18 @@
 // src/routes/webauthn.js
 import webauthnController from '../controllers/webauthnController.js'
+import { authenticate } from '../middleware/authenticate.js'
 
 export default async function (fastify, opts) {
   // Registration endpoints (requires authentication)
   fastify.post('/register/options', {
+    preHandler: authenticate,
     schema: {
-      description: 'Get WebAuthn registration options for passkey setup',
+      description: 'Get WebAuthn registration options for passkey setup (requires JWT)',
       tags: ['WebAuthn'],
+      security: [{ bearerAuth: [] }],
       body: {
         type: 'object',
-        required: ['staffId'],
-        properties: {
-          staffId: { type: 'number', description: 'User staff ID' }
-        }
+        properties: {}
       },
       response: {
         200: {
@@ -27,14 +27,15 @@ export default async function (fastify, opts) {
   }, webauthnController.registerOptions)
 
   fastify.post('/register/verify', {
+    preHandler: authenticate,
     schema: {
-      description: 'Verify WebAuthn registration response and save credential',
+      description: 'Verify WebAuthn registration response and save credential (requires JWT)',
       tags: ['WebAuthn'],
+      security: [{ bearerAuth: [] }],
       body: {
         type: 'object',
-        required: ['staffId', 'response'],
+        required: ['response'],
         properties: {
-          staffId: { type: 'number' },
           response: { type: 'object', additionalProperties: true },
           deviceName: { type: 'string' }
         }
@@ -105,16 +106,11 @@ export default async function (fastify, opts) {
 
   // Credential management endpoints (requires authentication)
   fastify.get('/credentials', {
+    preHandler: authenticate,
     schema: {
-      description: 'List user registered passkeys',
+      description: 'List user registered passkeys (requires JWT)',
       tags: ['WebAuthn'],
-      querystring: {
-        type: 'object',
-        required: ['staffId'],
-        properties: {
-          staffId: { type: 'number' }
-        }
-      },
+      security: [{ bearerAuth: [] }],
       response: {
         200: {
           type: 'object',
@@ -128,27 +124,18 @@ export default async function (fastify, opts) {
         }
       }
     }
-  }, async (request, reply) => {
-    // Convert query param to body for controller
-    request.body = { staffId: parseInt(request.query.staffId) }
-    return webauthnController.listCredentials(request, reply)
-  })
+  }, webauthnController.listCredentials)
 
   fastify.delete('/credentials/:credentialId', {
+    preHandler: authenticate,
     schema: {
-      description: 'Delete a registered passkey',
+      description: 'Delete a registered passkey (requires JWT)',
       tags: ['WebAuthn'],
+      security: [{ bearerAuth: [] }],
       params: {
         type: 'object',
         properties: {
           credentialId: { type: 'string' }
-        }
-      },
-      body: {
-        type: 'object',
-        required: ['staffId'],
-        properties: {
-          staffId: { type: 'number' }
         }
       },
       response: {

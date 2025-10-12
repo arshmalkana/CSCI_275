@@ -9,22 +9,11 @@ const webauthnController = {
    */
   async registerOptions(request, reply) {
     try {
-      // Get user from JWT token (will be set by auth middleware)
-      const { staffId } = request.body
-
-      console.log('Register options - staffId received:', staffId)
-
-      if (!staffId) {
-        return reply.code(400).send({
-          success: false,
-          message: 'staffId is required'
-        })
-      }
+      // Get staffId from JWT token (set by authenticate middleware)
+      const { staffId } = request.user
 
       // Get user data
       const staff = await authService.findStaffById(staffId)
-
-      console.log('Register options - staff found:', staff ? `Yes (${staff.staff_id})` : 'No')
 
       if (!staff) {
         return reply.code(404).send({
@@ -54,15 +43,20 @@ const webauthnController = {
 
   /**
    * Verify registration response and save credential
+   * Requires authenticated user (JWT token)
    */
   async registerVerify(request, reply) {
     try {
-      const { staffId, response, deviceName } = request.body
+      // Get staffId from JWT token (set by authenticate middleware)
+      const { staffId } = request.user
+      const { response, deviceName } = request.body
+      const userAgent = request.headers['user-agent'] || ''
 
       const result = await webauthnService.verifyRegistration(
         staffId,
         response,
-        deviceName
+        deviceName,
+        userAgent
       )
 
       return reply.code(200).send({
@@ -167,11 +161,12 @@ const webauthnController = {
 
   /**
    * List user's registered passkeys
-   * Requires authenticated user
+   * Requires authenticated user (JWT token)
    */
   async listCredentials(request, reply) {
     try {
-      const { staffId } = request.body
+      // Get staffId from JWT token (set by authenticate middleware)
+      const { staffId } = request.user
 
       const credentials = await webauthnService.getUserCredentials(staffId)
 
@@ -195,12 +190,13 @@ const webauthnController = {
 
   /**
    * Delete a passkey
-   * Requires authenticated user
+   * Requires authenticated user (JWT token)
    */
   async deleteCredential(request, reply) {
     try {
       const { credentialId } = request.params
-      const { staffId } = request.body
+      // Get staffId from JWT token (set by authenticate middleware)
+      const { staffId } = request.user
 
       const deleted = await webauthnService.deleteCredential(credentialId, staffId)
 

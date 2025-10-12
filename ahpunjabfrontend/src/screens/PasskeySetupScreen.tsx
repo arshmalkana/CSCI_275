@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Fingerprint, ShieldCheck, Smartphone, X } from 'lucide-react'
 import webauthnService from '../services/webauthnService'
 import authService from '../services/authService'
-import {PrimaryButton} from '../components/Button'
+import { PrimaryButton } from '../components/Button'
 
 export default function PasskeySetupScreen() {
   const navigate = useNavigate()
@@ -31,7 +31,7 @@ export default function PasskeySetupScreen() {
         return
       }
 
-      const result = await webauthnService.setupPasskey(user.id, deviceName || undefined)
+      const result = await webauthnService.setupPasskey(deviceName || undefined)
 
       if (result.success) {
         alert(`✅ Passkey Setup Successful!\n\nDevice: ${result.credential?.deviceName}\n\nYou can now use your biometrics to login faster and more securely.`)

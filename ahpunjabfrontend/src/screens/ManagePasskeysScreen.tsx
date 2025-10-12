@@ -23,7 +23,7 @@ export default function ManagePasskeysScreen() {
     try {
       const user = authService.getUser()
       if (user) {
-        const creds = await webauthnService.listPasskeys(user.id)
+        const creds = await webauthnService.listPasskeys()
         setCredentials(creds)
       }
     } catch (err) {
@@ -44,7 +44,7 @@ export default function ManagePasskeysScreen() {
         return
       }
 
-      const result = await webauthnService.setupPasskey(user.id, deviceName || undefined)
+      const result = await webauthnService.setupPasskey(deviceName || undefined)
 
       if (result.success) {
         alert(`✅ Passkey Added!\n\nDevice: ${result.credential?.deviceName}`)
@@ -70,7 +70,7 @@ export default function ManagePasskeysScreen() {
       const user = authService.getUser()
       if (!user) return
 
-      const success = await webauthnService.deletePasskey(credentialId, user.id)
+      const success = await webauthnService.deletePasskey(credentialId)
 
       if (success) {
         alert('✅ Passkey deleted successfully')
@@ -105,7 +105,7 @@ export default function ManagePasskeysScreen() {
       {/* Header */}
       <ScreenHeader
         title="Manage Passkeys"
-        onBack={() => navigate('/profile')}
+        onBack={() => navigate(-1)}
       />
 
       {/* Content */}

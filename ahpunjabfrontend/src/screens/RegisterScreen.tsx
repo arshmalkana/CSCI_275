@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { FloatingLabelField } from '../components/FloatingLabelField'
 import { SearchableSelect, SearchableMultiSelect } from '../components/SearchableSelect'
 import { PrimaryButton, SecondaryButton } from '../components/Button'
@@ -9,6 +10,7 @@ import { ChevronRight, UserPlus, Trash2, Plus } from 'lucide-react'
 import { MapPicker } from '../components/MapPicker'
 
 export default function RegisterScreen() {
+  const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState(1)
   const totalSteps = 4
 
@@ -250,8 +252,7 @@ export default function RegisterScreen() {
   }
 
   const handleBack = () => {
-    console.log('Navigate back')
-    window.location.reload(); // This will take you back to the screen selection
+    navigate(-1)
   }
 
   const stepTitles = [

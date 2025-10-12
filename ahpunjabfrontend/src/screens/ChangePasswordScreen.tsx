@@ -57,7 +57,7 @@ export default function ChangePasswordScreen() {
   }
 
   const handleBack = () => {
-    navigate('/profile')
+    navigate(-1)
   }
 
   const handleForgetPassword = () => {

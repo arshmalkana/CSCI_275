@@ -58,11 +58,7 @@ export default function App() {
           />
           <Route
             path="/forgot-password"
-            element={
-              <PublicRoute>
-                <ForgetPasswordScreen />
-              </PublicRoute>
-            }
+            element={<ForgetPasswordScreen />}
           />
 
           {/* Protected Routes */}

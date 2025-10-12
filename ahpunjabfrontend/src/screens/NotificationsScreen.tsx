@@ -52,7 +52,7 @@ export default function NotificationsScreen() {
   ])
 
   const handleBack = () => {
-    navigate('/home')
+    navigate(-1)
   }
 
   const handleNotificationClick = (notification: Notification) => {

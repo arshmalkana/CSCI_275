@@ -19,7 +19,7 @@ export default function VaccineDistribution() {
     }>({});
 
     const handleBack = () => {
-        navigate('/home')
+        navigate(-1)
     };
 
     const handleVaccineChange = (value: string) => {

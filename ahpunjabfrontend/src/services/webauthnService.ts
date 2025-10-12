@@ -44,14 +44,23 @@ class WebAuthnService {
   /**
    * Setup a new passkey for authenticated user
    */
-  async setupPasskey(staffId: number, deviceName?: string): Promise<SetupPasskeyResponse> {
+  async setupPasskey(deviceName?: string): Promise<SetupPasskeyResponse> {
     try {
+      // Get JWT token from localStorage
+      const token = localStorage.getItem('authToken')
+      if (!token) {
+        return { success: false, message: 'Not authenticated' }
+      }
+
       // Step 1: Get registration options from server
       const optionsResponse = await fetch(`${API_BASE_URL}/auth/webauthn/register/options`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         credentials: 'include',
-        body: JSON.stringify({ staffId })
+        body: JSON.stringify({})
       })
 
       if (!optionsResponse.ok) {
@@ -82,10 +91,12 @@ class WebAuthnService {
       // Step 3: Verify registration response with server
       const verifyResponse = await fetch(`${API_BASE_URL}/auth/webauthn/register/verify`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         credentials: 'include',
         body: JSON.stringify({
-          staffId,
           response: attResp,
           deviceName
         })
@@ -198,13 +209,19 @@ class WebAuthnService {
   /**
    * List user's registered passkeys (requires authentication)
    */
-  async listPasskeys(staffId: number): Promise<PasskeyCredential[]> {
+  async listPasskeys(): Promise<PasskeyCredential[]> {
     try {
+      const token = localStorage.getItem('authToken')
+      if (!token) return []
+
       const response = await fetch(
-        `${API_BASE_URL}/auth/webauthn/credentials?staffId=${staffId}`,
+        `${API_BASE_URL}/auth/webauthn/credentials`,
         {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           credentials: 'include'
         }
       )
@@ -224,15 +241,20 @@ class WebAuthnService {
   /**
    * Delete a passkey (requires authentication)
    */
-  async deletePasskey(credentialId: string, staffId: number): Promise<boolean> {
+  async deletePasskey(credentialId: string): Promise<boolean> {
     try {
+      const token = localStorage.getItem('authToken')
+      if (!token) return false
+
       const response = await fetch(
         `${API_BASE_URL}/auth/webauthn/credentials/${credentialId}`,
         {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ staffId })
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          credentials: 'include'
         }
       )
 

@@ -76,9 +76,10 @@ const webauthnService = {
    * @param {Number} staffId - User's staff ID
    * @param {Object} response - Registration response from browser
    * @param {String} deviceName - Optional device name
+   * @param {String} userAgent - User-Agent header from request
    * @returns {Object} Verification result
    */
-  async verifyRegistration(staffId, response, deviceName = null) {
+  async verifyRegistration(staffId, response, deviceName = null, userAgent = '') {
     // Get stored challenge
     const storedChallenge = challengeStore.get(staffId)
     if (!storedChallenge) {
@@ -121,7 +122,7 @@ const webauthnService = {
       } = registrationInfo
 
       // Auto-generate device name if not provided
-      const finalDeviceName = deviceName || this.generateDeviceName(response)
+      const finalDeviceName = deviceName || this.generateDeviceName(response, userAgent)
 
       // Handle both old and new @simplewebauthn API versions
       const finalCredentialID = credentialID || credential?.id
@@ -235,6 +236,7 @@ const webauthnService = {
 
     try {
       // Get credential from database
+      // response.id is already a base64url string from the browser
       const credResult = await query(
         `SELECT wc.*, s.user_id, s.full_name, s.user_role, s.designation,
                 s.current_institute_id, s.is_first_time, s.mobile, s.email,
@@ -246,24 +248,25 @@ const webauthnService = {
          LEFT JOIN districts d ON i.district_id = d.district_id
          LEFT JOIN tehsils t ON i.tehsil_id = t.tehsil_id
          WHERE wc.credential_id = $1 AND s.is_active = true`,
-        [Buffer.from(response.id, 'base64url').toString('base64url')]
+        [response.id]
       )
 
       if (credResult.rows.length === 0) {
         throw new Error('Credential not found')
       }
 
-      const credential = credResult.rows[0]
+      const cred = credResult.rows[0]
 
       const verification = await verifyAuthenticationResponse({
         response,
         expectedChallenge: storedChallenge.challenge,
         expectedOrigin: RP_ORIGIN,
         expectedRPID: RP_ID,
-        authenticator: {
-          credentialID: Buffer.from(credential.credential_id, 'base64url'),
-          credentialPublicKey: Buffer.from(credential.public_key, 'base64url'),
-          counter: parseInt(credential.counter)
+        credential: {
+          id: cred.credential_id,
+          publicKey: Buffer.from(cred.public_key, 'base64url'),
+          counter: parseInt(cred.counter, 10) || 0,
+          transports: cred.transports || undefined,
         },
         requireUserVerification: false
       })
@@ -277,7 +280,7 @@ const webauthnService = {
         `UPDATE webauthn_credentials
          SET counter = $1, last_used_at = CURRENT_TIMESTAMP
          WHERE credential_id = $2`,
-        [verification.authenticationInfo.newCounter, credential.credential_id]
+        [verification.authenticationInfo.newCounter, cred.credential_id]
       )
 
       // Clear challenge
@@ -285,19 +288,19 @@ const webauthnService = {
 
       // Return user data (same format as password login)
       return {
-        staff_id: credential.staff_id,
-        user_id: credential.user_id,
-        full_name: credential.full_name,
-        user_role: credential.user_role,
-        designation: credential.designation,
-        current_institute_id: credential.current_institute_id,
-        is_first_time: credential.is_first_time,
-        mobile: credential.mobile,
-        email: credential.email,
-        institute_name: credential.institute_name,
-        institute_type: credential.institute_type,
-        district_name: credential.district_name,
-        tehsil_name: credential.tehsil_name
+        staff_id: cred.staff_id,
+        user_id: cred.user_id,
+        full_name: cred.full_name,
+        user_role: cred.user_role,
+        designation: cred.designation,
+        current_institute_id: cred.current_institute_id,
+        is_first_time: cred.is_first_time,
+        mobile: cred.mobile,
+        email: cred.email,
+        institute_name: cred.institute_name,
+        institute_type: cred.institute_type,
+        district_name: cred.district_name,
+        tehsil_name: cred.tehsil_name
       }
     } catch (error) {
       challengeStore.delete(`auth_${userId}`)
@@ -375,14 +378,15 @@ const webauthnService = {
   /**
    * Generate device name from user agent
    * @param {Object} response - Registration response
+   * @param {String} userAgent - User-Agent header from request
    * @returns {String} Device name
    */
-  generateDeviceName(response) {
+  generateDeviceName(response, userAgent = '') {
     const transports = response.response.transports || []
 
     if (transports.includes('internal')) {
-      // Platform authenticator - try to detect device
-      return 'This Device'
+      // Platform authenticator - parse user agent to detect device
+      return this.parseUserAgent(userAgent)
     } else if (transports.includes('usb')) {
       return 'Security Key (USB)'
     } else if (transports.includes('nfc')) {
@@ -392,6 +396,63 @@ const webauthnService = {
     }
 
     return 'Unknown Device'
+  },
+
+  /**
+   * Parse User-Agent to extract device and browser info
+   * @param {String} userAgent - User-Agent header
+   * @returns {String} Formatted device name
+   */
+  parseUserAgent(userAgent) {
+    if (!userAgent) return 'This Device'
+
+    let device = ''
+    let browser = ''
+
+    // Detect browser
+    if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
+      browser = 'Chrome'
+    } else if (userAgent.includes('Edg')) {
+      browser = 'Edge'
+    } else if (userAgent.includes('Firefox')) {
+      browser = 'Firefox'
+    } else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
+      browser = 'Safari'
+    }
+
+    // Detect device/OS
+    if (userAgent.includes('iPhone')) {
+      device = 'iPhone'
+    } else if (userAgent.includes('iPad')) {
+      device = 'iPad'
+    } else if (userAgent.includes('Mac OS X') || userAgent.includes('Macintosh')) {
+      device = 'Mac'
+    } else if (userAgent.includes('Windows NT 10.0')) {
+      device = 'Windows PC'
+    } else if (userAgent.includes('Windows NT')) {
+      device = 'Windows PC'
+    } else if (userAgent.includes('Android')) {
+      // Try to extract device model
+      const androidMatch = userAgent.match(/Android.*;\s*([^)]+)\)/)
+      if (androidMatch && androidMatch[1]) {
+        device = androidMatch[1].trim()
+      } else {
+        device = 'Android Device'
+      }
+    } else if (userAgent.includes('Linux')) {
+      device = 'Linux PC'
+    }
+
+    // Construct device name
+    if (device && browser) {
+      return `${device} (${browser})`
+    } else if (device) {
+      return device
+    } else if (browser) {
+      return `${browser} Browser`
+    }
+
+    return 'This Device'
   }
 }
 
