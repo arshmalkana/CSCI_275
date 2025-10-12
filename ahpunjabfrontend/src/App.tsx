@@ -7,7 +7,7 @@ import NotificationsScreen from './screens/NotificationsScreen';
 import HomeScreen from './screens/HomeScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import VaccineDistribution from './screens/VaccineDistributionScreen';
-
+import MonthlyReport from './screens/MonthlyReportScreen';
 // forget pass/change pass header fix
 
 
@@ -23,7 +23,8 @@ export default function App() {
     ChangePassword: <ChangePasswordScreen />,
     Notifications: <NotificationsScreen />,
     Profile: <ProfileScreen />,
-    VaccineDistribution: <VaccineDistribution /> 
+    VaccineDistribution: <VaccineDistribution />,
+    MonthlyReport: <MonthlyReport />,
   };
 
   return (
