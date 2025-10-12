@@ -12,6 +12,7 @@ export default function LoginScreen() {
     username: '',
     password: ''
   })
+  const [rememberMe, setRememberMe] = useState(false)
   const [errors, setErrors] = useState<{[key: string]: string}>({})
   const [isLoading, setIsLoading] = useState(false)
   const [isPasskeyLoading, setIsPasskeyLoading] = useState(false)
@@ -21,6 +22,12 @@ export default function LoginScreen() {
   useEffect(() => {
     // Check if WebAuthn is supported
     setPasskeySupported(webauthnService.isSupported())
+
+    // Load remembered username
+    const rememberedUsername = localStorage.getItem('rememberedUsername')
+    if (rememberedUsername) {
+      setFormData(prev => ({ ...prev, username: rememberedUsername }))
+    }
   }, [])
 
   useEffect(() => {
@@ -68,13 +75,17 @@ export default function LoginScreen() {
     setErrors({})
 
     try {
-      const response = await authService.login({
-        username: formData.username,
-        password: formData.password
-      })
+      const response = await authService.login(
+        formData.username,
+        formData.password,
+        rememberMe
+      )
 
       if (response.success && response.user) {
         console.log('Login successful:', response.user)
+
+        // Save username for future logins
+        localStorage.setItem('rememberedUsername', formData.username)
 
         // Check if first time login - redirect to passkey setup
         if (response.user.isFirstTime && passkeySupported) {
@@ -103,10 +114,14 @@ export default function LoginScreen() {
     setErrors({})
 
     try {
-      const response = await webauthnService.loginWithPasskey(formData.username)
+      const response = await webauthnService.loginWithPasskey(formData.username, rememberMe)
 
       if (response.success && response.user) {
         console.log('Passkey login successful:', response.user)
+
+        // Save username for future logins
+        localStorage.setItem('rememberedUsername', formData.username)
+
         navigate('/home')
       } else {
         setErrors({ general: response.message })
@@ -214,13 +229,25 @@ export default function LoginScreen() {
           icon={<Lock size={20} />}
         />
 
-        {/* Forgot Password Link */}
-        <div className="text-right">
+        {/* Remember Me & Forgot Password */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="rememberMe"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-4 h-4 text-yellow-500 border-gray-300 rounded focus:ring-yellow-500"
+            />
+            <label htmlFor="rememberMe" className="text-xs text-gray-700 font-['Poppins']">
+              Keep me signed in (90 days)
+            </label>
+          </div>
           <button
             onClick={handleForgotPassword}
             className="text-xs text-yellow-600 hover:text-yellow-700 font-medium font-['Poppins'] transition-colors duration-200"
           >
-            Forgot your password?
+            Forgot password?
           </button>
         </div>
 

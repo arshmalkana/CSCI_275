@@ -1,6 +1,7 @@
 // src/controllers/webauthnController.js
 import webauthnService from '../services/webauthnService.js'
 import authService from '../services/authService.js'
+import refreshTokenService from '../services/refreshTokenService.js'
 
 const webauthnController = {
   /**
@@ -112,7 +113,7 @@ const webauthnController = {
    */
   async loginVerify(request, reply) {
     try {
-      const { username, response } = request.body
+      const { username, response, rememberMe } = request.body
 
       // Verify passkey authentication
       const staff = await webauthnService.verifyAuthentication(username, response)
@@ -120,12 +121,26 @@ const webauthnController = {
       // Generate JWT tokens (same as password login)
       const { accessToken, refreshToken } = authService.generateTokens(staff)
 
+      // Determine token expiry based on rememberMe
+      const tokenExpiry = rememberMe
+        ? 90 * 24 * 60 * 60 * 1000  // 90 days if remember me
+        : 7 * 24 * 60 * 60 * 1000   // 7 days default
+
+      // Store refresh token in database
+      await refreshTokenService.storeToken({
+        token: refreshToken,
+        staffId: staff.staff_id,
+        userAgent: request.headers['user-agent'],
+        ipAddress: request.ip,
+        expiresIn: tokenExpiry
+      })
+
       // Set refresh token in HTTP-only cookie
       reply.setCookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        maxAge: tokenExpiry,
         path: '/'
       })
 

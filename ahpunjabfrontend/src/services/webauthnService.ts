@@ -105,7 +105,7 @@ class WebAuthnService {
   /**
    * Login with passkey
    */
-  async loginWithPasskey(username: string): Promise<PasskeyLoginResponse> {
+  async loginWithPasskey(username: string, rememberMe = false): Promise<PasskeyLoginResponse> {
     try {
       // Step 1: Get authentication options from server
       const optionsResponse = await fetch(`${API_BASE_URL}/auth/webauthn/login/options`, {
@@ -147,7 +147,8 @@ class WebAuthnService {
         credentials: 'include',
         body: JSON.stringify({
           username,
-          response: asseResp
+          response: asseResp,
+          rememberMe
         })
       })
 

@@ -6,6 +6,7 @@ const API_BASE_URL = import.meta.env.PROD
 export interface LoginCredentials {
   username: string
   password: string
+  rememberMe?: boolean
 }
 
 export interface User {
@@ -32,10 +33,21 @@ export interface LoginResponse {
 }
 
 class AuthService {
-  async login(credentials: LoginCredentials): Promise<LoginResponse> {
+  // Convenience method for simple login
+  async login(username: string, password: string, rememberMe = false): Promise<LoginResponse>
+  async login(credentials: LoginCredentials): Promise<LoginResponse>
+  async login(
+    usernameOrCredentials: string | LoginCredentials,
+    password?: string,
+    rememberMe?: boolean
+  ): Promise<LoginResponse> {
+    const credentials: LoginCredentials =
+      typeof usernameOrCredentials === 'string'
+        ? { username: usernameOrCredentials, password: password!, rememberMe }
+        : usernameOrCredentials
+
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      // const response = await fetch(`http://127.0.0.1:8080/v1/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

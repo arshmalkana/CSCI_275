@@ -1,7 +1,34 @@
 // src/routes/auth.js
 import authController from '../controllers/authController.js'
+import { authenticate } from '../middleware/authenticate.js'
 
 export default async function (fastify, opts) {
+  // Check if user has passkey (public endpoint)
+  fastify.get('/check-passkey', {
+    schema: {
+      description: 'Check if user has registered passkeys',
+      tags: ['Authentication'],
+      querystring: {
+        type: 'object',
+        required: ['username'],
+        properties: {
+          username: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            hasPasskey: { type: 'boolean' },
+            username: { type: 'string' },
+            fullName: { type: 'string' }
+          }
+        }
+      }
+    }
+  }, authController.checkPasskey)
+
   // Login endpoint
   fastify.post('/login', {
     schema: {
@@ -12,7 +39,8 @@ export default async function (fastify, opts) {
         required: ['username', 'password'],
         properties: {
           username: { type: 'string' },
-          password: { type: 'string', minLength: 6 }
+          password: { type: 'string', minLength: 6 },
+          rememberMe: { type: 'boolean', default: false }
         }
       },
       response: {
@@ -78,4 +106,65 @@ export default async function (fastify, opts) {
       }
     }
   }, authController.refreshToken)
+
+  // Session management endpoints (requires authentication)
+  fastify.get('/sessions', {
+    preHandler: authenticate,
+    schema: {
+      description: 'Get all active sessions (requires JWT)',
+      tags: ['Authentication'],
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            sessions: { type: 'array' }
+          }
+        }
+      }
+    }
+  }, authController.getSessions)
+
+  fastify.delete('/sessions/:tokenId', {
+    preHandler: authenticate,
+    schema: {
+      description: 'Revoke a specific session (requires JWT)',
+      tags: ['Authentication'],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          tokenId: { type: 'integer' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' }
+          }
+        }
+      }
+    }
+  }, authController.revokeSession)
+
+  fastify.post('/sessions/revoke-all-others', {
+    preHandler: authenticate,
+    schema: {
+      description: 'Revoke all other sessions except current (requires JWT)',
+      tags: ['Authentication'],
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' }
+          }
+        }
+      }
+    }
+  }, authController.revokeAllOtherSessions)
 }

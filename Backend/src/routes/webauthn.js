@@ -86,7 +86,8 @@ export default async function (fastify, opts) {
         required: ['username', 'response'],
         properties: {
           username: { type: 'string' },
-          response: { type: 'object', additionalProperties: true }
+          response: { type: 'object', additionalProperties: true },
+          rememberMe: { type: 'boolean', default: false }
         }
       },
       response: {
