@@ -1,7 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginScreen from './screens/LoginScreen'
-// import UsernameScreen from './screens/UsernameScreen'
-// import AuthMethodScreen from './screens/AuthMethodScreen'
 import RegisterScreen from './screens/RegisterScreen'
 import ChangePasswordScreen from './screens/ChangePasswordScreen'
 import ForgetPasswordScreen from './screens/ForgetPasswordScreen'
@@ -42,31 +40,14 @@ export default function App() {
     <BrowserRouter>
       <div className="h-full w-full overflow-hidden bg-gray-100 font-sans">
         <Routes>
-          {/* Public Routes - Two-Step Login */}
-          {/* <Route
-            path="/username"
-            element={
-              <PublicRoute>
-                <UsernameScreen />
-              </PublicRoute>
-            }
-          /> */}
-          {/* <Route
-            path="/auth-method"
-            element={
-              <PublicRoute>
-                <AuthMethodScreen />
-              </PublicRoute>
-            }
-          /> */}
-          {/* Old Login (redirect to new flow) */}
+          {/* Public Routes - Single LoginScreen */}
           <Route
             path="/login"
             element={
               <PublicRoute>
                 <LoginScreen />
               </PublicRoute>
-              }
+            }
           />
           <Route
             path="/register"

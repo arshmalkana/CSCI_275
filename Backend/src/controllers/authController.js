@@ -3,50 +3,6 @@ import authService from '../services/authService.js'
 import refreshTokenService from '../services/refreshTokenService.js'
 
 const authController = {
-  /**
-   * Check if a user has registered passkeys
-   * Public endpoint (no authentication required)
-   */
-  async checkPasskey(request, reply) {
-    try {
-      const { username } = request.query
-
-      if (!username) {
-        return reply.code(400).send({
-          success: false,
-          message: 'Username is required'
-        })
-      }
-
-      // Find staff member
-      const staff = await authService.findStaffByUserId(username)
-
-      if (!staff) {
-        // Don't reveal if user exists or not (security)
-        return reply.code(200).send({
-          success: true,
-          hasPasskey: false
-        })
-      }
-
-      // Check if user has passkeys
-      const hasPasskey = staff.passkey_enabled || false
-
-      return reply.code(200).send({
-        success: true,
-        hasPasskey,
-        username: staff.user_id,
-        fullName: staff.full_name
-      })
-    } catch (error) {
-      console.error('Check passkey error:', error)
-      return reply.code(500).send({
-        success: false,
-        message: 'Failed to check passkey status'
-      })
-    }
-  },
-
   async login(request, reply) {
     const { username, password, rememberMe } = request.body
 

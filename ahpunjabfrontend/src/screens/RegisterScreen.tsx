@@ -367,7 +367,6 @@ export default function RegisterScreen() {
               title="Institute Location"
               latitude={formData.latitude}
               longitude={formData.longitude}
-              title="Institute Location"
               onLocationSelect={(lat, lng) => {
                 handleInputChange('latitude', lat.toString())
                 handleInputChange('longitude', lng.toString())

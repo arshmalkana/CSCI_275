@@ -9,8 +9,10 @@ import { query } from '../database/db.js'
 
 // Relying Party (RP) configuration
 const RP_NAME = process.env.RP_NAME || 'AH Punjab Reporting'
-const RP_ID = process.env.RP_ID || 'ahpunjabdev.itsarsh.dev'
-const RP_ORIGIN = process.env.RP_ORIGIN || 'https://ahpunjabdev.itsarsh.dev'
+// const RP_ID = process.env.RP_ID || 'ahpunjabdev.itsarsh.dev'
+// const RP_ORIGIN = process.env.RP_ORIGIN || 'https://ahpunjabdev.itsarsh.dev'
+const RP_ID = process.env.RP_ID || 'localhost'
+const RP_ORIGIN = process.env.RP_ORIGIN || 'http://localhost:3000'
 
 // Temporary storage for challenges (in production, use Redis)
 const challengeStore = new Map()
@@ -175,9 +177,9 @@ const webauthnService = {
    * @returns {Object} Authentication options
    */
   async generateAuthenticationOptions(userId) {
-    // Find user by user_id
+    // Find user by user_id (case-insensitive)
     const userResult = await query(
-      'SELECT staff_id FROM staff WHERE user_id = $1 AND is_active = true',
+      'SELECT staff_id FROM staff WHERE LOWER(user_id) = LOWER($1) AND is_active = true',
       [userId]
     )
 

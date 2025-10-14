@@ -30,7 +30,7 @@ const authService = {
       LEFT JOIN institutes i ON s.current_institute_id = i.institute_id
       LEFT JOIN districts d ON i.district_id = d.district_id
       LEFT JOIN tehsils t ON i.tehsil_id = t.tehsil_id
-      WHERE s.user_id = $1 AND s.is_active = true
+      WHERE LOWER(s.user_id) = LOWER($1) AND s.is_active = true
     `
 
     try {

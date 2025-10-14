@@ -91,11 +91,17 @@ export default function ActiveSessionsScreen() {
     const diffHours = Math.floor(diffMs / 3600000)
     const diffDays = Math.floor(diffMs / 86400000)
 
-    if (diffMins < 1) return 'Just now'
+    // For very recent times (< 1 minute), show actual time
+    if (diffMins < 1) {
+      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    }
     if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
     if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
     if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
-    return date.toLocaleDateString()
+    if (diffDays < 30) {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   }
 
   const getDeviceIcon = (deviceName: string) => {

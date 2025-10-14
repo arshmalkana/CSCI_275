@@ -3,32 +3,6 @@ import authController from '../controllers/authController.js'
 import { authenticate } from '../middleware/authenticate.js'
 
 export default async function (fastify, opts) {
-  // Check if user has passkey (public endpoint)
-  fastify.get('/check-passkey', {
-    schema: {
-      description: 'Check if user has registered passkeys',
-      tags: ['Authentication'],
-      querystring: {
-        type: 'object',
-        required: ['username'],
-        properties: {
-          username: { type: 'string' }
-        }
-      },
-      response: {
-        200: {
-          type: 'object',
-          properties: {
-            success: { type: 'boolean' },
-            hasPasskey: { type: 'boolean' },
-            username: { type: 'string' },
-            fullName: { type: 'string' }
-          }
-        }
-      }
-    }
-  }, authController.checkPasskey)
-
   // Login endpoint
   fastify.post('/login', {
     schema: {

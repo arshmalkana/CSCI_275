@@ -34,12 +34,12 @@ export interface LoginResponse {
 
 class AuthService {
   // Convenience method for simple login
-  async login(username: string, password: string, rememberMe = false): Promise<LoginResponse>
+  async login(username: string, password: string, rememberMe?: boolean): Promise<LoginResponse>
   async login(credentials: LoginCredentials): Promise<LoginResponse>
   async login(
     usernameOrCredentials: string | LoginCredentials,
     password?: string,
-    rememberMe?: boolean
+    rememberMe: boolean = false
   ): Promise<LoginResponse> {
     const credentials: LoginCredentials =
       typeof usernameOrCredentials === 'string'

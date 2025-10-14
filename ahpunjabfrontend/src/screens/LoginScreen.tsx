@@ -8,6 +8,7 @@ import webauthnService from '../services/webauthnService'
 
 export default function LoginScreen() {
   const navigate = useNavigate()
+  const [step, setStep] = useState<1 | 2>(1)
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -18,6 +19,7 @@ export default function LoginScreen() {
   const [isPasskeyLoading, setIsPasskeyLoading] = useState(false)
   const [showPasskeyOption, setShowPasskeyOption] = useState(false)
   const [passkeySupported, setPasskeySupported] = useState(false)
+  const [usePasswordMode, setUsePasswordMode] = useState(false)
 
   useEffect(() => {
     // Check if WebAuthn is supported
@@ -30,20 +32,48 @@ export default function LoginScreen() {
     }
   }, [])
 
-  useEffect(() => {
-    // Check if user has passkeys when username is entered
-    const checkPasskeys = async () => {
-      if (formData.username.trim().length > 0 && passkeySupported) {
-        const hasCreds = await webauthnService.hasPasskeys(formData.username)
-        setShowPasskeyOption(hasCreds)
-      } else {
-        setShowPasskeyOption(false)
-      }
+  const handleNextStep = async () => {
+    if (!formData.username.trim()) {
+      setErrors({ username: 'Username is required' })
+      return
     }
 
-    const timeout = setTimeout(checkPasskeys, 500)
-    return () => clearTimeout(timeout)
-  }, [formData.username, passkeySupported])
+    setErrors({})
+    setIsLoading(true)
+
+    try {
+      // Try to get passkey options to check if user has passkeys
+      const response = await fetch('/v1/auth/webauthn/login/options', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ username: formData.username })
+      })
+
+      if (response.ok) {
+        setShowPasskeyOption(true)
+        setUsePasswordMode(false)
+      } else {
+        setShowPasskeyOption(false)
+        setUsePasswordMode(true)
+      }
+      setStep(2)
+    } catch {
+      // On error, default to password mode
+      setShowPasskeyOption(false)
+      setUsePasswordMode(true)
+      setStep(2)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleBackToStep1 = () => {
+    setStep(1)
+    setErrors({})
+    setUsePasswordMode(false)
+    setShowPasskeyOption(false)
+  }
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -168,108 +198,170 @@ export default function LoginScreen() {
           </div>
         )}
 
-        {/* Username Input */}
-        <FloatingLabelField
-          field="username"
-          label="Username"
-          type="text"
-          required
-          value={formData.username}
-          error={errors.username}
-          onChange={handleInputChange}
-          icon={<User size={20} />}
-        />
+        {/* Step 1: Username Input */}
+        {step === 1 && (
+          <>
+            <FloatingLabelField
+              field="username"
+              label="Username"
+              type="text"
+              required
+              value={formData.username}
+              error={errors.username}
+              onChange={handleInputChange}
+              icon={<User size={20} />}
+            />
 
-        {/* Passkey Login Button (shown when user has passkeys) */}
-        {showPasskeyOption && (
-          <button
-            onClick={handlePasskeyLogin}
-            disabled={isPasskeyLoading}
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-lg font-semibold font-['Poppins'] hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isPasskeyLoading ? (
+            {/* Login Button */}
+            <PrimaryButton onClick={handleNextStep} disabled={isLoading}>
+              {isLoading ? 'Checking...' : 'Login'}
+            </PrimaryButton>
+
+            {/* Divider */}
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="px-4 bg-white text-gray-500 font-['Poppins']">OR</span>
+              </div>
+            </div>
+
+            {/* Register Button */}
+            <SecondaryButton onClick={handleRegister}>
+              Create New Account
+            </SecondaryButton>
+          </>
+        )}
+
+        {/* Step 2: Authentication Method */}
+        {step === 2 && (
+          <>
+            {/* Back Button */}
+            <button
+              onClick={handleBackToStep1}
+              className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800 font-['Poppins'] transition-colors duration-200"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back
+            </button>
+
+            {/* Show username (read-only) */}
+            <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-lg pl-12 pr-4 py-3 relative flex items-center min-h-[52px]">
+              <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-yellow-600">
+                <User size={20} />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-gray-500 font-['Poppins'] leading-none mb-1">Logging in as</p>
+                <p className="text-base font-semibold text-gray-900 font-['Poppins'] leading-tight">{formData.username}</p>
+              </div>
+            </div>
+
+            {/* Passkey Login Button (if available) */}
+            {showPasskeyOption && !usePasswordMode && (
               <>
-                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                Authenticating...
-              </>
-            ) : (
-              <>
-                <Fingerprint size={20} />
-                Login with Passkey
+                <button
+                  onClick={handlePasskeyLogin}
+                  disabled={isPasskeyLoading}
+                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-lg font-semibold font-['Poppins'] hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isPasskeyLoading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Authenticating...
+                    </>
+                  ) : (
+                    <>
+                      <Fingerprint size={20} />
+                      Login with Passkey
+                    </>
+                  )}
+                </button>
+
+                {/* Switch to Password Link */}
+                <button
+                  onClick={() => setUsePasswordMode(true)}
+                  className="text-sm text-yellow-600 hover:text-yellow-700 font-medium font-['Poppins'] transition-colors duration-200 text-center w-full"
+                >
+                  Use password instead
+                </button>
               </>
             )}
-          </button>
+
+            {/* Password Login (if no passkey or user chose password) */}
+            {(usePasswordMode || !showPasskeyOption) && (
+              <>
+                {/* Divider (if switching from passkey) */}
+                {//showPasskeyOption && (
+                  // <div className="relative my-4">
+                  //   <div className="absolute inset-0 flex items-center">
+                  //     <div className="w-full border-t border-gray-300"></div>
+                  //   </div>
+                  //   <div className="relative flex justify-center text-xs">
+                  //     <span className="px-4 bg-white text-gray-500 font-['Poppins']">OR USE PASSWORD</span>
+                  //   </div>
+                  // </div>
+                //)
+                }
+
+                {/* Password Input */}
+                <FloatingLabelField
+                  field="password"
+                  label="Password"
+                  type="password"
+                  required
+                  value={formData.password}
+                  error={errors.password}
+                  onChange={handleInputChange}
+                  showPasswordToggle
+                  icon={<Lock size={20} />}
+                />
+
+                {/* Remember Me & Forgot Password */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-700 font-['Poppins']">Remember me</span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
+                    </label>
+                  </div>
+                  <button
+                    onClick={handleForgotPassword}
+                    className="text-sm text-yellow-600 hover:text-yellow-700 font-medium font-['Poppins'] transition-colors duration-200"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+
+                {/* Login Button */}
+                <PrimaryButton onClick={handleLogin} disabled={isLoading}>
+                  {isLoading ? 'Signing In...' : 'Sign In with Password'}
+                </PrimaryButton>
+
+                {/* Switch to Passkey Link (if available) */}
+                {showPasskeyOption && (
+                  <button
+                    onClick={() => setUsePasswordMode(false)}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium font-['Poppins'] transition-colors duration-200 text-center w-full"
+                  >
+                    Use passkey instead
+                  </button>
+                )}
+              </>
+            )}
+          </>
         )}
-
-        {/* Divider (shown when passkey option is available) */}
-        {showPasskeyOption && (
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="px-4 bg-white text-gray-500 font-['Poppins']">OR USE PASSWORD</span>
-            </div>
-          </div>
-        )}
-
-        {/* Password Input */}
-        <FloatingLabelField
-          field="password"
-          label="Password"
-          type="password"
-          required
-          value={formData.password}
-          error={errors.password}
-          onChange={handleInputChange}
-          showPasswordToggle
-          icon={<Lock size={20} />}
-        />
-
-        {/* Remember Me & Forgot Password */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="rememberMe"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className="w-4 h-4 text-yellow-500 border-gray-300 rounded focus:ring-yellow-500"
-            />
-            <label htmlFor="rememberMe" className="text-xs text-gray-700 font-['Poppins']">
-              Keep me signed in (90 days)
-            </label>
-          </div>
-          <button
-            onClick={handleForgotPassword}
-            className="text-xs text-yellow-600 hover:text-yellow-700 font-medium font-['Poppins'] transition-colors duration-200"
-          >
-            Forgot password?
-          </button>
-        </div>
-
-        {/* Login Button */}
-        <PrimaryButton onClick={handleLogin} disabled={isLoading}>
-          {isLoading ? 'Signing In...' : 'Sign In with Password'}
-        </PrimaryButton>
-
-        {/* Divider */}
-        <div className="relative my-4">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
-          </div>
-          <div className="relative flex justify-center text-xs">
-            <span className="px-4 bg-white text-gray-500 font-['Poppins']">OR</span>
-          </div>
-        </div>
-
-        {/* Register Button */}
-        <SecondaryButton onClick={handleRegister}>
-          Create New Account
-        </SecondaryButton>
 
         {/* Footer */}
         <div className="text-center mt-4 pt-4 border-t border-gray-200">
