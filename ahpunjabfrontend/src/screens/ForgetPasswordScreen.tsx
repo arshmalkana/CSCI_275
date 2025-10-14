@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { FloatingLabelField } from '../components/FloatingLabelField'
 import { PrimaryButton, SecondaryButton } from '../components/Button'
 import { ScreenHeader } from '../components/ScreenHeader'
@@ -7,6 +8,7 @@ import { validateEmail } from '../utils/validation'
 import { CheckCircle2, Lock, Mail, AlertCircle } from 'lucide-react'
 
 export default function ForgetPasswordScreen() {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     email: ''
   })
@@ -40,9 +42,7 @@ export default function ForgetPasswordScreen() {
   }
 
   const handleBack = () => {
-    // Navigate back to login but how!
-    console.log('Navigate back to login')
-    window.location.reload(); // This will take you back to the screen selection
+    navigate(-1)
   }
 
   const handleResendEmail = () => {

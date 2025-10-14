@@ -1,4 +1,5 @@
 import userSchema from './schemas/userSchema.js'
+import refreshTokenService from './services/refreshTokenService.js'
 
 export default async function (fastify, opts) {
   // Register cookie support
@@ -32,5 +33,15 @@ export default async function (fastify, opts) {
 
   // Routes
   await fastify.register(import('./routes/auth.js'), { prefix: '/v1/auth' })
-  await fastify.register(import('./routes/user.js'), { prefix: '/users' })
+  await fastify.register(import('./routes/webauthn.js'), { prefix: '/v1/auth/webauthn' })
+
+  // Cleanup expired tokens on server startup
+  fastify.addHook('onReady', async () => {
+    try {
+      await refreshTokenService.cleanupExpiredTokens()
+      fastify.log.info('Expired refresh tokens cleaned up on startup')
+    } catch (error) {
+      fastify.log.warn('Failed to cleanup expired tokens on startup:', error.message)
+    }
+  })
 }
