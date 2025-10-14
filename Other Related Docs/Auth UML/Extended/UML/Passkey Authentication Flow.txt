@@ -1,0 +1,234 @@
+
+@startuml WebAuthn Passkey Flow
+title WebAuthn/Passkey Authentication Flow (FIDO2)
+
+actor User
+participant "Browser" as Browser
+participant "Frontend\n(React)" as Frontend
+participant "Backend\n(Fastify)" as Backend
+participant "webauthnController" as Controller
+participant "webauthnService" as Service
+participant "PostgreSQL\nDatabase" as DB
+participant "Authenticator\n(Device)" as Device
+
+== Passkey Registration ==
+User -> Browser: Navigate to Profile\nClick "Add Passkey"
+Browser -> Frontend: Open Manage Passkeys
+Frontend -> Frontend: authService.getUser()
+note right: Get logged-in user info
+
+Frontend -> Backend: POST /v1/auth/webauthn/register/options\nAuthorization: Bearer {accessToken}
+Backend -> Backend: authenticate middleware
+Backend -> Controller: registerOptions(request)
+Controller -> Controller: Extract user from JWT
+Controller -> Service: generateRegistrationOptions(user)
+
+Service -> DB: SELECT credential_id, device_name,\ntransports FROM webauthn_credentials\nWHERE staff_id = $1
+DB --> Service: Existing credentials[]
+note right: To exclude already\nregistered authenticators
+
+Service -> Service: Create options using\n@simplewebauthn/server
+note right
+RP_ID: 'localhost'
+RP_ORIGIN: 'http://localhost:3001'
+User ID: Buffer(staff_id)
+userName: user_id
+Timeout: 5 minutes
+authenticatorSelection:
+  - residentKey: 'preferred'
+  - userVerification: 'preferred'
+  - authenticatorAttachment: 'platform'
+excludeCredentials: existing[]
+end note
+
+Service -> Service: Store challenge in memory\nchallengeStore.set(staff_id, {challenge, timestamp})
+note right: In production: use Redis\nExpires in 5 minutes
+
+Service --> Controller: Registration options
+Controller --> Backend: options
+Backend --> Frontend: 200 OK {options}
+
+Frontend -> Frontend: webauthnService.setupPasskey(deviceName)
+Frontend -> Browser: navigator.credentials.create({\n  publicKey: options\n})
+Browser -> Device: Show biometric prompt\n(Face ID, Touch ID, Windows Hello)
+User -> Device: Authenticate with biometrics
+
+alt User Authenticates
+    Device --> Browser: Attestation response
+    Browser --> Frontend: Registration response
+
+    Frontend -> Backend: POST /v1/auth/webauthn/register/verify\n{username, response, deviceName}\nAuthorization: Bearer {accessToken}
+    Backend -> Controller: registerVerify(request)
+    Controller -> Service: verifyRegistrationResponse(\nstaffId, response, deviceName, userAgent)
+
+    Service -> Service: Retrieve challenge from memory\nchallengeStore.get(staff_id)
+
+    Service -> Service: Verify using @simplewebauthn/server\nverifyRegistrationResponse({\n  response,\n  expectedChallenge,\n  expectedOrigin,\n  expectedRPID\n})
+
+    alt Verification Success
+        Service -> Service: Delete used challenge\nchallengeStore.delete(staff_id)
+
+        Service -> Service: Extract device name from userAgent\nif not provided
+        note right: Parse UA for browser/OS info
+
+        Service -> DB: INSERT INTO webauthn_credentials\n(staff_id, credential_id,\npublic_key, counter, device_name,\ntransports, aaguid,\ncredentialBackedUp, credentialDeviceType)
+        DB --> Service: Credential saved
+
+        Service --> Controller: {verified: true, credential}
+        Controller --> Backend: Success response
+        Backend --> Frontend: 200 OK {success, credential}
+        Frontend --> Browser: Show success message
+        Frontend -> Frontend: Reload passkey list
+    else Verification Failed
+        Service --> Controller: {verified: false, message}
+        Controller --> Backend: Error
+        Backend --> Frontend: 400 Bad Request
+        Frontend --> Browser: Show error
+    end
+
+else User Cancels
+    Device --> Browser: Error
+    Browser --> Frontend: NotAllowedError
+    Frontend --> Browser: Show "Cancelled" message
+end
+
+== Passkey Login (Step 1: Check for Passkeys) ==
+User -> Browser: Enter username\nClick "Login"
+Browser -> Frontend: handleNextStep()
+Frontend -> Backend: POST /v1/auth/webauthn/login/options\n{username}
+note right: No auth required -\npublic endpoint
+Backend -> Controller: loginOptions(request)
+Controller -> Service: generateAuthenticationOptions(username)
+
+Service -> DB: SELECT staff_id FROM staff\nWHERE LOWER(user_id) = LOWER($1)\nAND is_active = TRUE
+note right: Case-insensitive username
+
+alt User Found
+    DB --> Service: staff_id
+    Service -> DB: SELECT credential_id, transports\nFROM webauthn_credentials\nWHERE staff_id = $1
+    DB --> Service: credentials[]
+
+    alt User Has Passkeys
+        Service -> Service: Create auth options\nusing @simplewebauthn/server
+        note right
+        rpID: 'localhost'
+        timeout: 5 minutes
+        userVerification: 'preferred'
+        allowCredentials: credentials[]
+        end note
+
+        Service -> Service: Store challenge\nchallengeStore.set(staff_id, {challenge, timestamp})
+        Service --> Controller: Authentication options
+        Controller --> Backend: options
+        Backend --> Frontend: 200 OK {options}
+        Frontend -> Frontend: setShowPasskeyOption(true)\nsetStep(2)
+        Frontend --> Browser: Show Step 2 with\n"Login with Passkey" button
+
+    else No Passkeys Registered
+        Service --> Controller: throw Error("No passkeys")
+        Controller --> Backend: 400 Bad Request
+        Backend --> Frontend: 400 {message: "No passkeys"}
+        Frontend -> Frontend: setShowPasskeyOption(false)\nsetUsePasswordMode(true)\nsetStep(2)
+        Frontend --> Browser: Show Step 2 with\npassword field
+    end
+
+else User Not Found
+    DB --> Service: No record
+    Service --> Controller: throw Error("User not found")
+    Controller --> Backend: 400 Bad Request
+    Backend --> Frontend: 400 {message: "User not found"}
+    Frontend -> Frontend: setShowPasskeyOption(false)\nsetUsePasswordMode(true)\nsetStep(2)
+    Frontend --> Browser: Show Step 2 with\npassword field
+end
+
+== Passkey Login (Step 2: Authenticate) ==
+User -> Browser: Click "Login with Passkey"
+Browser -> Frontend: handlePasskeyLogin()
+Frontend -> Frontend: Get stored options\nfrom Step 1
+Frontend -> Browser: navigator.credentials.get({\n  publicKey: options\n})
+Browser -> Device: Show biometric prompt
+User -> Device: Authenticate with biometrics
+
+alt User Authenticates
+    Device --> Browser: Assertion response
+    Browser --> Frontend: Authentication response
+
+    Frontend -> Backend: POST /v1/auth/webauthn/login/verify\n{username, response, rememberMe}
+    Backend -> Controller: loginVerify(request)
+    Controller -> Service: verifyAuthenticationResponse(\nusername, response, rememberMe)
+
+    Service -> DB: SELECT staff_id FROM staff\nWHERE LOWER(user_id) = LOWER($1)
+    DB --> Service: staff_id
+
+    Service -> DB: SELECT * FROM webauthn_credentials\nWHERE staff_id = $1\nAND credential_id = $2
+    DB --> Service: credential (public_key, counter)
+
+    Service -> Service: Retrieve challenge\nchallengeStore.get(staff_id)
+
+    Service -> Service: Verify using @simplewebauthn/server\nverifyAuthenticationResponse({\n  response,\n  expectedChallenge,\n  expectedOrigin,\n  expectedRPID,\n  authenticator: {\n    credentialID,\n    credentialPublicKey,\n    counter\n  }\n})
+
+    alt Verification Success
+        Service -> Service: Delete used challenge
+
+        Service -> DB: UPDATE webauthn_credentials\nSET counter = $1,\nlast_used_at = NOW()\nWHERE credential_id = $2
+        note right: Update counter to prevent\nreplay attacks
+
+        Service -> DB: SELECT * FROM staff WHERE staff_id = $1
+        DB --> Service: User data
+
+        Service -> JWT: generateTokens(user)
+        JWT --> Service: {accessToken, refreshToken}
+
+        Service -> TokenService: storeToken({token, staffId,\nuserAgent, ipAddress,\nexpiresIn: rememberMe ? 90days : 7days})
+        TokenService -> DB: INSERT INTO refresh_tokens
+
+        Service --> Controller: {verified: true, user, tokens}
+        Controller -> Backend: Set HttpOnly cookie
+        Controller --> Backend: Success response
+        Backend --> Frontend: 200 OK {user, token, expiresIn}
+        Frontend -> Frontend: Store accessToken in memory\nStore user in localStorage
+        Frontend --> Browser: Navigate to /home
+
+    else Verification Failed
+        Service --> Controller: {verified: false, message}
+        Controller --> Backend: 400 Bad Request
+        Backend --> Frontend: 400 {message}
+        Frontend --> Browser: Show error
+    end
+
+else User Cancels
+    Device --> Browser: Error
+    Browser --> Frontend: NotAllowedError
+    Frontend --> Browser: User can switch to password mode
+end
+
+== Delete Passkey ==
+User -> Browser: Click delete on passkey
+Browser -> Frontend: Confirm deletion
+User -> Browser: Confirm
+Frontend -> Backend: DELETE /v1/auth/webauthn/credentials/{id}\nAuthorization: Bearer {accessToken}
+Backend -> Backend: authenticate middleware
+Backend -> Controller: deleteCredential(request)
+Controller -> Controller: Extract user from JWT
+Controller -> DB: DELETE FROM webauthn_credentials\nWHERE credential_id = $1\nAND staff_id = $2
+note right: Only delete own credentials
+DB --> Controller: Deleted
+Controller --> Backend: Success
+Backend --> Frontend: 200 OK
+Frontend -> Frontend: Reload passkey list
+Frontend --> Browser: Update UI
+
+== List User Passkeys ==
+User -> Browser: Navigate to Manage Passkeys
+Browser -> Frontend: Load screen
+Frontend -> Backend: GET /v1/auth/webauthn/credentials\nAuthorization: Bearer {accessToken}
+Backend -> Backend: authenticate middleware
+Backend -> Controller: listCredentials(request)
+Controller -> Controller: Extract user from JWT
+Controller -> DB: SELECT credential_id, device_name,\ntransports, created_at, last_used_at\nFROM webauthn_credentials\nWHERE staff_id = $1\nORDER BY created_at DESC
+DB --> Controller: credentials[]
+Controller --> Backend: credentials array
+Backend --> Frontend: 200 OK {credentials: [...]}
+Frontend --> Browser: Display passkey list with\ndevice names and timestamps
+
+@enduml

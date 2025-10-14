@@ -1,0 +1,137 @@
+
+@startuml Session Management Flow
+title Session Management & Multi-Device Tracking
+
+actor User
+participant "Browser A\n(Desktop)" as BrowserA
+participant "Browser B\n(Mobile)" as BrowserB
+participant "Frontend" as Frontend
+participant "Backend" as Backend
+participant "refreshTokenService" as TokenService
+participant "Database" as DB
+
+== User Logs In on Desktop ==
+User -> BrowserA: Login with credentials
+BrowserA -> Backend: POST /v1/auth/login\nUser-Agent: Chrome/120 (Windows 10)\nIP: 192.168.1.100
+Backend -> TokenService: storeToken({\n  token,\n  staffId: 1,\n  userAgent: "Chrome/120 (Windows 10)",\n  ipAddress: "192.168.1.100",\n  expiresIn: 7 days\n})
+
+TokenService -> TokenService: Parse user agent\ndeviceName = "Chrome on Windows"
+TokenService -> DB: INSERT INTO refresh_tokens\n(\n  token_hash: "abc123...",\n  staff_id: 1,\n  device_name: "Chrome on Windows",\n  user_agent: "Mozilla/5.0...",\n  ip_address: "192.168.1.100",\n  expires_at: NOW() + INTERVAL '7 days',\n  created_at: NOW(),\n  last_used_at: NOW()\n)
+DB --> TokenService: token_id: 1
+BrowserA --> User: Logged in\nSession ID: 1
+
+== User Logs In on Mobile (Same Account) ==
+User -> BrowserB: Login with credentials + Remember Me
+BrowserB -> Backend: POST /v1/auth/login\nUser-Agent: Safari/17 (iOS 17.2)\nIP: 192.168.1.101
+Backend -> TokenService: storeToken({\n  token,\n  staffId: 1,\n  userAgent: "Safari/17 (iOS 17.2)",\n  ipAddress: "192.168.1.101",\n  expiresIn: 90 days\n})
+
+TokenService -> TokenService: deviceName = "Safari on iOS"
+TokenService -> DB: INSERT INTO refresh_tokens\n(token_id: 2, staff_id: 1,\ndevice_name: "Safari on iOS",\nip_address: "192.168.1.101",\nexpires_at: NOW() + INTERVAL '90 days')
+DB --> TokenService: token_id: 2
+BrowserB --> User: Logged in\nSession ID: 2
+
+note over DB
+Staff ID: 1 now has 2 active sessions:
+1. Desktop (Chrome on Windows) - expires in 7 days
+2. Mobile (Safari on iOS) - expires in 90 days
+end note
+
+== User Views Active Sessions ==
+User -> BrowserA: Navigate to Active Sessions
+BrowserA -> Frontend: Load screen
+Frontend -> Backend: GET /v1/auth/sessions\nAuthorization: Bearer {token}\nCookie: refreshToken={token1}
+
+Backend -> TokenService: getActiveSessions(staffId: 1)
+TokenService -> TokenService: hashToken(currentToken)
+TokenService -> DB: SELECT\n  token_id,\n  device_name,\n  user_agent,\n  ip_address,\n  created_at,\n  last_used_at,\n  expires_at,\n  (token_hash = $2) as is_current\nFROM refresh_tokens\nWHERE staff_id = $1\n  AND is_revoked = FALSE\n  AND expires_at > NOW()\nORDER BY last_used_at DESC
+
+DB --> TokenService: [\n  {\n    token_id: 1,\n    device_name: "Chrome on Windows",\n    ip_address: "192.168.1.100",\n    created_at: "2024-01-15 10:30:00",\n    last_used_at: "2024-01-15 11:45:00",\n    is_current: true\n  },\n  {\n    token_id: 2,\n    device_name: "Safari on iOS",\n    ip_address: "192.168.1.101",\n    created_at: "2024-01-15 11:00:00",\n    last_used_at: "2024-01-15 11:30:00",\n    is_current: false\n  }\n]
+
+TokenService --> Backend: sessions array
+Backend --> Frontend: 200 OK {sessions: [...]}
+Frontend --> BrowserA: Display sessions\n✓ Chrome on Windows (Current)\n  Safari on iOS
+
+== User Revokes Mobile Session ==
+User -> BrowserA: Click "End Session" on mobile
+BrowserA -> Frontend: Confirm action
+User -> BrowserA: Confirm
+Frontend -> Backend: DELETE /v1/auth/sessions/{tokenId: 2}\nAuthorization: Bearer {token}
+
+Backend -> TokenService: revokeTokenById(\n  tokenId: 2,\n  staffId: 1,\n  reason: "Revoked by user"\n)
+
+TokenService -> DB: UPDATE refresh_tokens\nSET\n  is_revoked = TRUE,\n  revoked_at = NOW(),\n  revoked_reason = 'Revoked by user'\nWHERE token_id = 2\n  AND staff_id = 1
+note right: Only revoke if owned by user\n(security check)
+
+DB --> TokenService: 1 row updated
+TokenService --> Backend: Success
+Backend --> Frontend: 200 OK
+Frontend -> Frontend: Reload session list
+Frontend --> BrowserA: Updated list\n✓ Chrome on Windows (Current)
+
+note over BrowserB
+Mobile session is now revoked.
+Next API request will fail:
+- 401 Unauthorized
+- "Token revoked"
+- Redirect to login
+end note
+
+== Mobile Tries to Use Revoked Token ==
+User -> BrowserB: Navigate to any page
+BrowserB -> Backend: GET /v1/some/resource\nAuthorization: Bearer {oldToken}\nCookie: refreshToken={revokedToken}
+
+Backend -> Backend: authenticate middleware
+Backend -> TokenService: verifyAndRefresh(revokedToken)
+TokenService -> TokenService: hashToken(token)
+TokenService -> DB: SELECT * FROM refresh_tokens\nWHERE token_hash = $1\n  AND is_revoked = FALSE\n  AND expires_at > NOW()
+
+DB --> TokenService: No rows\n(token is revoked)
+TokenService --> Backend: throw Error("Token revoked")
+Backend --> Frontend: 401 Unauthorized {\n  message: "Token has been revoked"\n}
+Frontend -> Frontend: authService.clearUser()
+Frontend -> BrowserB: navigate('/login')
+BrowserB --> User: Redirected to login\n"Your session has ended"
+
+== User Logs Out All Devices ==
+User -> BrowserA: Click "Logout All Other Devices"
+BrowserA -> Frontend: Confirm action
+Frontend -> Backend: POST /v1/auth/logout-all\nAuthorization: Bearer {token}\nCookie: refreshToken={token1}
+
+Backend -> TokenService: revokeAllOtherTokens(\n  staffId: 1,\n  currentToken: token1,\n  reason: "Logout from all other devices"\n)
+
+TokenService -> TokenService: hashToken(currentToken)
+TokenService -> DB: UPDATE refresh_tokens\nSET\n  is_revoked = TRUE,\n  revoked_at = NOW(),\n  revoked_reason = 'Logout from all other devices'\nWHERE staff_id = 1\n  AND token_hash != $2\n  AND is_revoked = FALSE
+
+note over DB
+Revokes all sessions for staff_id: 1
+EXCEPT the current one (token_hash = abc123...)
+end note
+
+DB --> TokenService: N rows updated
+TokenService --> Backend: { count: N }
+Backend --> Frontend: 200 OK {\n  message: "Logged out from N devices"\n}
+Frontend --> BrowserA: Show notification\n"Logged out from all other devices"
+
+== Automatic Cleanup (Daily) ==
+note over DB: Every day at 2 AM via pg_cron
+
+DB -> DB: SELECT cleanup_expired_refresh_tokens()
+DB -> DB: DELETE FROM refresh_tokens\nWHERE expires_at < NOW()\n  OR (\n    is_revoked = TRUE\n    AND revoked_at < NOW() - INTERVAL '30 days'\n  )
+
+note right
+Deletes:
+1. Expired tokens
+2. Revoked tokens older than 30 days
+   (keep recent for audit trail)
+end note
+
+DB --> DB: Deleted M rows
+
+== Cleanup on Server Startup ==
+note over Backend: Server starts/restarts
+Backend -> TokenService: cleanupExpiredTokens()
+TokenService -> DB: SELECT cleanup_expired_refresh_tokens()
+DB --> TokenService: Deleted M rows
+TokenService --> Backend: Log: "Cleaned up M expired tokens"
+
+@enduml
