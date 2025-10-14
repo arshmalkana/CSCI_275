@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { FloatingLabelField } from '../components/FloatingLabelField'
 import { PrimaryButton } from '../components/Button'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { Lock, User, CheckCircle, AlertTriangle } from 'lucide-react'
 
 export default function ChangePasswordScreen() {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     oldPassword: '',
     newPassword: '',
@@ -55,14 +57,11 @@ export default function ChangePasswordScreen() {
   }
 
   const handleBack = () => {
-    // Navigate back to profile, will add it later
-    console.log('Navigate back to profile')
-    window.location.reload(); // This will take you back to the screen selection
+    navigate(-1)
   }
 
   const handleForgetPassword = () => {
-    // Navigate to forget password screen, will add laterrrrrrrr
-    console.log('Navigate to forget password')
+    navigate('/forgot-password')
   }
 
   return (
