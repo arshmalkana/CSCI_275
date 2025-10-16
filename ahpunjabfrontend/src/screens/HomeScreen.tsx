@@ -76,7 +76,7 @@ export default function HomeScreen() {
         console.error('Failed to fetch home data:', err)
         setError(err instanceof Error ? err.message : 'Failed to load data')
         // Use mock data as fallback
-        setInstituteData(MOCK_INSTITUTE_DATA)
+        // setInstituteData(MOCK_INSTITUTE_DATA)
       } finally {
         setIsLoading(false)
       }
