@@ -2,6 +2,7 @@
 import webauthnService from '../services/webauthnService.js'
 import authService from '../services/authService.js'
 import refreshTokenService from '../services/refreshTokenService.js'
+import { NotFoundError, ValidationError, WebAuthnError } from '../utils/errors.js'
 
 const webauthnController = {
   /**
@@ -17,26 +18,37 @@ const webauthnController = {
       const staff = await authService.findStaffById(staffId)
 
       if (!staff) {
-        return reply.code(404).send({
-          success: false,
-          message: 'User not found'
-        })
+        throw new NotFoundError('User', staffId)
       }
 
-      const options = await webauthnService.generateRegistrationOptions({
-        staff_id: staff.staff_id,
-        user_id: staff.user_id,
-        full_name: staff.full_name
-      })
+      const options = await webauthnService.generateRegistrationOptions(
+        {
+          staff_id: staff.staff_id,
+          user_id: staff.user_id,
+          full_name: staff.full_name
+        },
+        request.ip,
+        request.headers['user-agent']
+      )
 
       return reply.code(200).send({
         success: true,
         options
       })
     } catch (error) {
-      console.error('Register options error:', error)
+      request.log.error({ error, staffId: request.user?.staffId }, 'Register options error')
+
+      if (error instanceof NotFoundError) {
+        return reply.code(404).send({
+          success: false,
+          error: error.name,
+          message: error.message
+        })
+      }
+
       return reply.code(500).send({
         success: false,
+        error: 'InternalServerError',
         message: 'Failed to generate registration options'
       })
     }
@@ -52,6 +64,10 @@ const webauthnController = {
       const { staffId } = request.user
       const { response, deviceName } = request.body
       const userAgent = request.headers['user-agent'] || ''
+
+      if (!response) {
+        throw new ValidationError('Registration response is required', 'response')
+      }
 
       const result = await webauthnService.verifyRegistration(
         staffId,
@@ -69,9 +85,28 @@ const webauthnController = {
         }
       })
     } catch (error) {
-      console.error('Register verify error:', error)
+      request.log.error({ error, staffId: request.user?.staffId }, 'Register verify error')
+
+      if (error instanceof ValidationError) {
+        return reply.code(400).send({
+          success: false,
+          error: error.name,
+          message: error.message,
+          field: error.field
+        })
+      }
+
+      if (error instanceof WebAuthnError) {
+        return reply.code(400).send({
+          success: false,
+          error: error.name,
+          message: error.message
+        })
+      }
+
       return reply.code(400).send({
         success: false,
+        error: 'RegistrationError',
         message: error.message || 'Failed to verify registration'
       })
     }
@@ -85,24 +120,26 @@ const webauthnController = {
       const { username } = request.body
 
       if (!username) {
-        return reply.code(400).send({
-          success: false,
-          message: 'Username is required'
-        })
+        throw new ValidationError('Username is required', 'username')
       }
 
-      const options = await webauthnService.generateAuthenticationOptions(username)
+      const options = await webauthnService.generateAuthenticationOptions(
+        username,
+        request.ip,
+        request.headers['user-agent']
+      )
 
       return reply.code(200).send({
         success: true,
         options
       })
     } catch (error) {
-      console.error('Login options error:', error)
+      request.log.warn({ error, username: request.body.username }, 'Login options error')
 
       // Don't reveal if user exists or not (security)
       return reply.code(400).send({
         success: false,
+        error: 'AuthenticationError',
         message: 'No passkeys available for this user'
       })
     }
@@ -114,6 +151,14 @@ const webauthnController = {
   async loginVerify(request, reply) {
     try {
       const { username, response, rememberMe } = request.body
+
+      if (!username) {
+        throw new ValidationError('Username is required', 'username')
+      }
+
+      if (!response) {
+        throw new ValidationError('Authentication response is required', 'response')
+      }
 
       // Verify passkey authentication
       const staff = await webauthnService.verifyAuthentication(username, response)
@@ -144,6 +189,8 @@ const webauthnController = {
         path: '/'
       })
 
+      request.log.info({ staffId: staff.staff_id, username }, 'Passkey login successful')
+
       // Return success response (same format as password login)
       return reply.code(200).send({
         success: true,
@@ -166,9 +213,20 @@ const webauthnController = {
         expiresIn: '15m'
       })
     } catch (error) {
-      console.error('Login verify error:', error)
+      request.log.error({ error, username: request.body.username }, 'Login verify error')
+
+      if (error instanceof ValidationError) {
+        return reply.code(400).send({
+          success: false,
+          error: error.name,
+          message: error.message,
+          field: error.field
+        })
+      }
+
       return reply.code(401).send({
         success: false,
+        error: 'AuthenticationError',
         message: 'Authentication failed'
       })
     }
@@ -195,9 +253,11 @@ const webauthnController = {
         }))
       })
     } catch (error) {
-      console.error('List credentials error:', error)
+      request.log.error({ error, staffId: request.user?.staffId }, 'List credentials error')
+
       return reply.code(500).send({
         success: false,
+        error: 'InternalServerError',
         message: 'Failed to retrieve credentials'
       })
     }
@@ -213,23 +273,45 @@ const webauthnController = {
       // Get staffId from JWT token (set by authenticate middleware)
       const { staffId } = request.user
 
+      if (!credentialId) {
+        throw new ValidationError('Credential ID is required', 'credentialId')
+      }
+
       const deleted = await webauthnService.deleteCredential(credentialId, staffId)
 
       if (!deleted) {
-        return reply.code(404).send({
-          success: false,
-          message: 'Credential not found'
-        })
+        throw new NotFoundError('Credential', credentialId)
       }
+
+      request.log.info({ staffId, credentialId }, 'Passkey deleted successfully')
 
       return reply.code(200).send({
         success: true,
         message: 'Passkey deleted successfully'
       })
     } catch (error) {
-      console.error('Delete credential error:', error)
+      request.log.error({ error, staffId: request.user?.staffId, credentialId: request.params.credentialId }, 'Delete credential error')
+
+      if (error instanceof ValidationError) {
+        return reply.code(400).send({
+          success: false,
+          error: error.name,
+          message: error.message,
+          field: error.field
+        })
+      }
+
+      if (error instanceof NotFoundError) {
+        return reply.code(404).send({
+          success: false,
+          error: error.name,
+          message: error.message
+        })
+      }
+
       return reply.code(500).send({
         success: false,
+        error: 'InternalServerError',
         message: 'Failed to delete credential'
       })
     }

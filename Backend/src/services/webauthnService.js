@@ -6,27 +6,115 @@ import {
   verifyAuthenticationResponse
 } from '@simplewebauthn/server'
 import { query } from '../database/db.js'
+import { WebAuthnError, NotFoundError, ValidationError } from '../utils/errors.js'
 
 // Relying Party (RP) configuration
 const RP_NAME = process.env.RP_NAME || 'AH Punjab Reporting'
-// const RP_ID = process.env.RP_ID || 'ahpunjabdev.itsarsh.dev'
-// const RP_ORIGIN = process.env.RP_ORIGIN || 'https://ahpunjabdev.itsarsh.dev'
 const RP_ID = process.env.RP_ID || 'localhost'
 const RP_ORIGIN = process.env.RP_ORIGIN || 'http://localhost:3000'
 
-// Temporary storage for challenges (in production, use Redis)
-const challengeStore = new Map()
+// Challenge storage now uses database (see webauthn_challenges table)
+// Removed in-memory Map for security and scalability
 
 const webauthnService = {
   /**
+   * Store challenge in database
+   * @param {String} challengeKey - Unique key for challenge
+   * @param {String} challenge - Challenge string
+   * @param {Number} staffId - Staff ID (optional)
+   * @param {String} challengeType - 'registration' or 'authentication'
+   * @param {Number} expiryMinutes - Expiry time in minutes
+   * @param {String} ipAddress - Client IP address
+   * @param {String} userAgent - Client user agent
+   */
+  async storeChallenge(challengeKey, challenge, staffId, challengeType, expiryMinutes, ipAddress = null, userAgent = null) {
+    try {
+      const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000)
+
+      await query(
+        `INSERT INTO webauthn_challenges
+         (challenge_key, challenge, staff_id, challenge_type, expires_at, ip_address, user_agent)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (challenge_key)
+         DO UPDATE SET
+           challenge = EXCLUDED.challenge,
+           expires_at = EXCLUDED.expires_at,
+           ip_address = EXCLUDED.ip_address,
+           user_agent = EXCLUDED.user_agent`,
+        [challengeKey, challenge, staffId, challengeType, expiresAt, ipAddress, userAgent]
+      )
+    } catch (error) {
+      throw new WebAuthnError(`Failed to store challenge: ${error.message}`)
+    }
+  },
+
+  /**
+   * Get challenge from database
+   * @param {String} challengeKey - Unique key for challenge
+   * @returns {Object|null} Challenge data or null if not found/expired
+   */
+  async getChallenge(challengeKey) {
+    try {
+      const result = await query(
+        `SELECT challenge, staff_id, expires_at
+         FROM webauthn_challenges
+         WHERE challenge_key = $1 AND expires_at > NOW()`,
+        [challengeKey]
+      )
+
+      if (result.rows.length === 0) {
+        return null
+      }
+
+      return result.rows[0]
+    } catch (error) {
+      throw new WebAuthnError(`Failed to retrieve challenge: ${error.message}`)
+    }
+  },
+
+  /**
+   * Delete challenge from database
+   * @param {String} challengeKey - Unique key for challenge
+   */
+  async deleteChallenge(challengeKey) {
+    try {
+      await query(
+        'DELETE FROM webauthn_challenges WHERE challenge_key = $1',
+        [challengeKey]
+      )
+    } catch (error) {
+      // Don't throw on delete errors, just log
+      console.error('Failed to delete challenge:', error)
+    }
+  },
+
+  /**
+   * Cleanup expired challenges (called periodically)
+   * @returns {Number} Number of challenges deleted
+   */
+  async cleanupExpiredChallenges() {
+    try {
+      const result = await query(
+        'DELETE FROM webauthn_challenges WHERE expires_at < NOW()'
+      )
+      return result.rowCount
+    } catch (error) {
+      console.error('Failed to cleanup expired challenges:', error)
+      return 0
+    }
+  },
+
+  /**
    * Generate registration options for a new passkey
    * @param {Object} user - User object with staff_id, user_id, full_name
+   * @param {String} ipAddress - Client IP address
+   * @param {String} userAgent - Client user agent
    * @returns {Object} Registration options to send to browser
    */
-  async generateRegistrationOptions(user) {
+  async generateRegistrationOptions(user, ipAddress = null, userAgent = null) {
     // Validate user object
     if (!user || !user.staff_id) {
-      throw new Error('Invalid user object: staff_id is required')
+      throw new ValidationError('Invalid user object: staff_id is required', 'staff_id')
     }
 
     // Get existing credentials for this user
@@ -50,25 +138,25 @@ const webauthnService = {
         authenticatorAttachment: 'platform'
       },
       // Exclude already registered credentials
-      excludeCredentials: existingCredentials.map(cred => {
-        // credential_id is already base64url string, convert to Uint8Array
-        // const idBuffer = Buffer.from(cred.credential_id, 'base64url')
-        return {
-          // id: new Uint8Array(idBuffer),
-          id: cred.credential_id,
-          type: 'public-key',
-          transports: cred.transports || []
-        }
-      }),
+      excludeCredentials: existingCredentials.map(cred => ({
+        id: cred.credential_id,
+        type: 'public-key',
+        transports: cred.transports || []
+      })),
       // Request attestation for authenticator info
       attestationType: 'none'
     })
 
-    // Store challenge temporarily (expires in 5 minutes)
-    challengeStore.set(user.staff_id, {
-      challenge: options.challenge,
-      timestamp: Date.now()
-    })
+    // Store challenge in database (expires in 5 minutes)
+    await this.storeChallenge(
+      String(user.staff_id),
+      options.challenge,
+      user.staff_id,
+      'registration',
+      5,
+      ipAddress,
+      userAgent
+    )
 
     return options
   },
@@ -82,16 +170,11 @@ const webauthnService = {
    * @returns {Object} Verification result
    */
   async verifyRegistration(staffId, response, deviceName = null, userAgent = '') {
-    // Get stored challenge
-    const storedChallenge = challengeStore.get(staffId)
-    if (!storedChallenge) {
-      throw new Error('Challenge not found or expired')
-    }
+    // Get stored challenge from database
+    const storedChallenge = await this.getChallenge(String(staffId))
 
-    // Check if challenge expired (5 minutes)
-    if (Date.now() - storedChallenge.timestamp > 300000) {
-      challengeStore.delete(staffId)
-      throw new Error('Challenge expired')
+    if (!storedChallenge) {
+      throw new WebAuthnError('Challenge not found or expired', 'registration')
     }
 
     try {
@@ -104,14 +187,10 @@ const webauthnService = {
       })
 
       if (!verification.verified) {
-        throw new Error('Registration verification failed')
+        throw new WebAuthnError('Registration verification failed', 'registration')
       }
 
-      console.log('Verification response:', JSON.stringify(verification, null, 2))
-
       const { registrationInfo } = verification
-
-      console.log('Registration info:', JSON.stringify(registrationInfo, null, 2))
 
       const {
         credential,
@@ -132,8 +211,7 @@ const webauthnService = {
       const finalCounter = counter ?? credential?.counter ?? 0
 
       if (!finalCredentialID || !finalCredentialPublicKey) {
-        console.error('Missing credential data:', { credentialID, credential })
-        throw new Error('Invalid credential data received')
+        throw new WebAuthnError('Invalid credential data received', 'registration')
       }
 
       // Convert aaguid to hex (handle undefined case)
@@ -157,8 +235,8 @@ const webauthnService = {
         [staffId]
       )
 
-      // Clear challenge
-      challengeStore.delete(staffId)
+      // Clear challenge from database
+      await this.deleteChallenge(String(staffId))
 
       return {
         verified: true,
@@ -166,7 +244,8 @@ const webauthnService = {
         deviceName: finalDeviceName
       }
     } catch (error) {
-      challengeStore.delete(staffId)
+      // Clear challenge on error
+      await this.deleteChallenge(String(staffId))
       throw error
     }
   },
@@ -174,9 +253,11 @@ const webauthnService = {
   /**
    * Generate authentication options for passkey login
    * @param {String} userId - User's login username
+   * @param {String} ipAddress - Client IP address
+   * @param {String} userAgent - Client user agent
    * @returns {Object} Authentication options
    */
-  async generateAuthenticationOptions(userId) {
+  async generateAuthenticationOptions(userId, ipAddress = null, userAgent = null) {
     // Find user by user_id (case-insensitive)
     const userResult = await query(
       'SELECT staff_id FROM staff WHERE LOWER(user_id) = LOWER($1) AND is_active = true',
@@ -184,16 +265,16 @@ const webauthnService = {
     )
 
     if (userResult.rows.length === 0) {
-      throw new Error('User not found')
+      throw new NotFoundError('User', userId)
     }
 
     const staffId = userResult.rows[0].staff_id
-    console.log("stafffffffffffffffffff  ", staffId)
+
     // Get user's credentials
     const credentials = await this.getUserCredentials(staffId)
 
     if (credentials.length === 0) {
-      throw new Error('No passkeys registered for this user')
+      throw new WebAuthnError('No passkeys registered for this user', 'authentication')
     }
 
     const options = await generateAuthenticationOptions({
@@ -207,12 +288,16 @@ const webauthnService = {
       userVerification: 'preferred'
     })
 
-    // Store challenge with username (not staff_id since user isn't logged in yet)
-    challengeStore.set(`auth_${userId}`, {
-      challenge: options.challenge,
+    // Store challenge in database with username prefix (expires in 1 minute)
+    await this.storeChallenge(
+      `auth_${userId}`,
+      options.challenge,
       staffId,
-      timestamp: Date.now()
-    })
+      'authentication',
+      1,
+      ipAddress,
+      userAgent
+    )
 
     return options
   },
@@ -224,21 +309,15 @@ const webauthnService = {
    * @returns {Object} User data if verified
    */
   async verifyAuthentication(userId, response) {
-    // Get stored challenge
-    const storedChallenge = challengeStore.get(`auth_${userId}`)
-    if (!storedChallenge) {
-      throw new Error('Challenge not found or expired')
-    }
+    // Get stored challenge from database
+    const storedChallenge = await this.getChallenge(`auth_${userId}`)
 
-    // Check if challenge expired (1 minute)
-    if (Date.now() - storedChallenge.timestamp > 60000) {
-      challengeStore.delete(`auth_${userId}`)
-      throw new Error('Challenge expired')
+    if (!storedChallenge) {
+      throw new WebAuthnError('Challenge not found or expired', 'authentication')
     }
 
     try {
       // Get credential from database
-      // response.id is already a base64url string from the browser
       const credResult = await query(
         `SELECT wc.*, s.user_id, s.full_name, s.user_role, s.designation,
                 s.current_institute_id, s.is_first_time, s.mobile, s.email,
@@ -254,7 +333,7 @@ const webauthnService = {
       )
 
       if (credResult.rows.length === 0) {
-        throw new Error('Credential not found')
+        throw new NotFoundError('Credential', response.id)
       }
 
       const cred = credResult.rows[0]
@@ -274,7 +353,7 @@ const webauthnService = {
       })
 
       if (!verification.verified) {
-        throw new Error('Authentication verification failed')
+        throw new WebAuthnError('Authentication verification failed', 'authentication')
       }
 
       // Update counter and last_used_at
@@ -285,8 +364,8 @@ const webauthnService = {
         [verification.authenticationInfo.newCounter, cred.credential_id]
       )
 
-      // Clear challenge
-      challengeStore.delete(`auth_${userId}`)
+      // Clear challenge from database
+      await this.deleteChallenge(`auth_${userId}`)
 
       // Return user data (same format as password login)
       return {
@@ -305,7 +384,8 @@ const webauthnService = {
         tehsil_name: cred.tehsil_name
       }
     } catch (error) {
-      challengeStore.delete(`auth_${userId}`)
+      // Clear challenge on error
+      await this.deleteChallenge(`auth_${userId}`)
       throw error
     }
   },

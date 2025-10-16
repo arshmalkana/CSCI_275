@@ -19,6 +19,8 @@ services:
       - ./init/04-test-users.sql:/docker-entrypoint-initdb.d/04-test-users.sql
       - ./init/05-webauthn.sql:/docker-entrypoint-initdb.d/05-webauthn.sql
       - ./init/06-refresh-tokens.sql:/docker-entrypoint-initdb.d/06-refresh-tokens.sql
+      - ./init/07-comprehensive_seed_data.sql:/docker-entrypoint-initdb.d/07-comprehensive_seed_data.sql
+      - ./init/08-webauthn-challenges.sql:/docker-entrypoint-initdb.d/08-webauthn-challenges.sql
       # Comment out for dev to reseed every time, uncomment for production 
       # - postgres_data:/var/lib/postgresql/data
       # Persist data even when container stops

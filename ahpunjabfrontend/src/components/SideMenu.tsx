@@ -12,15 +12,15 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
   const [isAnimating, setIsAnimating] = useState(false);
 
   const menuItems = [
-    { name: "Home", icon: "🏠" },
-    { name: "Monthly Reporting", icon: "📊" },
-    { name: "Attendance Report", icon: "👥" },
-    { name: "Vaccination Reports", icon: "💉" },
-    { name: "Vaccine Distribution", icon: "🚚" },
-    { name: "Semen Distribution", icon: "🐄" },
-    { name: "Summary Report", icon: "📈" },
-    { name: "Manage Transfer", icon: "🔄" },
-    { name: "Contact other Institutes", icon: "📞" },
+    { name: "Home", icon: "🏠", path: "/home" },
+    { name: "Monthly Reporting", icon: "📊", path: "/reports/monthly" },
+    { name: "Attendance Report", icon: "👥", path: "/reports/attendance" },
+    { name: "Vaccination Reports", icon: "💉", path: "/reports/vaccination" },
+    { name: "Vaccine Distribution", icon: "🚚", path: "/vaccine-distribution" },
+    { name: "Semen Distribution", icon: "🐄", path: "/semen-distribution" },
+    { name: "Summary Report", icon: "📈", path: "/reports/summary" },
+    // { name: "Manage Transfer", icon: "🔄", path: "/reports/manage-transfer" },
+    { name: "Contact other Institutes", icon: "📞", path: "/contact-institutes" },
   ];
 
   useEffect(() => {
@@ -33,8 +33,8 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
   }, [isOpen]);
 
   const handleMenuItemClick = (item: string) => {
-    console.log('Menu item clicked:', item);
     onClose(); // Close menu after selection
+    navigate(menuItems.find(i => i.name === item)?.path || '/home');
   };
 
   const handleLogout = () => {

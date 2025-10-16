@@ -36,7 +36,21 @@ export default async function (fastify, opts) {
           }
         }
       }
-    }
+    },
+    config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: '15 minutes',
+          errorResponseBuilder: (request, context) => {
+            return {
+              statusCode: 429,
+              error: 'Too Many Login Attempts',
+              message: 'Too many failed login attempts. Please try again in 15 minutes.',
+              retryAfter: Math.ceil(context.after / 1000)
+            }
+          }
+        }
+      }
   }, authController.login)
 
   // Logout endpoint
@@ -78,7 +92,13 @@ export default async function (fastify, opts) {
           }
         }
       }
-    }
+    },
+    config: {
+        rateLimit: {
+          max: 10,
+          timeWindow: '15 minutes'
+        }
+      }
   }, authController.refreshToken)
 
   // Session management endpoints (requires authentication)

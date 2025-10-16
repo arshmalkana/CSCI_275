@@ -3,9 +3,24 @@ import webauthnController from '../controllers/webauthnController.js'
 import { authenticate } from '../middleware/authenticate.js'
 
 export default async function (fastify, opts) {
+
+  const webauthnLimit = {
+    max: 5,
+    timeWindow: '15 minutes',
+    errorResponseBuilder: (request, context) => {
+      return {
+        statusCode: 429,
+        error: 'Too Many Attempts',
+        message: 'Too many passkey attempts. Please try again in 15 minutes.',
+        retryAfter: Math.ceil(context.after / 1000)
+      }
+    }
+  }
+
   // Registration endpoints (requires authentication)
   fastify.post('/register/options', {
     preHandler: authenticate,
+    config: { rateLimit: webauthnLimit },
     schema: {
       description: 'Get WebAuthn registration options for passkey setup (requires JWT)',
       tags: ['WebAuthn'],
@@ -28,6 +43,7 @@ export default async function (fastify, opts) {
 
   fastify.post('/register/verify', {
     preHandler: authenticate,
+    config: { rateLimit: webauthnLimit },
     schema: {
       description: 'Verify WebAuthn registration response and save credential (requires JWT)',
       tags: ['WebAuthn'],
@@ -55,6 +71,7 @@ export default async function (fastify, opts) {
 
   // Login endpoints (public)
   fastify.post('/login/options', {
+    config: { rateLimit: webauthnLimit },
     schema: {
       description: 'Get WebAuthn authentication options for passkey login',
       tags: ['WebAuthn'],
@@ -78,6 +95,7 @@ export default async function (fastify, opts) {
   }, webauthnController.loginOptions)
 
   fastify.post('/login/verify', {
+    config: { rateLimit: webauthnLimit },
     schema: {
       description: 'Verify WebAuthn authentication and login user',
       tags: ['WebAuthn'],

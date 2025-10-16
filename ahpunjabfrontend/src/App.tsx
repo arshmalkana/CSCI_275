@@ -10,6 +10,7 @@ import VaccineDistributionScreen from './screens/VaccineDistributionScreen'
 import PasskeySetupScreen from './screens/PasskeySetupScreen'
 import ManagePasskeysScreen from './screens/ManagePasskeysScreen'
 import ActiveSessionsScreen from './screens/ActiveSessionsScreen'
+import MonthlyReportScreen from './screens/MonthlyReportScreen'
 import AllScreensScreen from './screens/AllScreensScreen'
 import authService from './services/authService'
 
@@ -100,6 +101,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <VaccineDistributionScreen />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/monthly"
+            element={
+              <ProtectedRoute>
+                <MonthlyReportScreen />
               </ProtectedRoute>
             }
           />
