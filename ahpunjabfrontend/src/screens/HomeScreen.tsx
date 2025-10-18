@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import SideMenu from '../components/SideMenu'
+import { MainHeader } from '../components/Headers'
 import { Card, CardTitle, StatCard, StatusBadge } from '../components/Card'
-import { Menu, Bell, User, ChevronDown, ChevronRight, BellRing, Phone, Mail } from 'lucide-react'
+import { ChevronDown, ChevronRight, BellRing, Phone, Mail, CloudAlert } from 'lucide-react'
 import { getStorageItem, setStorageItem } from '../utils/storage'
 import api from '../utils/api'
+import { SuccessDialog } from '../components/DialogBox'
 
 // Types for API response
 interface VaccineData {
@@ -53,7 +54,6 @@ interface HomeData {
 }
 
 export default function HomeScreen() {
-  const navigate = useNavigate()
   const [notifications] = useState(5) // Temporary notification count, use api to update
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false)
   const [instituteData, setInstituteData] = useState<HomeData | null>(null)
@@ -63,6 +63,9 @@ export default function HomeScreen() {
     // Load from storage or default to 'FMD'
     return getStorageItem('selectedVaccine') || 'FMD'
   })
+
+  // Dialog state
+  const [successDialog, setSuccessDialog] = useState({ isOpen: false, message: '' })
 
   // Fetch home data from API on mount
   useEffect(() => {
@@ -105,47 +108,14 @@ export default function HomeScreen() {
 
   const handleSendReminder = (instituteName: string) => {
     // TODO: Implement API call to send reminder
-    alert(`Reminder sent to ${instituteName}`)
+    setSuccessDialog({
+      isOpen: true,
+      message: `Reminder sent to ${instituteName}`
+    })
   }
 
-  // Vaccine data from API or mock data
-  const vaccineData = instituteData?.vaccines || {
-    'FMD': {
-      name: 'FMD',
-      monthly: { completed: 350},
-      annual: { completed: 3850, target: 6000 }
-    },
-    'HS': {
-      name: 'HS',
-      monthly: { completed: 280 },
-      annual: { completed: 3120, target: 3600 }
-    },
-    'BQ': {
-      name: 'Black Quarter',
-      monthly: { completed: 150 },
-      annual: { completed: 1650, target: 2400 }
-    },
-    'BRUC': {
-      name: 'Brucellosis',
-      monthly: { completed: 120 },
-      annual: { completed: 1320, target: 1800 }
-    },
-    'THEI': {
-      name: 'Theilaria',
-      monthly: { completed: 95},
-      annual: { completed: 1045, target: 1200 }
-    },
-    'RABIES': {
-      name: 'Rabies',
-      monthly: { completed: 70},
-      annual: { completed: 770, target: 960 }
-    },
-    'ETV': {
-      name: 'Entero Toximia',
-      monthly: { completed: 100},
-      annual: { completed: 1100, target: 1440 }
-    }
-  }
+  // Vaccine data from API only (no fallback)
+  const vaccineData = instituteData?.vaccines || {}
 
   // Get color based on category (fixed colors)
   const getCategoryColor = (category: 'opd' | 'aiCow' | 'aiBuf' | 'vaccine'): 'blue' | 'green' | 'orange' | 'yellow' | 'red' => {
@@ -175,12 +145,12 @@ export default function HomeScreen() {
     return (
       <div className="HomeScreen w-full max-w-md mx-auto h-screen flex items-center justify-center bg-white">
         <div className="text-center px-6">
-          <div className="text-red-500 text-5xl mb-4">⚠️</div>
+          <div className="text-red-600 flex justify-center mb-4"><CloudAlert size={96} /></div>
           <h2 className="text-xl font-bold text-gray-900 font-['Poppins'] mb-2">Failed to Load Data</h2>
           <p className="text-gray-600 font-['Poppins'] mb-4">{error || 'Unable to fetch homepage data'}</p>
           <button
             onClick={() => window.location.reload()}
-            className="bg-yellow-500 text-white px-6 py-2 rounded-lg font-['Poppins'] hover:bg-yellow-600"
+            className="bg-red-600 text-white px-6 py-2 rounded-lg font-['Poppins'] hover:bg-yellow-600"
           >
             Retry
           </button>
@@ -192,47 +162,10 @@ export default function HomeScreen() {
   return (
     <div className="HomeScreen w-full max-w-md mx-auto h-screen flex flex-col bg-white justify-center overflow-hidden">
       {/* Header */}
-      <div className="Header w-full h-20 bg-yellow-500 sticky top-0 z-10">
-        <div className="flex items-center justify-between px-4 h-full">
-          {/* Hamburger Menu */}
-          <button
-            className="w-6 h-6"
-            onClick={() => setIsSideMenuOpen(true)}
-          >
-            <Menu size={24} />
-          </button>
-
-          {/* App Title */}
-          <div className="text-black text-lg font-semibold font-['Poppins']">
-            AH Punjab
-          </div>
-
-          {/* Right Icons */}
-          <div className="flex items-center gap-3">
-            {/* Notification Bell */}
-            <button
-              className="relative"
-              onClick={() => navigate('/notifications')}
-            >
-              <Bell size={24} />
-              {notifications > 0 && (
-                <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">
-                  {notifications}
-                </div>
-              )}
-            </button>
-
-            {/* Profile Icon */}
-            <button
-              className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center"
-              onClick={() => navigate('/profile')}
-            >
-              <User size={16} />
-            </button>
-          </div>
-        </div>
-      </div>
-
+      <MainHeader
+        onMenuClick={() => setIsSideMenuOpen(true)}
+        notifications={notifications}
+      />
       {/* Main Content */}
       <div className="MainContent flex-1 bg-gray-50 overflow-y-auto"
         style={{
@@ -625,6 +558,13 @@ export default function HomeScreen() {
       <SideMenu
         isOpen={isSideMenuOpen}
         onClose={() => setIsSideMenuOpen(false)}
+      />
+
+      {/* Success Dialog */}
+      <SuccessDialog
+        isOpen={successDialog.isOpen}
+        message={successDialog.message}
+        onClose={() => setSuccessDialog({ isOpen: false, message: '' })}
       />
     </div>
   )

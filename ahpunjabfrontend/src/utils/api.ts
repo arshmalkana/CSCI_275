@@ -118,7 +118,22 @@ export const api = {
 
   logout: () => apiPost('/auth/logout', {}),
 
-  // Add more endpoints as needed
+  // Profile
+  getProfile: () => apiGet('/profile'),
+
+  updateProfile: (updates: {
+    fullName?: string
+    mobile?: string
+    email?: string
+    whatsappNumber?: string
+    dateOfBirth?: string
+  }) => apiPut('/profile', updates),
+
+  updateLocation: (location: { latitude: number; longitude: number }) =>
+    apiPut('/profile/location', location),
+
+  uploadProfilePicture: (pictureUrl: string) =>
+    apiPost('/profile/picture', { pictureUrl })
 }
 
 export default api

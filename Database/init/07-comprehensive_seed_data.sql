@@ -327,7 +327,7 @@ INSERT INTO staff (user_id, full_name, designation, date_of_birth, mobile, email
  '1985-06-15',
  '+919834562107',
  'rajdeep.sandhu@ahpunjab.gov.in',
- '$2a$10$placeholder_hash', -- Will be replaced with real argon2id hash in production
+ 'password', -- Will be replaced with real argon2id hash in production
  'INAPH',
  (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001'),
  FALSE,
@@ -340,7 +340,7 @@ INSERT INTO staff (user_id, full_name, designation, date_of_birth, mobile, email
  '1990-03-20',
  '+919872041356',
  'manpreet.kaur@ahpunjab.gov.in',
- '$2a$10$placeholder_hash',
+ 'password',
  'AIW',
  (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001'),
  FALSE,
@@ -353,7 +353,7 @@ INSERT INTO staff (user_id, full_name, designation, date_of_birth, mobile, email
  '1988-09-10',
  '+919798125463',
  'arvinder.singh@ahpunjab.gov.in',
- '$2a$10$placeholder_hash',
+ 'password',
  'AIW',
  (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001'),
  FALSE,
@@ -366,7 +366,7 @@ INSERT INTO staff (user_id, full_name, designation, date_of_birth, mobile, email
  '1980-03-20',
  '+919876543211',
  'manjit.kaur@ahpunjab.gov.in',
- '$2a$10$placeholder_hash',
+ 'password',
  'Tehsil_Admin',
  (SELECT institute_id FROM institutes WHERE org_id = 'TEHSIL_AMRITSAR1'),
  FALSE,
@@ -379,7 +379,7 @@ INSERT INTO staff (user_id, full_name, designation, date_of_birth, mobile, email
  '1975-09-10',
  '+919876543212',
  'rajinder.kumar@ahpunjab.gov.in',
- '$2a$10$placeholder_hash',
+ 'password',
  'District_Admin',
  (SELECT institute_id FROM institutes WHERE org_id = 'DISTRICT_AMRITSAR'),
  FALSE,
@@ -546,6 +546,216 @@ INSERT INTO monthly_reports (institute_id, reporting_month, start_date, end_date
  (SELECT staff_id FROM staff WHERE user_id = 'CVD_KOTRA_001'),
  'Draft',
  NULL);
+
+-- ============================================================================
+-- 10. REPORT DETAILS DATA (OPD, AI, Vaccination) for Homepage Testing
+-- ============================================================================
+
+-- Add historical monthly reports for financial year 2024-25 (April 2024 onwards)
+INSERT INTO monthly_reports (institute_id, reporting_month, start_date, end_date, prepared_by, submission_status, submitted_at) VALUES
+-- April 2024
+((SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001'),
+ '2024-04',
+ '2024-04-01',
+ '2024-04-30',
+ (SELECT staff_id FROM staff WHERE user_id = 'CVD_KOTRA_001'),
+ 'Approved',
+ '2024-05-03 11:00:00'),
+-- July 2024
+((SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001'),
+ '2024-07',
+ '2024-07-01',
+ '2024-07-31',
+ (SELECT staff_id FROM staff WHERE user_id = 'CVD_KOTRA_001'),
+ 'Approved',
+ '2024-08-02 10:00:00'),
+-- September 2024
+((SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001'),
+ '2024-09',
+ '2024-09-01',
+ '2024-09-30',
+ (SELECT staff_id FROM staff WHERE user_id = 'CVD_KOTRA_001'),
+ 'Approved',
+ '2024-10-02 09:30:00'),
+-- October 2025 (current month)
+((SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001'),
+ '2025-10',
+ '2025-10-01',
+ '2025-10-31',
+ (SELECT staff_id FROM staff WHERE user_id = 'CVD_KOTRA_001'),
+ 'Submitted',
+ '2025-10-18 10:00:00');
+
+-- OPD Report Details
+INSERT INTO opd_report_details (report_id, species, disease_category, total_cases, revenue_generated) VALUES
+-- April 2024
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-04'),
+ 'Cattle', 'Digestive', 30, 300.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-04'),
+ 'Buffalo', 'Respiratory', 15, 150.00),
+-- May 2024
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-05'),
+ 'Cattle', 'Reproductive', 32, 320.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-05'),
+ 'Buffalo', 'Digestive', 13, 130.00),
+-- June 2024
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-06'),
+ 'Cattle', 'Digestive', 28, 280.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-06'),
+ 'Buffalo', 'Respiratory', 17, 170.00),
+-- July 2024
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-07'),
+ 'Cattle', 'Reproductive', 28, 280.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-07'),
+ 'Buffalo', 'Digestive', 17, 170.00),
+-- September 2024
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-09'),
+ 'Cattle', 'Digestive', 32, 320.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-09'),
+ 'Buffalo', 'Respiratory', 13, 130.00),
+-- October 2025 (current month)
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2025-10'),
+ 'Cattle', 'Digestive', 30, 300.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2025-10'),
+ 'Buffalo', 'Respiratory', 15, 150.00);
+
+-- AI Report Details (Cattle and Buffalo)
+INSERT INTO ai_report_details (report_id, semen_type_id, total_ai_done, successful_pregnancies, revenue_generated) VALUES
+-- April 2024
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-04'),
+ (SELECT semen_id FROM semen_types WHERE semen_code = 'HF'), 18, 14, 450.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-04'),
+ (SELECT semen_id FROM semen_types WHERE semen_code = 'JERSEY'), 17, 13, 425.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-04'),
+ (SELECT semen_id FROM semen_types WHERE semen_code = 'MURRAH'), 25, 20, 1250.00),
+-- May 2024
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-05'),
+ (SELECT semen_id FROM semen_types WHERE semen_code = 'HF'), 22, 17, 550.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-05'),
+ (SELECT semen_id FROM semen_types WHERE semen_code = 'JERSEY'), 13, 10, 325.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-05'),
+ (SELECT semen_id FROM semen_types WHERE semen_code = 'MURRAH'), 25, 19, 1250.00),
+-- June 2024
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-06'),
+ (SELECT semen_id FROM semen_types WHERE semen_code = 'HF'), 20, 15, 500.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-06'),
+ (SELECT semen_id FROM semen_types WHERE semen_code = 'JERSEY'), 15, 12, 375.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-06'),
+ (SELECT semen_id FROM semen_types WHERE semen_code = 'MURRAH'), 25, 20, 1250.00),
+-- July 2024
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-07'),
+ (SELECT semen_id FROM semen_types WHERE semen_code = 'HF'), 21, 16, 525.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-07'),
+ (SELECT semen_id FROM semen_types WHERE semen_code = 'JERSEY'), 14, 11, 350.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-07'),
+ (SELECT semen_id FROM semen_types WHERE semen_code = 'MURRAH'), 25, 19, 1250.00),
+-- September 2024
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-09'),
+ (SELECT semen_id FROM semen_types WHERE semen_code = 'HF'), 23, 18, 575.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-09'),
+ (SELECT semen_id FROM semen_types WHERE semen_code = 'JERSEY'), 12, 9, 300.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-09'),
+ (SELECT semen_id FROM semen_types WHERE semen_code = 'MURRAH'), 25, 20, 1250.00),
+-- October 2025 (current month)
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2025-10'),
+ (SELECT semen_id FROM semen_types WHERE semen_code = 'HF'), 20, 15, 500.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2025-10'),
+ (SELECT semen_id FROM semen_types WHERE semen_code = 'JERSEY'), 15, 12, 375.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2025-10'),
+ (SELECT semen_id FROM semen_types WHERE semen_code = 'MURRAH'), 25, 20, 1250.00);
+
+-- Vaccination Report Details (All vaccines)
+INSERT INTO vaccination_report_details (report_id, vaccine_id, species, doses_used, animals_vaccinated, revenue_generated) VALUES
+-- April 2024
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-04'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'FMD'), 'Cattle', 350, 175, 3500.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-04'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'HS'), 'Buffalo', 280, 140, 1400.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-04'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'BQ'), 'Cattle', 150, 150, 1200.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-04'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'BRUC'), 'Cattle', 120, 120, 1800.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-04'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'THEI'), 'Cattle', 95, 48, 1900.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-04'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'RABIES'), 'Dog', 70, 70, 840.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-04'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'ETV'), 'Goat', 100, 100, 1000.00),
+-- May 2024
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-05'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'FMD'), 'Cattle', 350, 175, 3500.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-05'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'HS'), 'Buffalo', 280, 140, 1400.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-05'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'BQ'), 'Cattle', 150, 150, 1200.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-05'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'BRUC'), 'Cattle', 120, 120, 1800.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-05'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'THEI'), 'Cattle', 95, 48, 1900.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-05'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'RABIES'), 'Dog', 70, 70, 840.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-05'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'ETV'), 'Goat', 100, 100, 1000.00),
+-- June 2024
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-06'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'FMD'), 'Cattle', 350, 175, 3500.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-06'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'HS'), 'Buffalo', 280, 140, 1400.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-06'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'BQ'), 'Cattle', 150, 150, 1200.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-06'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'BRUC'), 'Cattle', 120, 120, 1800.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-06'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'THEI'), 'Cattle', 95, 48, 1900.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-06'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'RABIES'), 'Dog', 70, 70, 840.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-06'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'ETV'), 'Goat', 100, 100, 1000.00),
+-- July 2024
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-07'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'FMD'), 'Cattle', 350, 175, 3500.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-07'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'HS'), 'Buffalo', 280, 140, 1400.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-07'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'BQ'), 'Cattle', 150, 150, 1200.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-07'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'BRUC'), 'Cattle', 120, 120, 1800.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-07'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'THEI'), 'Cattle', 95, 48, 1900.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-07'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'RABIES'), 'Dog', 70, 70, 840.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-07'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'ETV'), 'Goat', 100, 100, 1000.00),
+-- September 2024
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-09'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'FMD'), 'Cattle', 350, 175, 3500.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-09'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'HS'), 'Buffalo', 280, 140, 1400.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-09'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'BQ'), 'Cattle', 150, 150, 1200.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-09'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'BRUC'), 'Cattle', 120, 120, 1800.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-09'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'THEI'), 'Cattle', 95, 48, 1900.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-09'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'RABIES'), 'Dog', 70, 70, 840.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2024-09'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'ETV'), 'Goat', 100, 100, 1000.00),
+-- October 2025 (current month)
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2025-10'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'FMD'), 'Cattle', 350, 175, 3500.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2025-10'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'HS'), 'Buffalo', 280, 140, 1400.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2025-10'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'BQ'), 'Cattle', 150, 150, 1200.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2025-10'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'BRUC'), 'Cattle', 120, 120, 1800.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2025-10'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'THEI'), 'Cattle', 95, 48, 1900.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2025-10'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'RABIES'), 'Dog', 70, 70, 840.00),
+((SELECT report_id FROM monthly_reports WHERE institute_id = (SELECT institute_id FROM institutes WHERE org_id = 'CVD_KOTRA_001') AND reporting_month = '2025-10'),
+ (SELECT vaccine_id FROM vaccines WHERE vaccine_code = 'ETV'), 'Goat', 100, 100, 1000.00);
 
 -- ============================================================================
 -- VERIFICATION QUERIES (Uncomment to test)

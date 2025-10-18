@@ -1,23 +1,119 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FloatingLabelField } from '../components/FloatingLabelField';
 import { PrimaryButton } from '../components/Button';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { validateEmail, validatePhone } from '../utils/validation';
-import { Camera, User, Mail, Phone, Lock, ArrowLeft, Fingerprint, Shield} from 'lucide-react';
+import { Camera, User, Mail, Phone, Lock, ArrowLeft, Fingerprint, Shield, Loader} from 'lucide-react';
 import { MapPicker } from '../components/MapPicker';
+import api from '../utils/api';
+import ImageCropModal from '../components/ImageCropModal';
+import { DiscardChangesDialog, SuccessDialog, ErrorDialog } from '../components/DialogBox';
+
+interface ProfileData {
+  userId: string
+  staffId: number
+  fullName: string
+  designation: string
+  mobile: string
+  email: string
+  dateOfBirth: string | null
+  dateOfJoining: string
+  userRole: string
+  profilePictureUrl: string | null
+  institute: {
+    instituteId: number
+    instituteName: string
+    instituteType: string
+    latitude: number | null
+    longitude: number | null
+    districtName: string
+    tehsilName: string
+    villageName: string
+  }
+}
 
 export default function ProfileScreen() {
   const navigate = useNavigate();
+
+  // Profile data from backend
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Form data
   const [formData, setFormData] = useState({
-    inchargeName: 'Dr. Rajdeep Sandhu',
-    email: 'rajdeep.sandhu@ahpunjab.gov.in',
-    mobile: '9834562107',
-    latitude:"30.4681",
-    longitude: "72.6503"
+    inchargeName: '',
+    email: '',
+    mobile: '',
+    latitude: '',
+    longitude: ''
+  });
+
+  // Original data for change detection
+  const [originalData, setOriginalData] = useState({
+    inchargeName: '',
+    email: '',
+    mobile: '',
+    latitude: '',
+    longitude: ''
   });
 
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+
+  // Profile picture state
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [tempImageUrl, setTempImageUrl] = useState<string | null>(null);
+
+  // Dialog states
+  const [successDialog, setSuccessDialog] = useState({ isOpen: false, message: '' });
+  const [errorDialog, setErrorDialog] = useState({ isOpen: false, message: '' });
+
+  // Fetch profile on mount
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  // Detect unsaved changes
+  useEffect(() => {
+    const hasChanges =
+      formData.inchargeName !== originalData.inchargeName ||
+      formData.email !== originalData.email ||
+      formData.mobile !== originalData.mobile ||
+      formData.latitude !== originalData.latitude ||
+      formData.longitude !== originalData.longitude;
+
+    setHasUnsavedChanges(hasChanges);
+  }, [formData, originalData]);
+
+  const fetchProfile = async () => {
+    try {
+      setIsLoading(true);
+      const data = await api.getProfile() as ProfileData;
+      setProfileData(data);
+
+      // Initialize form with backend data
+      const initialData = {
+        inchargeName: data.fullName,
+        email: data.email,
+        mobile: data.mobile,
+        latitude: data.institute.latitude?.toString() || '',
+        longitude: data.institute.longitude?.toString() || ''
+      };
+
+      setFormData(initialData);
+      setOriginalData(initialData);
+      setProfilePicture(data.profilePictureUrl);
+    } catch (err) {
+      console.error('Failed to fetch profile:', err);
+      setErrorDialog({ isOpen: true, message: 'Failed to load profile. Please try again.' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -28,7 +124,43 @@ export default function ProfileScreen() {
   };
 
 
-  const handleSave = () => {
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setErrorDialog({ isOpen: true, message: 'Please select an image file' });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorDialog({ isOpen: true, message: 'Image size must be less than 5MB' });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setTempImageUrl(e.target?.result as string);
+      setShowCropModal(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCropComplete = async (croppedImage: string) => {
+    try {
+      await api.uploadProfilePicture(croppedImage);
+      setProfilePicture(croppedImage);
+      if (profileData) {
+        setProfileData({ ...profileData, profilePictureUrl: croppedImage });
+      }
+      setSuccessDialog({ isOpen: true, message: 'Profile picture updated successfully' });
+    } catch (err) {
+      console.error('Failed to upload profile picture:', err);
+      setErrorDialog({ isOpen: true, message: 'Failed to update profile picture' });
+    }
+  };
+
+  const handleSave = async () => {
     const newErrors: {[key: string]: string} = {};
 
     if (!formData.inchargeName.trim()) {
@@ -50,12 +182,62 @@ export default function ProfileScreen() {
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      console.log('Profile updated:', formData);
-      // Handle profile update logic here
+      try {
+        setIsSaving(true);
+
+        // Update profile
+        const updates: {
+          fullName?: string
+          mobile?: string
+          email?: string
+        } = {};
+
+        if (formData.inchargeName !== originalData.inchargeName) updates.fullName = formData.inchargeName;
+        if (formData.mobile !== originalData.mobile) updates.mobile = formData.mobile;
+        if (formData.email !== originalData.email) updates.email = formData.email;
+
+        if (Object.keys(updates).length > 0) {
+          await api.updateProfile(updates);
+        }
+
+        // Update location if changed
+        const lat = parseFloat(formData.latitude);
+        const lng = parseFloat(formData.longitude);
+        if (
+          !isNaN(lat) &&
+          !isNaN(lng) &&
+          (formData.latitude !== originalData.latitude ||
+            formData.longitude !== originalData.longitude)
+        ) {
+          await api.updateLocation({ latitude: lat, longitude: lng });
+        }
+
+        // Refresh profile
+        await fetchProfile();
+        setHasUnsavedChanges(false);
+        setSuccessDialog({ isOpen: true, message: 'Profile updated successfully' });
+      } catch (err) {
+        console.error('Failed to save profile:', err);
+        setErrorDialog({
+          isOpen: true,
+          message: err instanceof Error ? err.message : 'Failed to save profile'
+        });
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
   const handleBack = () => {
+    if (hasUnsavedChanges) {
+      setShowDiscardDialog(true);
+    } else {
+      navigate(-1);
+    }
+  };
+
+  const handleDiscard = () => {
+    setShowDiscardDialog(false);
     navigate(-1);
   };
 
@@ -70,6 +252,18 @@ export default function ProfileScreen() {
   const handleActiveSessions = () => {
     navigate('/active-sessions');
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="w-full max-w-md mx-auto h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-['Poppins']">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="ProfileScreen w-full h-screen max-w-md mx-auto bg-white flex flex-col overflow-hidden">
@@ -89,12 +283,26 @@ export default function ProfileScreen() {
         {/* Profile Picture Section */}
         <div className="flex flex-col items-center py-8 bg-white">
           <div className="relative">
-            <div className="w-32 h-32 bg-gradient-to-br from-yellow-100 to-orange-100 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
-              <User size={64} className="text-yellow-600" />
+            <div className="w-32 h-32 bg-gradient-to-br from-yellow-100 to-orange-100 rounded-full flex items-center justify-center shadow-lg border-4 border-white overflow-hidden">
+              {profilePicture ? (
+                <img src={profilePicture} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <User size={64} className="text-yellow-600" />
+              )}
             </div>
-            <button className="absolute bottom-0 right-0 w-12 h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg hover:from-yellow-500 hover:to-yellow-600 transition-all duration-200 active:scale-95">
+            <label
+              htmlFor="profile-picture-input"
+              className="absolute bottom-0 right-0 w-12 h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg hover:from-yellow-500 hover:to-yellow-600 transition-all duration-200 active:scale-95 cursor-pointer"
+            >
               <Camera size={20} className="text-white" />
-            </button>
+              <input
+                id="profile-picture-input"
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelect}
+                className="hidden"
+              />
+            </label>
           </div>
         </div>
 
@@ -243,10 +451,51 @@ export default function ProfileScreen() {
           paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))'
         }}
       >
-        <PrimaryButton onClick={handleSave}>
-          Save Changes
+        <PrimaryButton onClick={handleSave} disabled={isSaving}>
+          {isSaving ? (
+            <div className="flex items-center justify-center gap-2">
+              <Loader size={20} className="animate-spin" />
+              <span>Saving...</span>
+            </div>
+          ) : (
+            'Save Changes'
+          )}
         </PrimaryButton>
       </div>
+
+      {/* Image Crop Modal */}
+      {tempImageUrl && (
+        <ImageCropModal
+          isOpen={showCropModal}
+          imageUrl={tempImageUrl}
+          onClose={() => {
+            setShowCropModal(false);
+            setTempImageUrl(null);
+          }}
+          onCropComplete={handleCropComplete}
+        />
+      )}
+
+      {/* Discard Changes Dialog */}
+      <DiscardChangesDialog
+        isOpen={showDiscardDialog}
+        onDiscard={handleDiscard}
+        onCancel={() => setShowDiscardDialog(false)}
+      />
+
+      {/* Success Dialog */}
+      <SuccessDialog
+        isOpen={successDialog.isOpen}
+        message={successDialog.message}
+        onClose={() => setSuccessDialog({ isOpen: false, message: '' })}
+      />
+
+      {/* Error Dialog */}
+      <ErrorDialog
+        isOpen={errorDialog.isOpen}
+        message={errorDialog.message}
+        onClose={() => setErrorDialog({ isOpen: false, message: '' })}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { Fingerprint, ShieldCheck, Smartphone, X } from 'lucide-react'
 import webauthnService from '../services/webauthnService'
 import authService from '../services/authService'
 import { PrimaryButton } from '../components/Button'
+import { SuccessDialog } from '../components/DialogBox'
 
 export default function PasskeySetupScreen() {
   const navigate = useNavigate()
@@ -11,6 +12,7 @@ export default function PasskeySetupScreen() {
   const [isSupported, setIsSupported] = useState(true)
   const [deviceName, setDeviceName] = useState('')
   const [error, setError] = useState('')
+  const [successDialog, setSuccessDialog] = useState({ isOpen: false, message: '', deviceName: '' })
 
   useEffect(() => {
     // Check if WebAuthn is supported
@@ -34,8 +36,11 @@ export default function PasskeySetupScreen() {
       const result = await webauthnService.setupPasskey(deviceName || undefined)
 
       if (result.success) {
-        alert(`✅ Passkey Setup Successful!\n\nDevice: ${result.credential?.deviceName}\n\nYou can now use your biometrics to login faster and more securely.`)
-        navigate('/home')
+        setSuccessDialog({
+          isOpen: true,
+          message: `Device: ${result.credential?.deviceName}\n\nYou can now use your biometrics to login faster and more securely.`,
+          deviceName: result.credential?.deviceName || 'Unknown Device'
+        })
       } else {
         setError(result.message || 'Failed to setup passkey')
       }
@@ -205,6 +210,17 @@ export default function PasskeySetupScreen() {
           Skip for Now
         </button>
       </div>
+
+      {/* Success Dialog */}
+      <SuccessDialog
+        isOpen={successDialog.isOpen}
+        title="Passkey Setup Successful!"
+        message={successDialog.message}
+        onClose={() => {
+          setSuccessDialog({ isOpen: false, message: '', deviceName: '' })
+          navigate('/home')
+        }}
+      />
     </div>
   )
 }

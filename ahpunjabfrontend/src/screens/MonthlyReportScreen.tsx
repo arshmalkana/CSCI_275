@@ -1,18 +1,16 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import {
   FileText,
   Plus,
   Mail,
-  ChevronRight,
-  Menu,
-  Bell,
-  User
+  ChevronRight
 } from 'lucide-react'
 
 // Shared app components used across the app for consistent look & feel
 import { SearchableSelect } from '../components/SearchableSelect'
 import SideMenu from '../components/SideMenu'
+import { MainHeader } from '../components/Headers'
+import { InfoDialog } from '../components/DialogBox'
 
 // --- Types -----------------------------------------------------------------
 
@@ -144,8 +142,6 @@ function EmptyState({ label }: { label: string }) {
 // --- Main Screen -----------------------------------------------------------
 
 export default function MonthlyReportScreen() {
-  const navigate = useNavigate()
-
   // side menu & notifications to match HomeScreen header
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false)
   const [notifications] = useState(3)
@@ -153,6 +149,9 @@ export default function MonthlyReportScreen() {
   // filters & selection
   const [selectedYear, setSelectedYear] = useState('2024-25')
   const [statusFilter, setStatusFilter] = useState<'all' | ReportStatus>('all')
+
+  // Dialog state
+  const [infoDialog, setInfoDialog] = useState({ isOpen: false, message: '' })
 
   // Derived list based on filters
   const filteredReports = useMemo(() => {
@@ -194,55 +193,19 @@ export default function MonthlyReportScreen() {
   const handleDownloadReport = (report: Report) => {
     // TODO: API call to request email
     console.log(`Request email for report: ${report.id}`)
-    alert(`Report for ${report.month} ${report.year} will be sent to your registered email.`)
+    setInfoDialog({
+      isOpen: true,
+      message: `Report for ${report.month} ${report.year} will be sent to your registered email.`
+    })
   }
 
   return (
     <div className="MonthlyReportScreen w-full h-screen max-w-md mx-auto bg-white flex flex-col overflow-hidden">
-      {/* Header (same pattern as HomeScreen) */}
-      <div className="Header w-full bg-gradient-to-r from-yellow-400 to-yellow-500 shadow-md">
-        <div className="flex items-center justify-between px-6 h-16">
-          {/* Hamburger Menu */}
-          <button
-            className="p-2 hover:bg-yellow-400 rounded-lg transition-colors"
-            onClick={() => setIsSideMenuOpen(true)}
-            aria-label="Open menu"
-          >
-            <Menu size={24} className="text-gray-800" />
-          </button>
-
-          {/* App Title */}
-          <h1 className="text-gray-900 text-lg font-bold font-['Poppins']">
-            AH Punjab
-          </h1>
-
-          {/* Right Icons */}
-          <div className="flex items-center gap-2">
-            {/* Notification Bell */}
-            <button
-              className="relative p-2 hover:bg-yellow-400 rounded-lg transition-colors"
-              onClick={() => navigate('/notifications')}
-              aria-label="Notifications"
-            >
-              <Bell size={22} className="text-gray-800" />
-              {notifications > 0 && (
-                <span className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-4 h-4 text-[10px] font-bold flex items-center justify-center">
-                  {notifications}
-                </span>
-              )}
-            </button>
-
-            {/* Profile Icon */}
-            <button
-              className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-md hover:shadow-lg transition-shadow"
-              onClick={() => navigate('/profile')}
-              aria-label="Profile"
-            >
-              <User size={18} className="text-gray-700" />
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Header */}
+      <MainHeader
+        onMenuClick={() => setIsSideMenuOpen(true)}
+        notifications={notifications}
+      />
 
       {/* Content */}
       <div
@@ -338,6 +301,13 @@ export default function MonthlyReportScreen() {
       <SideMenu
         isOpen={isSideMenuOpen}
         onClose={() => setIsSideMenuOpen(false)}
+      />
+
+      {/* Info Dialog */}
+      <InfoDialog
+        isOpen={infoDialog.isOpen}
+        message={infoDialog.message}
+        onClose={() => setInfoDialog({ isOpen: false, message: '' })}
       />
     </div>
   )

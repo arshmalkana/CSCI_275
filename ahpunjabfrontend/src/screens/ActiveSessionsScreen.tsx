@@ -3,12 +3,18 @@ import { useNavigate } from 'react-router-dom'
 import { Smartphone, Monitor, Trash2, Shield, AlertTriangle, Clock, MapPin } from 'lucide-react'
 import sessionService, { type Session } from '../services/sessionService'
 import { ScreenHeader } from '../components/ScreenHeader'
+import { SuccessDialog, ErrorDialog, InfoDialog } from '../components/DialogBox'
+import DialogBox from '../components/DialogBox'
 
 export default function ActiveSessionsScreen() {
   const navigate = useNavigate()
   const [sessions, setSessions] = useState<Session[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [revokingId, setRevokingId] = useState<number | null>(null)
+  const [successDialog, setSuccessDialog] = useState({ isOpen: false, message: '' })
+  const [errorDialog, setErrorDialog] = useState({ isOpen: false, message: '' })
+  const [infoDialog, setInfoDialog] = useState({ isOpen: false, message: '' })
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, tokenId: 0, deviceName: '', isRevokeAll: false })
 
   useEffect(() => {
     loadSessions()
@@ -26,61 +32,67 @@ export default function ActiveSessionsScreen() {
     }
   }
 
-  const handleRevokeSession = async (tokenId: number, deviceName: string) => {
-    if (!confirm(`Revoke session for "${deviceName}"?\n\nYou will be logged out from that device.`)) {
-      return
-    }
-
-    setRevokingId(tokenId)
-    try {
-      const success = await sessionService.revokeSession(tokenId)
-
-      if (success) {
-        alert('✅ Session revoked successfully')
-        await loadSessions()
-      } else {
-        alert('❌ Failed to revoke session')
-      }
-    } catch (err) {
-      console.error('Revoke session error:', err)
-      alert('❌ An error occurred')
-    } finally {
-      setRevokingId(null)
-    }
+  const handleRevokeSession = (tokenId: number, deviceName: string) => {
+    setConfirmDialog({ isOpen: true, tokenId, deviceName, isRevokeAll: false })
   }
 
-  const handleRevokeAllOthers = async () => {
+  const confirmRevoke = async () => {
+    const { tokenId, isRevokeAll } = confirmDialog
+
+    if (isRevokeAll) {
+      setIsLoading(true)
+      try {
+        const success = await sessionService.revokeAllOtherSessions()
+
+        if (success) {
+          const count = sessions.filter(s => !s.is_current).length
+          setSuccessDialog({ isOpen: true, message: `${count} session(s) revoked successfully` })
+          await loadSessions()
+        } else {
+          setErrorDialog({ isOpen: true, message: 'Failed to revoke sessions' })
+        }
+      } catch (err) {
+        console.error('Revoke all sessions error:', err)
+        setErrorDialog({ isOpen: true, message: 'An error occurred while revoking sessions' })
+      } finally {
+        setIsLoading(false)
+      }
+    } else {
+      setRevokingId(tokenId)
+      try {
+        const success = await sessionService.revokeSession(tokenId)
+
+        if (success) {
+          setSuccessDialog({ isOpen: true, message: 'Session revoked successfully' })
+          await loadSessions()
+        } else {
+          setErrorDialog({ isOpen: true, message: 'Failed to revoke session' })
+        }
+      } catch (err) {
+        console.error('Revoke session error:', err)
+        setErrorDialog({ isOpen: true, message: 'An error occurred while revoking session' })
+      } finally {
+        setRevokingId(null)
+      }
+    }
+
+    setConfirmDialog({ isOpen: false, tokenId: 0, deviceName: '', isRevokeAll: false })
+  }
+
+  const handleRevokeAllOthers = () => {
     const otherSessionsCount = sessions.filter(s => !s.is_current).length
 
     if (otherSessionsCount === 0) {
-      alert('No other sessions to revoke')
+      setInfoDialog({ isOpen: true, message: 'No other sessions to revoke' })
       return
     }
 
-    if (!confirm(
-      `Logout from all other devices?\n\n` +
-      `This will revoke ${otherSessionsCount} other session(s).\n\n` +
-      `You will remain logged in on this device.`
-    )) {
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      const success = await sessionService.revokeAllOtherSessions()
-
-      if (success) {
-        alert(`✅ ${otherSessionsCount} session(s) revoked successfully`)
-        await loadSessions()
-      } else {
-        alert('❌ Failed to revoke sessions')
-      }
-    } catch (err) {
-      console.error('Revoke all sessions error:', err)
-      alert('❌ An error occurred')
-    } finally {
-      setIsLoading(false)
-    }
+    setConfirmDialog({
+      isOpen: true,
+      tokenId: 0,
+      deviceName: `${otherSessionsCount} session(s)`,
+      isRevokeAll: true
+    })
   }
 
   const formatDate = (dateString: string) => {
@@ -294,6 +306,44 @@ export default function ActiveSessionsScreen() {
           </>
         )}
       </div>
+
+      {/* Confirm Dialog */}
+      <DialogBox
+        isOpen={confirmDialog.isOpen}
+        type="confirm"
+        title={confirmDialog.isRevokeAll ? "Logout from All Other Devices?" : "Revoke Session?"}
+        message={
+          confirmDialog.isRevokeAll
+            ? `This will revoke ${confirmDialog.deviceName}. You will remain logged in on this device.`
+            : `You will be logged out from "${confirmDialog.deviceName}".`
+        }
+        onClose={() => setConfirmDialog({ isOpen: false, tokenId: 0, deviceName: '', isRevokeAll: false })}
+        onConfirm={confirmRevoke}
+        confirmText={confirmDialog.isRevokeAll ? "Logout All" : "Revoke"}
+        cancelText="Cancel"
+        showCancel={true}
+      />
+
+      {/* Success Dialog */}
+      <SuccessDialog
+        isOpen={successDialog.isOpen}
+        message={successDialog.message}
+        onClose={() => setSuccessDialog({ isOpen: false, message: '' })}
+      />
+
+      {/* Error Dialog */}
+      <ErrorDialog
+        isOpen={errorDialog.isOpen}
+        message={errorDialog.message}
+        onClose={() => setErrorDialog({ isOpen: false, message: '' })}
+      />
+
+      {/* Info Dialog */}
+      <InfoDialog
+        isOpen={infoDialog.isOpen}
+        message={infoDialog.message}
+        onClose={() => setInfoDialog({ isOpen: false, message: '' })}
+      />
     </div>
   )
 }

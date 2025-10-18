@@ -5,6 +5,7 @@ import { PrimaryButton, SecondaryButton } from '../components/Button'
 import { User, Lock, Fingerprint } from 'lucide-react'
 import authService from '../services/authService'
 import webauthnService from '../services/webauthnService'
+import { SuccessDialog } from '../components/DialogBox'
 
 export default function LoginScreen() {
   const navigate = useNavigate()
@@ -20,6 +21,7 @@ export default function LoginScreen() {
   const [showPasskeyOption, setShowPasskeyOption] = useState(false)
   const [passkeySupported, setPasskeySupported] = useState(false)
   const [usePasswordMode, setUsePasswordMode] = useState(false)
+  const [successDialog, setSuccessDialog] = useState({ isOpen: false, message: '', userName: '' })
 
   useEffect(() => {
     // Check if WebAuthn is supported
@@ -119,8 +121,11 @@ export default function LoginScreen() {
 
         // Check if first time login - redirect to passkey setup
         if (response.user.isFirstTime && passkeySupported) {
-          alert(`✅ Welcome ${response.user.name}!\n\nFirst time login detected. Let's setup a passkey for faster login next time.`)
-          navigate('/setup-passkey')
+          setSuccessDialog({
+            isOpen: true,
+            message: `First time login detected. Let's setup a passkey for faster login next time.`,
+            userName: response.user.name
+          })
         } else {
           navigate('/home')
         }
@@ -376,6 +381,17 @@ export default function LoginScreen() {
         </div>
 
       </div>
+
+      {/* Success Dialog */}
+      <SuccessDialog
+        isOpen={successDialog.isOpen}
+        title={`Welcome ${successDialog.userName}!`}
+        message={successDialog.message}
+        onClose={() => {
+          setSuccessDialog({ isOpen: false, message: '', userName: '' })
+          navigate('/setup-passkey')
+        }}
+      />
     </div>
   )
 }

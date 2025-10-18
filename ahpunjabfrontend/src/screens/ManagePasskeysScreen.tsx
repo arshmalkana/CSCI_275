@@ -4,6 +4,8 @@ import { Fingerprint, Trash2, Plus, Smartphone } from 'lucide-react'
 import webauthnService,  { type PasskeyCredential } from '../services/webauthnService'
 import authService from '../services/authService'
 import { ScreenHeader } from '../components/ScreenHeader'
+import { SuccessDialog, ErrorDialog } from '../components/DialogBox'
+import DialogBox from '../components/DialogBox'
 // import {PrimaryButton} from '../components/Button'
 
 export default function ManagePasskeysScreen() {
@@ -13,6 +15,9 @@ export default function ManagePasskeysScreen() {
   const [isAdding, setIsAdding] = useState(false)
   const [deviceName, setDeviceName] = useState('')
   const [error, setError] = useState('')
+  const [successDialog, setSuccessDialog] = useState({ isOpen: false, message: '' })
+  const [errorDialog, setErrorDialog] = useState({ isOpen: false, message: '' })
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, credentialId: '', deviceName: '' })
 
   useEffect(() => {
     loadCredentials()
@@ -47,7 +52,10 @@ export default function ManagePasskeysScreen() {
       const result = await webauthnService.setupPasskey(deviceName || undefined)
 
       if (result.success) {
-        alert(`✅ Passkey Added!\n\nDevice: ${result.credential?.deviceName}`)
+        setSuccessDialog({
+          isOpen: true,
+          message: `Device: ${result.credential?.deviceName} has been added successfully!`
+        })
         setDeviceName('')
         await loadCredentials()
       } else {
@@ -61,26 +69,28 @@ export default function ManagePasskeysScreen() {
     }
   }
 
-  const handleDeletePasskey = async (credentialId: string, deviceName: string) => {
-    if (!confirm(`Delete passkey for "${deviceName}"?\n\nYou won't be able to use this device for biometric login anymore.`)) {
-      return
-    }
+  const handleDeletePasskey = (credentialId: string, deviceName: string) => {
+    setConfirmDialog({ isOpen: true, credentialId, deviceName })
+  }
 
+  const confirmDelete = async () => {
     try {
       const user = authService.getUser()
       if (!user) return
 
-      const success = await webauthnService.deletePasskey(credentialId)
+      const success = await webauthnService.deletePasskey(confirmDialog.credentialId)
 
       if (success) {
-        alert('✅ Passkey deleted successfully')
+        setSuccessDialog({ isOpen: true, message: 'Passkey deleted successfully' })
         await loadCredentials()
       } else {
-        alert('❌ Failed to delete passkey')
+        setErrorDialog({ isOpen: true, message: 'Failed to delete passkey' })
       }
     } catch (err) {
       console.error('Delete passkey error:', err)
-      alert('❌ An error occurred')
+      setErrorDialog({ isOpen: true, message: 'An error occurred while deleting passkey' })
+    } finally {
+      setConfirmDialog({ isOpen: false, credentialId: '', deviceName: '' })
     }
   }
 
@@ -244,6 +254,33 @@ export default function ManagePasskeysScreen() {
           </div>
         )}
       </div>
+
+      {/* Confirm Delete Dialog */}
+      <DialogBox
+        isOpen={confirmDialog.isOpen}
+        type="confirm"
+        title="Delete Passkey?"
+        message={`You won't be able to use "${confirmDialog.deviceName}" for biometric login anymore. You can always use your password as a fallback.`}
+        onClose={() => setConfirmDialog({ isOpen: false, credentialId: '', deviceName: '' })}
+        onConfirm={confirmDelete}
+        confirmText="Delete"
+        cancelText="Cancel"
+        showCancel={true}
+      />
+
+      {/* Success Dialog */}
+      <SuccessDialog
+        isOpen={successDialog.isOpen}
+        message={successDialog.message}
+        onClose={() => setSuccessDialog({ isOpen: false, message: '' })}
+      />
+
+      {/* Error Dialog */}
+      <ErrorDialog
+        isOpen={errorDialog.isOpen}
+        message={errorDialog.message}
+        onClose={() => setErrorDialog({ isOpen: false, message: '' })}
+      />
     </div>
   )
 }

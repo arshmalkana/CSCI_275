@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom'
-import { PrimaryButton } from '../components/Button'
 
 export default function AllScreensScreen() {
   const navigate = useNavigate()
