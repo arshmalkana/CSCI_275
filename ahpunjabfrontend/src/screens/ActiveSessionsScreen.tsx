@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Smartphone, Monitor, Trash2, Shield, AlertTriangle, Clock, MapPin } from 'lucide-react'
 import sessionService, { type Session } from '../services/sessionService'
-import { ScreenHeader } from '../components/ScreenHeader'
+// import { ScreenHeader } from '../components/ScreenHeader'
 import { SuccessDialog, ErrorDialog, InfoDialog } from '../components/DialogBox'
 import DialogBox from '../components/DialogBox'
+import { BackHeader } from '../components/Headers'
 
 export default function ActiveSessionsScreen() {
   const navigate = useNavigate()
@@ -131,7 +132,11 @@ export default function ActiveSessionsScreen() {
   return (
     <div className="w-full h-screen max-w-md mx-auto bg-white flex flex-col overflow-hidden">
       {/* Header */}
-      <ScreenHeader
+      {/* <ScreenHeader
+        title="Active Sessions"
+        onBack={() => navigate(-1)}
+      /> */}
+      <BackHeader
         title="Active Sessions"
         onBack={() => navigate(-1)}
       />

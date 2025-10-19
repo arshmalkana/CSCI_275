@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { FloatingLabelField } from '../components/FloatingLabelField'
 import { SearchableSelect, SearchableMultiSelect } from '../components/SearchableSelect'
 import { PrimaryButton, SecondaryButton } from '../components/Button'
@@ -8,26 +9,13 @@ import { ProgressIndicator } from '../components/ProgressIndicator'
 import { RadioGroup, Checkbox } from '../components/FormControls'
 import { ChevronRight, UserPlus, Trash2, Plus } from 'lucide-react'
 import { MapPicker } from '../components/MapPicker'
+import { LoadingOverlay } from '../components/LoadingOverlay'
 
 export default function RegisterScreen() {
   const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState(1)
   const totalSteps = 4
-
-  // Geography data from API
-  const [geoData, setGeoData] = useState<{
-    districts: Array<{ districtId: number; districtName: string }>;
-    tehsils: Array<{ tehsilId: number; tehsilName: string }>;
-    villages: Array<{ villageId: number; villageName: string }>;
-    parentInstitutes: Array<{ instituteId: number; instituteName: string; instituteType: string }>;
-  }>({
-    districts: [],
-    tehsils: [],
-    villages: [],
-    parentInstitutes: []
-  })
-
-  const [isLoadingGeo, setIsLoadingGeo] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Empty Form state
   const [formData, setFormData] = useState({
@@ -71,103 +59,73 @@ export default function RegisterScreen() {
   const [employees, setEmployees] = useState<Array<{type: string, name: string, mobile: string, email: string}>>([])
   const [selectedVillageForPopulation, setSelectedVillageForPopulation] = useState<string>('')
 
+  // Fetch districts with React Query (cached for 24 hours - rarely changes)
+  const { data: districtsData } = useQuery({
+    queryKey: ['geo', 'districts'],
+    queryFn: async () => {
+      const response = await fetch('/v1/geo/districts')
+      const data = await response.json()
+      return data.success ? data.data.districts : []
+    },
+    staleTime: 24 * 60 * 60 * 1000, // 24 hours
+    gcTime: 48 * 60 * 60 * 1000, // Keep in cache for 48 hours
+  })
+
+  // Fetch tehsils based on selected district (cached for 1 hour)
+  const { data: tehsilsData, isLoading: isTehsilsLoading } = useQuery({
+    queryKey: ['geo', 'tehsils', formData.district],
+    queryFn: async () => {
+      const response = await fetch(`/v1/geo/${encodeURIComponent(formData.district)}/tehsils`)
+      const data = await response.json()
+      return data.success ? data.data.tehsils : []
+    },
+    enabled: !!formData.district, // Only fetch when district is selected
+    staleTime: 60 * 60 * 1000, // 1 hour
+  })
+
+  // Fetch villages based on selected district and tehsil (cached for 1 hour)
+  const { data: villagesData, isLoading: isVillagesLoading } = useQuery({
+    queryKey: ['geo', 'villages', formData.district, formData.tehsil],
+    queryFn: async () => {
+      const response = await fetch(
+        `/v1/geo/${encodeURIComponent(formData.district)}/${encodeURIComponent(formData.tehsil)}/villages`
+      )
+      const data = await response.json()
+      return data.success ? data.data.villages : []
+    },
+    enabled: !!formData.district && !!formData.tehsil,
+    staleTime: 60 * 60 * 1000,
+  })
+
+  // Fetch parent institutes based on location and type (cached for 30 minutes)
+  const { data: parentInstitutesData, isLoading: isParentInstitutesLoading } = useQuery({
+    queryKey: ['geo', 'parentInstitutes', formData.district, formData.tehsil, formData.instituteType],
+    queryFn: async () => {
+      const response = await fetch(
+        `/v1/geo/parent-institutes?district=${encodeURIComponent(formData.district)}&tehsil=${encodeURIComponent(formData.tehsil)}&instituteType=${encodeURIComponent(formData.instituteType)}`
+      )
+      const data = await response.json()
+      return data.success ? data.data.institutes : []
+    },
+    enabled: !!formData.district && !!formData.tehsil && !!formData.instituteType,
+    staleTime: 30 * 60 * 1000, // 30 minutes
+  })
+
+  // Combine loading states
+  const isLoadingGeo = isTehsilsLoading || isVillagesLoading || isParentInstitutesLoading
+
+  // Build geoData from queries
+  const geoData = {
+    districts: districtsData || [],
+    tehsils: tehsilsData || [],
+    villages: villagesData || [],
+    parentInstitutes: parentInstitutesData || []
+  }
+
   // Get all villages (establishment + service villages)
   const allVillages = formData.village
     ? [formData.village, ...formData.serviceVillages]
     : formData.serviceVillages
-
-  // Fetch districts on mount
-  useEffect(() => {
-    const fetchDistricts = async () => {
-      try {
-        setIsLoadingGeo(true)
-        const response = await fetch('/v1/geo/districts')
-        const data = await response.json()
-        if (data.success) {
-          setGeoData(prev => ({ ...prev, districts: data.data.districts }))
-        }
-      } catch (error) {
-        console.error('Failed to fetch districts:', error)
-      } finally {
-        setIsLoadingGeo(false)
-      }
-    }
-    fetchDistricts()
-  }, [])
-
-  // Fetch tehsils when district changes
-  useEffect(() => {
-    if (!formData.district) {
-      setGeoData(prev => ({ ...prev, tehsils: [], villages: [] }))
-      return
-    }
-
-    const fetchTehsils = async () => {
-      try {
-        setIsLoadingGeo(true)
-        const response = await fetch(`/v1/geo/${encodeURIComponent(formData.district)}/tehsils`)
-        const data = await response.json()
-        if (data.success) {
-          setGeoData(prev => ({ ...prev, tehsils: data.data.tehsils, villages: [] }))
-        }
-      } catch (error) {
-        console.error('Failed to fetch tehsils:', error)
-      } finally {
-        setIsLoadingGeo(false)
-      }
-    }
-    fetchTehsils()
-  }, [formData.district])
-
-  // Fetch villages when tehsil changes
-  useEffect(() => {
-    if (!formData.district || !formData.tehsil) {
-      setGeoData(prev => ({ ...prev, villages: [] }))
-      return
-    }
-
-    const fetchVillages = async () => {
-      try {
-        setIsLoadingGeo(true)
-        const response = await fetch(`/v1/geo/${encodeURIComponent(formData.district)}/${encodeURIComponent(formData.tehsil)}/villages`)
-        const data = await response.json()
-        if (data.success) {
-          setGeoData(prev => ({ ...prev, villages: data.data.villages }))
-        }
-      } catch (error) {
-        console.error('Failed to fetch villages:', error)
-      } finally {
-        setIsLoadingGeo(false)
-      }
-    }
-    fetchVillages()
-  }, [formData.district, formData.tehsil])
-
-  // Fetch parent institutes when district, tehsil, or instituteType changes
-  useEffect(() => {
-    if (!formData.district || !formData.tehsil || !formData.instituteType) {
-      setGeoData(prev => ({ ...prev, parentInstitutes: [] }))
-      return
-    }
-
-    const fetchParentInstitutes = async () => {
-      try {
-        setIsLoadingGeo(true)
-        const response = await fetch(
-          `/v1/geo/parent-institutes?district=${encodeURIComponent(formData.district)}&tehsil=${encodeURIComponent(formData.tehsil)}&instituteType=${encodeURIComponent(formData.instituteType)}`
-        )
-        const data = await response.json()
-        if (data.success) {
-          setGeoData(prev => ({ ...prev, parentInstitutes: data.data.institutes }))
-        }
-      } catch (error) {
-        console.error('Failed to fetch parent institutes:', error)
-      } finally {
-        setIsLoadingGeo(false)
-      }
-    }
-    fetchParentInstitutes()
-  }, [formData.district, formData.tehsil, formData.instituteType])
 
   const handleInputChange = (field: string, value: string | boolean | string[]) => {
     // Reset dependent fields when parent changes
@@ -368,7 +326,7 @@ export default function RegisterScreen() {
     }
 
     try {
-      setIsLoadingGeo(true)
+      setIsSubmitting(true)
 
       // Prepare registration data
       const registrationData = {
@@ -412,7 +370,7 @@ export default function RegisterScreen() {
       console.error('Registration error:', error)
       alert('Failed to submit registration. Please check your internet connection and try again.')
     } finally {
-      setIsLoadingGeo(false)
+      setIsSubmitting(false)
     }
   }
 
@@ -503,6 +461,13 @@ export default function RegisterScreen() {
         totalSteps={totalSteps}
       />
 
+      {/* Loading Overlay */}
+      <LoadingOverlay
+        isLoading={isLoadingGeo || isSubmitting}
+        message={isSubmitting ? "Submitting..." : "Loading..."}
+        subMessage={isSubmitting ? "Creating your registration" : "Fetching data"}
+      />
+
       {/* Scrollable Form Content */}
       <div
         className="flex-1 overflow-y-auto px-6 py-4 bg-white"
@@ -519,13 +484,13 @@ export default function RegisterScreen() {
               <p className="text-gray-600 font-['Poppins'] text-sm">Tell us about your veterinary institute</p>
             </div>
 
-            {renderSelect('district', 'Select Your District', geoData.districts.map(d => d.districtName))}
+            {renderSelect('district', 'Select Your District', geoData.districts.map((d: { districtName: string }) => d.districtName))}
 
-            {renderSelect('tehsil', 'Select Your Tehsil', geoData.tehsils.map(t => t.tehsilName))}
+            {renderSelect('tehsil', 'Select Your Tehsil', geoData.tehsils.map((t: { tehsilName: string }) => t.tehsilName))}
 
-            {renderSelect('village', 'Village of Establishment', geoData.villages.map(v => v.villageName), true)}
+            {renderSelect('village', 'Village of Establishment', geoData.villages.map((v: { villageName: string }) => v.villageName), true)}
 
-            {renderMultiSelect('serviceVillages', 'Other Villages of Service (Optional)', geoData.villages.filter(v => v.villageName !== formData.village).map(v => v.villageName))}
+            {renderMultiSelect('serviceVillages', 'Other Villages of Service (Optional)', geoData.villages.filter((v: { villageName: string }) => v.villageName !== formData.village).map((v: { villageName: string }) => v.villageName))}
 
             {/* Location Selection - Accordion Style */}
             <MapPicker
@@ -570,7 +535,7 @@ export default function RegisterScreen() {
               />
             </div>
 
-            {renderSelect('parentInstitute', 'Your Reporting/Parent Institute', geoData.parentInstitutes.map(p => p.instituteName), true)}
+            {renderSelect('parentInstitute', 'Your Reporting/Parent Institute', geoData.parentInstitutes.map((p: { instituteName: string }) => p.instituteName), true)}
           </div>
         )}
 

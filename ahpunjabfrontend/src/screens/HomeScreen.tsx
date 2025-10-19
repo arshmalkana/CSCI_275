@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import SideMenu from '../components/SideMenu'
 import { MainHeader } from '../components/Headers'
 import { Card, CardTitle, StatCard, StatusBadge } from '../components/Card'
@@ -6,6 +7,7 @@ import { ChevronDown, ChevronRight, BellRing, Phone, Mail, CloudAlert } from 'lu
 import { getStorageItem, setStorageItem } from '../utils/storage'
 import api from '../utils/api'
 import { SuccessDialog } from '../components/DialogBox'
+import { LoadingOverlay } from '../components/LoadingOverlay'
 
 // Types for API response
 interface VaccineData {
@@ -56,9 +58,6 @@ interface HomeData {
 export default function HomeScreen() {
   const [notifications] = useState(5) // Temporary notification count, use api to update
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false)
-  const [instituteData, setInstituteData] = useState<HomeData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [selectedVaccine, setSelectedVaccine] = useState(() => {
     // Load from storage or default to 'FMD'
     return getStorageItem('selectedVaccine') || 'FMD'
@@ -67,26 +66,16 @@ export default function HomeScreen() {
   // Dialog state
   const [successDialog, setSuccessDialog] = useState({ isOpen: false, message: '' })
 
-  // Fetch home data from API on mount
-  useEffect(() => {
-    const fetchHomeData = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-        const data = await api.getHomeData() as HomeData
-        setInstituteData(data)
-      } catch (err) {
-        console.error('Failed to fetch home data:', err)
-        setError(err instanceof Error ? err.message : 'Failed to load data')
-        // Use mock data as fallback
-        // setInstituteData(MOCK_INSTITUTE_DATA)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchHomeData()
-  }, [])
+  // Fetch home data with React Query (automatic caching and refetching)
+  const { data: instituteData, isLoading, error } = useQuery<HomeData>({
+    queryKey: ['homeData'],
+    queryFn: async () => {
+      const data = await api.getHomeData()
+      return data as HomeData
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+  })
 
   // Save vaccine selection to storage
   useEffect(() => {
@@ -128,37 +117,6 @@ export default function HomeScreen() {
     return colorMap[category]
   }
 
-  // If loading, show loading state
-  if (isLoading) {
-    return (
-      <div className="HomeScreen w-full max-w-md mx-auto h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-['Poppins']">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // If no data and error, show error state
-  if (!instituteData) {
-    return (
-      <div className="HomeScreen w-full max-w-md mx-auto h-screen flex items-center justify-center bg-white">
-        <div className="text-center px-6">
-          <div className="text-red-600 flex justify-center mb-4"><CloudAlert size={96} /></div>
-          <h2 className="text-xl font-bold text-gray-900 font-['Poppins'] mb-2">Failed to Load Data</h2>
-          <p className="text-gray-600 font-['Poppins'] mb-4">{error || 'Unable to fetch homepage data'}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-red-600 text-white px-6 py-2 rounded-lg font-['Poppins'] hover:bg-yellow-600"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="HomeScreen w-full max-w-md mx-auto h-screen flex flex-col bg-white justify-center overflow-hidden">
       {/* Header */}
@@ -166,6 +124,14 @@ export default function HomeScreen() {
         onMenuClick={() => setIsSideMenuOpen(true)}
         notifications={notifications}
       />
+
+      {/* Loading Overlay */}
+      <LoadingOverlay
+        isLoading={isLoading}
+        message="Loading..."
+        subMessage="Fetching your dashboard data"
+      />
+
       {/* Main Content */}
       <div className="MainContent flex-1 bg-gray-50 overflow-y-auto"
         style={{
@@ -173,19 +139,37 @@ export default function HomeScreen() {
           overscrollBehavior: 'contain'
         }}
       >
-        <div className="p-4 space-y-4">
+        {!instituteData && !isLoading ? (
+          // Error state when data failed to load
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center px-6">
+              <div className="text-red-600 flex justify-center mb-4"><CloudAlert size={96} /></div>
+              <h2 className="text-xl font-bold text-gray-900 font-['Poppins'] mb-2">Failed to Load Data</h2>
+              <p className="text-gray-600 font-['Poppins'] mb-4">
+                {error instanceof Error ? error.message : 'Unable to fetch homepage data'}
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="bg-red-600 text-white px-6 py-2 rounded-lg font-['Poppins'] hover:bg-yellow-600"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        ) : instituteData ? (
+          <div className="p-4 space-y-4">
 
-          {/* Institute Info Card */}
-          <Card className="InstituteCard">
-            <div className="text-black text-lg font-semibold font-['Poppins'] mb-2">
-              {instituteData.name}
-            </div>
-            <div className="text-black text-sm font-normal font-['Poppins'] mb-3">
-              {instituteData.welcomeMessage}
-            </div>
-            <div className="flex justify-between text-xs text-gray-600 font-['Poppins']">
-              <span>{instituteData.location.lat}</span>
-              <span>{instituteData.location.lng}</span>
+            {/* Institute Info Card */}
+            <Card className="InstituteCard">
+              <div className="text-black text-lg font-semibold font-['Poppins'] mb-2">
+                {instituteData.name}
+              </div>
+              <div className="text-black text-sm font-normal font-['Poppins'] mb-3">
+                {instituteData.welcomeMessage}
+              </div>
+              <div className="flex justify-between text-xs text-gray-600 font-['Poppins']">
+                <span>{instituteData.location.lat}</span>
+                <span>{instituteData.location.lng}</span>
             </div>
           </Card>
 
@@ -551,7 +535,8 @@ export default function HomeScreen() {
             </Card>
           )}
 
-        </div>
+          </div>
+        ) : null}
       </div>
 
       {/* Side Menu */}
