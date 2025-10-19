@@ -12,19 +12,26 @@ const DOMPurify = createDOMPurify()
  */
 export async function sanitizeInput(request, reply) {
   try {
+    // Skip sanitization for geography endpoints (already validated by schema)
+    const isGeoEndpoint = request.url.startsWith('/v1/geo/')
+
     // Sanitize body
     if (request.body && typeof request.body === 'object') {
       request.body = sanitizeObject(request.body)
     }
 
-    // Sanitize query params
+    // Sanitize query params (but use lighter sanitization for geo endpoints)
     if (request.query && typeof request.query === 'object') {
-      request.query = sanitizeObject(request.query)
+      request.query = isGeoEndpoint
+        ? sanitizeObject(request.query, true) // Light sanitization
+        : sanitizeObject(request.query)
     }
 
-    // Sanitize URL params
+    // Sanitize URL params (but use lighter sanitization for geo endpoints)
     if (request.params && typeof request.params === 'object') {
-      request.params = sanitizeObject(request.params)
+      request.params = isGeoEndpoint
+        ? sanitizeObject(request.params, true) // Light sanitization
+        : sanitizeObject(request.params)
     }
   } catch (error) {
     request.log.error({ error }, 'Input sanitization error')
@@ -35,9 +42,10 @@ export async function sanitizeInput(request, reply) {
 /**
  * Recursively sanitize an object
  * @param {Object} obj - Object to sanitize
+ * @param {boolean} light - Use light sanitization (for geographic names)
  * @returns {Object} Sanitized object
  */
-function sanitizeObject(obj) {
+function sanitizeObject(obj, light = false) {
   if (!obj || typeof obj !== 'object') {
     return obj
   }
@@ -46,9 +54,9 @@ function sanitizeObject(obj) {
   if (Array.isArray(obj)) {
     return obj.map(item => {
       if (typeof item === 'string') {
-        return sanitizeString(item)
+        return sanitizeString(item, light)
       } else if (typeof item === 'object') {
-        return sanitizeObject(item)
+        return sanitizeObject(item, light)
       }
       return item
     })
@@ -57,13 +65,13 @@ function sanitizeObject(obj) {
   // Handle objects
   const sanitized = {}
   for (const [key, value] of Object.entries(obj)) {
-    // Sanitize key
-    const cleanKey = sanitizeString(key)
+    // Sanitize key (always use light for keys)
+    const cleanKey = sanitizeString(key, true)
 
     if (typeof value === 'string') {
-      sanitized[cleanKey] = sanitizeString(value)
+      sanitized[cleanKey] = sanitizeString(value, light)
     } else if (typeof value === 'object' && value !== null) {
-      sanitized[cleanKey] = sanitizeObject(value)
+      sanitized[cleanKey] = sanitizeObject(value, light)
     } else {
       sanitized[cleanKey] = value
     }
@@ -75,13 +83,27 @@ function sanitizeObject(obj) {
 /**
  * Sanitize a string value
  * @param {string} str - String to sanitize
+ * @param {boolean} light - Use light sanitization (for geographic names, numbers, etc.)
  * @returns {string} Sanitized string
  */
-function sanitizeString(str) {
+function sanitizeString(str, light = false) {
   if (typeof str !== 'string') {
     return str
   }
 
+  // Light sanitization: Only remove dangerous characters, keep spaces and hyphens
+  if (light) {
+    let cleaned = str.trim()
+    // Remove null bytes and dangerous control characters
+    cleaned = cleaned.replace(/\0/g, '')
+    cleaned = cleaned.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '')
+    // Remove SQL injection patterns but keep regular text
+    cleaned = cleaned.replace(/[';"\\/]/g, '')
+    cleaned = cleaned.replace(/--|\/\*/g, '')
+    return cleaned
+  }
+
+  // Full sanitization for sensitive inputs
   // Remove HTML tags and dangerous characters using DOMPurify
   let cleaned = DOMPurify.sanitize(str, {
     ALLOWED_TAGS: [], // No HTML tags allowed
@@ -97,7 +119,12 @@ function sanitizeString(str) {
   cleaned = cleaned.replace(/\0/g, '')
 
   // Escape dangerous Unicode characters
-  cleaned = validator.escape(cleaned)
+  try {
+    cleaned = validator.escape(cleaned)
+  } catch (error) {
+    // If escape fails, just use the cleaned string
+    // This can happen with certain Unicode characters
+  }
 
   return cleaned
 }

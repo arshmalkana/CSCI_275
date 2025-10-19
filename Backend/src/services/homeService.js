@@ -207,10 +207,10 @@ export async function getHomeDataByUserId(userId) {
 
     const vaccineAnnualQuery = `
       SELECT
+        v.vaccine_id,
         v.vaccine_code,
         v.vaccine_name,
-        COALESCE(SUM(vrd.doses_used), 0) as annual_doses,
-        COALESCE(MAX(vs.doses_received), 0) as target_doses
+        COALESCE(SUM(vrd.doses_used), 0) as annual_doses
       FROM vaccines v
       LEFT JOIN vaccination_report_details vrd ON v.vaccine_id = vrd.vaccine_id
       LEFT JOIN monthly_reports mr ON vrd.report_id = mr.report_id
@@ -218,8 +218,6 @@ export async function getHomeDataByUserId(userId) {
         AND mr.reporting_month >= $2
         AND mr.reporting_month <= $3
         AND mr.submission_status IN ('Submitted', 'Approved')
-      LEFT JOIN vaccine_stock vs ON v.vaccine_id = vs.vaccine_id
-        AND vs.institute_id = $1
       WHERE v.is_active = TRUE
       GROUP BY v.vaccine_id, v.vaccine_code, v.vaccine_name
       ORDER BY v.vaccine_code
@@ -227,7 +225,42 @@ export async function getHomeDataByUserId(userId) {
 
     const vaccineAnnualResult = await query(vaccineAnnualQuery, [instituteId, fyStartDate, fyEndDate])
 
-    // 9. Get attached institutes reporting status (for Tehsil/District admins)
+    // 9. Get performance targets from database (institute-specific + type defaults)
+    // Priority: Institute-specific targets override institute type defaults
+    const targetsQuery = `
+      WITH institute_info AS (
+        SELECT institute_type FROM institutes WHERE institute_id = $1
+      )
+      SELECT DISTINCT ON (target_type, vaccine_id)
+        target_type,
+        vaccine_id,
+        annual_target,
+        monthly_target,
+        CASE
+          WHEN institute_id IS NOT NULL THEN 1
+          WHEN institute_type IS NOT NULL THEN 2
+        END as priority
+      FROM institute_targets
+      WHERE (institute_id = $1 OR institute_type = (SELECT institute_type FROM institute_info))
+        AND effective_from <= CURRENT_DATE
+        AND (effective_until IS NULL OR effective_until >= CURRENT_DATE)
+      ORDER BY target_type, vaccine_id, priority ASC  -- Lower priority number = higher priority (1 = specific, 2 = type default)
+    `
+
+    const targetsResult = await query(targetsQuery, [instituteId])
+
+    // Build targets map for easy lookup
+    const targets = {}
+    targetsResult.rows.forEach(t => {
+      if (t.target_type === 'Vaccine') {
+        if (!targets.vaccines) targets.vaccines = {}
+        targets.vaccines[t.vaccine_id] = t.annual_target
+      } else {
+        targets[t.target_type] = t.annual_target
+      }
+    })
+
+    // 10. Get attached institutes reporting status (for Tehsil/District admins)
     let attachedInstitutes = []
 
     if (mainStaff.user_role === 'Tehsil_Admin' || mainStaff.user_role === 'District_Admin') {
@@ -270,15 +303,15 @@ export async function getHomeDataByUserId(userId) {
       stats: {
         opd: {
           monthly: { completed: parseInt(opdStatsResult.rows[0].monthly_opd) },
-          annual: { completed: parseInt(annualOpdResult.rows[0].annual_opd), target: 1200 }
+          annual: { completed: parseInt(annualOpdResult.rows[0].annual_opd), target: targets.OPD || 1200 }
         },
         aiCow: {
           monthly: { completed: parseInt(aiCowMonthlyResult.rows[0].monthly_ai_cow) },
-          annual: { completed: parseInt(aiCowAnnualResult.rows[0].annual_ai_cow), target: 600 }
+          annual: { completed: parseInt(aiCowAnnualResult.rows[0].annual_ai_cow), target: targets.AI_Cattle || 600 }
         },
         aiBuf: {
           monthly: { completed: parseInt(aiBufMonthlyResult.rows[0].monthly_ai_buf) },
-          annual: { completed: parseInt(aiBufAnnualResult.rows[0].annual_ai_buf), target: 360 }
+          annual: { completed: parseInt(aiBufAnnualResult.rows[0].annual_ai_buf), target: targets.AI_Buffalo || 360 }
         }
       },
       vaccines: {},
@@ -307,16 +340,18 @@ export async function getHomeDataByUserId(userId) {
       attachedInstitutes
     }
 
-    // Add vaccine data
+    // Add vaccine data with targets from database
     const vaccineData = {}
     vaccineMonthlyResult.rows.forEach(v => {
       const annualData = vaccineAnnualResult.rows.find(av => av.vaccine_code === v.vaccine_code)
+      const vaccineTarget = targets.vaccines && annualData ? targets.vaccines[annualData.vaccine_id] : 0
+
       vaccineData[v.vaccine_code] = {
         name: v.vaccine_name,
         monthly: { completed: parseInt(v.monthly_doses) },
         annual: {
           completed: annualData ? parseInt(annualData.annual_doses) : 0,
-          target: annualData ? parseInt(annualData.target_doses) : 0
+          target: vaccineTarget || 0
         }
       }
     })
