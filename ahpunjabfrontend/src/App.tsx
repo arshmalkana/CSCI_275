@@ -11,6 +11,7 @@ import PasskeySetupScreen from './screens/PasskeySetupScreen'
 import ManagePasskeysScreen from './screens/ManagePasskeysScreen'
 import ActiveSessionsScreen from './screens/ActiveSessionsScreen'
 import MonthlyReportScreen from './screens/MonthlyReportScreen'
+import CreateReportScreen from './screens/CreateReportScreen'
 import AllScreensScreen from './screens/AllScreensScreen'
 import authService from './services/authService'
 
@@ -109,6 +110,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <MonthlyReportScreen />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/create"
+            element={
+              <ProtectedRoute>
+                <CreateReportScreen />
               </ProtectedRoute>
             }
           />

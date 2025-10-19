@@ -46,7 +46,7 @@ export const FloatingLabelField: React.FC<FloatingLabelFieldProps> = ({
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <div className="relative">
+      <div className="relative ">
         {/* Left Icon */}
         {icon && (
           <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 z-10">
@@ -61,11 +61,12 @@ export const FloatingLabelField: React.FC<FloatingLabelFieldProps> = ({
           onBlur={() => onBlur?.(field)}
           placeholder={placeholder} // Keep as single space for floating effect so it will go up on unfocus
           disabled={disabled}
-          className={`peer w-full ${paddingLeft} ${paddingRight} pt-5 pb-2 border ${
+          className={`peer w-full ${paddingLeft} ${paddingRight} pt-5 pb-2 border  ${
             error ? 'border-red-300' : 'border-gray-300'
           } rounded-lg bg-gray-50 text-gray-900 text-base font-['Poppins']
             focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent
-            transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed`}
+            transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed
+            [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
         />
 
         {/* THE EYE */}
@@ -82,7 +83,7 @@ export const FloatingLabelField: React.FC<FloatingLabelFieldProps> = ({
         {/* Actual Cool part here: floating label */}
         <label
           className={`absolute ${hasIcon ? 'left-12' : 'left-4'} text-gray-500 text-base font-['Poppins']
-            transition-all duration-200 pointer-events-none
+            transition-all duration-200 pointer-events-none 
             peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-base
             peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-gray-600
             peer-focus:top-1.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-yellow-600 peer-focus:!text-yellow-600
