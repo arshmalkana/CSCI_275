@@ -1,4 +1,5 @@
--- AH Punjab - Full Villages Data from Census
+-- AH Punjab - Geography Seed Data
+-- Complete Punjab geography: 21 Districts, 84 Tehsils, 12,354 Villages
 -- Auto-generated from punjab_villages.json
 
 -- ============================================================================

@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FloatingLabelField } from '../components/FloatingLabelField';
 import { PrimaryButton } from '../components/Button';
-import { ScreenHeader } from '../components/ScreenHeader';
 import { validateEmail, validatePhone } from '../utils/validation';
-import { Camera, User, Mail, Phone, Lock, ArrowLeft, Fingerprint, Shield, Loader} from 'lucide-react';
+import { Camera, User, Mail, Phone, Lock, Fingerprint, Shield, ArrowLeft, Loader } from 'lucide-react';
 import { MapPicker } from '../components/MapPicker';
 import api from '../utils/api';
 import ImageCropModal from '../components/ImageCropModal';
 import { DiscardChangesDialog, SuccessDialog, ErrorDialog } from '../components/DialogBox';
+import { BackHeader } from '../components/Headers';
+import { LoadingOverlay } from '../components/LoadingOverlay';
 
 interface ProfileData {
   userId: string
@@ -35,11 +37,7 @@ interface ProfileData {
 
 export default function ProfileScreen() {
   const navigate = useNavigate();
-
-  // Profile data from backend
-  const [profileData, setProfileData] = useState<ProfileData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const queryClient = useQueryClient();
 
   // Form data
   const [formData, setFormData] = useState({
@@ -72,10 +70,33 @@ export default function ProfileScreen() {
   const [successDialog, setSuccessDialog] = useState({ isOpen: false, message: '' });
   const [errorDialog, setErrorDialog] = useState({ isOpen: false, message: '' });
 
-  // Fetch profile on mount
+  // Fetch profile with React Query
+  const { data: profileData, isLoading } = useQuery<ProfileData>({
+    queryKey: ['profile'],
+    queryFn: async () => {
+      const data = await api.getProfile();
+      return data as ProfileData;
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes - profile data doesn't change often
+    retry: 1,
+  });
+
+  // Initialize form data when profile loads
   useEffect(() => {
-    fetchProfile();
-  }, []);
+    if (profileData) {
+      const initialData = {
+        inchargeName: profileData.fullName,
+        email: profileData.email,
+        mobile: profileData.mobile,
+        latitude: profileData.institute.latitude?.toString() || '',
+        longitude: profileData.institute.longitude?.toString() || ''
+      };
+
+      setFormData(initialData);
+      setOriginalData(initialData);
+      setProfilePicture(profileData.profilePictureUrl);
+    }
+  }, [profileData]);
 
   // Detect unsaved changes
   useEffect(() => {
@@ -89,31 +110,38 @@ export default function ProfileScreen() {
     setHasUnsavedChanges(hasChanges);
   }, [formData, originalData]);
 
-  const fetchProfile = async () => {
-    try {
-      setIsLoading(true);
-      const data = await api.getProfile() as ProfileData;
-      setProfileData(data);
+  // Mutation for updating profile
+  const updateProfileMutation = useMutation({
+    mutationFn: async (updates: { fullName?: string; email?: string; mobile?: string }) => {
+      return await api.updateProfile(updates);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch profile data
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+    },
+  });
 
-      // Initialize form with backend data
-      const initialData = {
-        inchargeName: data.fullName,
-        email: data.email,
-        mobile: data.mobile,
-        latitude: data.institute.latitude?.toString() || '',
-        longitude: data.institute.longitude?.toString() || ''
-      };
+  // Mutation for updating location
+  const updateLocationMutation = useMutation({
+    mutationFn: async (location: { latitude: number; longitude: number }) => {
+      return await api.updateLocation(location);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+    },
+  });
 
-      setFormData(initialData);
-      setOriginalData(initialData);
-      setProfilePicture(data.profilePictureUrl);
-    } catch (err) {
-      console.error('Failed to fetch profile:', err);
-      setErrorDialog({ isOpen: true, message: 'Failed to load profile. Please try again.' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Mutation for uploading profile picture
+  const uploadPictureMutation = useMutation({
+    mutationFn: async (image: string) => {
+      return await api.uploadProfilePicture(image);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+    },
+  });
+
+  const isSaving = updateProfileMutation.isPending || updateLocationMutation.isPending || uploadPictureMutation.isPending;
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -148,11 +176,8 @@ export default function ProfileScreen() {
 
   const handleCropComplete = async (croppedImage: string) => {
     try {
-      await api.uploadProfilePicture(croppedImage);
+      await uploadPictureMutation.mutateAsync(croppedImage);
       setProfilePicture(croppedImage);
-      if (profileData) {
-        setProfileData({ ...profileData, profilePictureUrl: croppedImage });
-      }
       setSuccessDialog({ isOpen: true, message: 'Profile picture updated successfully' });
     } catch (err) {
       console.error('Failed to upload profile picture:', err);
@@ -183,8 +208,6 @@ export default function ProfileScreen() {
 
     if (Object.keys(newErrors).length === 0) {
       try {
-        setIsSaving(true);
-
         // Update profile
         const updates: {
           fullName?: string
@@ -197,7 +220,7 @@ export default function ProfileScreen() {
         if (formData.email !== originalData.email) updates.email = formData.email;
 
         if (Object.keys(updates).length > 0) {
-          await api.updateProfile(updates);
+          await updateProfileMutation.mutateAsync(updates);
         }
 
         // Update location if changed
@@ -209,11 +232,10 @@ export default function ProfileScreen() {
           (formData.latitude !== originalData.latitude ||
             formData.longitude !== originalData.longitude)
         ) {
-          await api.updateLocation({ latitude: lat, longitude: lng });
+          await updateLocationMutation.mutateAsync({ latitude: lat, longitude: lng });
         }
 
-        // Refresh profile
-        await fetchProfile();
+        // React Query will automatically refetch after mutations
         setHasUnsavedChanges(false);
         setSuccessDialog({ isOpen: true, message: 'Profile updated successfully' });
       } catch (err) {
@@ -222,8 +244,6 @@ export default function ProfileScreen() {
           isOpen: true,
           message: err instanceof Error ? err.message : 'Failed to save profile'
         });
-      } finally {
-        setIsSaving(false);
       }
     }
   };
@@ -253,23 +273,18 @@ export default function ProfileScreen() {
     navigate('/active-sessions');
   };
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="w-full max-w-md mx-auto h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-['Poppins']">Loading profile...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="ProfileScreen w-full h-screen max-w-md mx-auto bg-white flex flex-col overflow-hidden">
 
       {/* Header */}
-      <ScreenHeader title="Edit Profile" onBack={handleBack} />
+      <BackHeader title="Edit Profile" onBack={handleBack} />
+
+      {/* Loading Overlay for initial load and saving */}
+      <LoadingOverlay
+        isLoading={isLoading || isSaving}
+        message={isLoading ? "Loading profile..." : "Saving changes..."}
+        subMessage={isLoading ? "Please wait" : "Updating your profile"}
+      />
 
       {/* Scrollable Content - Takes remaining space, scrolls internally */}
       <div

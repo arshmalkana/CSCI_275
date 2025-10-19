@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { FloatingLabelField } from '../components/FloatingLabelField'
 import { SearchableSelect, SearchableMultiSelect } from '../components/SearchableSelect'
 import { PrimaryButton, SecondaryButton } from '../components/Button'
@@ -8,11 +9,13 @@ import { ProgressIndicator } from '../components/ProgressIndicator'
 import { RadioGroup, Checkbox } from '../components/FormControls'
 import { ChevronRight, UserPlus, Trash2, Plus } from 'lucide-react'
 import { MapPicker } from '../components/MapPicker'
+import { LoadingOverlay } from '../components/LoadingOverlay'
 
 export default function RegisterScreen() {
   const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState(1)
   const totalSteps = 4
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Empty Form state
   const [formData, setFormData] = useState({
@@ -56,12 +59,84 @@ export default function RegisterScreen() {
   const [employees, setEmployees] = useState<Array<{type: string, name: string, mobile: string, email: string}>>([])
   const [selectedVillageForPopulation, setSelectedVillageForPopulation] = useState<string>('')
 
+  // Fetch districts with React Query (cached for 24 hours - rarely changes)
+  const { data: districtsData } = useQuery({
+    queryKey: ['geo', 'districts'],
+    queryFn: async () => {
+      const response = await fetch('/v1/geo/districts')
+      const data = await response.json()
+      return data.success ? data.data.districts : []
+    },
+    staleTime: 24 * 60 * 60 * 1000, // 24 hours
+    gcTime: 48 * 60 * 60 * 1000, // Keep in cache for 48 hours
+  })
+
+  // Fetch tehsils based on selected district (cached for 1 hour)
+  const { data: tehsilsData, isLoading: isTehsilsLoading } = useQuery({
+    queryKey: ['geo', 'tehsils', formData.district],
+    queryFn: async () => {
+      const response = await fetch(`/v1/geo/${encodeURIComponent(formData.district)}/tehsils`)
+      const data = await response.json()
+      return data.success ? data.data.tehsils : []
+    },
+    enabled: !!formData.district, // Only fetch when district is selected
+    staleTime: 60 * 60 * 1000, // 1 hour
+  })
+
+  // Fetch villages based on selected district and tehsil (cached for 1 hour)
+  const { data: villagesData, isLoading: isVillagesLoading } = useQuery({
+    queryKey: ['geo', 'villages', formData.district, formData.tehsil],
+    queryFn: async () => {
+      const response = await fetch(
+        `/v1/geo/${encodeURIComponent(formData.district)}/${encodeURIComponent(formData.tehsil)}/villages`
+      )
+      const data = await response.json()
+      return data.success ? data.data.villages : []
+    },
+    enabled: !!formData.district && !!formData.tehsil,
+    staleTime: 60 * 60 * 1000,
+  })
+
+  // Fetch parent institutes based on location and type (cached for 30 minutes)
+  const { data: parentInstitutesData, isLoading: isParentInstitutesLoading } = useQuery({
+    queryKey: ['geo', 'parentInstitutes', formData.district, formData.tehsil, formData.instituteType],
+    queryFn: async () => {
+      const response = await fetch(
+        `/v1/geo/parent-institutes?district=${encodeURIComponent(formData.district)}&tehsil=${encodeURIComponent(formData.tehsil)}&instituteType=${encodeURIComponent(formData.instituteType)}`
+      )
+      const data = await response.json()
+      return data.success ? data.data.institutes : []
+    },
+    enabled: !!formData.district && !!formData.tehsil && !!formData.instituteType,
+    staleTime: 30 * 60 * 1000, // 30 minutes
+  })
+
+  // Combine loading states
+  const isLoadingGeo = isTehsilsLoading || isVillagesLoading || isParentInstitutesLoading
+
+  // Build geoData from queries
+  const geoData = {
+    districts: districtsData || [],
+    tehsils: tehsilsData || [],
+    villages: villagesData || [],
+    parentInstitutes: parentInstitutesData || []
+  }
+
   // Get all villages (establishment + service villages)
   const allVillages = formData.village
     ? [formData.village, ...formData.serviceVillages]
     : formData.serviceVillages
 
   const handleInputChange = (field: string, value: string | boolean | string[]) => {
+    // Reset dependent fields when parent changes
+    if (field === 'district') {
+      setFormData(prev => ({ ...prev, district: value as string, tehsil: '', village: '', serviceVillages: [] }))
+      return
+    }
+    if (field === 'tehsil') {
+      setFormData(prev => ({ ...prev, tehsil: value as string, village: '', serviceVillages: [] }))
+      return
+    }
     setFormData(prev => ({ ...prev, [field]: value }))
 
     // Initialize population data for new villages
@@ -245,9 +320,57 @@ export default function RegisterScreen() {
     }
   }
 
-  const handleRegister = () => {
-    if (validateStep(currentStep)) {
-      console.log('Register data:', { ...formData, employees })
+  const handleRegister = async () => {
+    if (!validateStep(currentStep)) {
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+
+      // Prepare registration data
+      const registrationData = {
+        district: formData.district,
+        tehsil: formData.tehsil,
+        village: formData.village,
+        serviceVillages: formData.serviceVillages,
+        instituteType: formData.instituteType,
+        isClusterAvailable: formData.isClusterAvailable,
+        isLabAvailable: formData.isLabAvailable,
+        isTehsilHQ: formData.isTehsilHQ,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        incharge: {
+          type: formData.inchargeType,
+          name: formData.inchargeName,
+          mobile: formData.inchargeMobile,
+          email: formData.inchargeEmail
+        },
+        employees: employees,
+        villagePopulations: villagePopulations
+      }
+
+      const response = await fetch('/v1/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(registrationData)
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        alert(`Registration submitted successfully!\n\nInstitute: ${data.data.instituteName}\nRegistration ID: ${data.data.registrationId}\n\nStatus: ${data.data.status}\n\nYour registration is pending admin approval. You will be notified once approved.`)
+        navigate('/login')
+      } else {
+        alert(`Registration failed: ${data.message || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Registration error:', error)
+      alert('Failed to submit registration. Please check your internet connection and try again.')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -338,6 +461,13 @@ export default function RegisterScreen() {
         totalSteps={totalSteps}
       />
 
+      {/* Loading Overlay */}
+      <LoadingOverlay
+        isLoading={isLoadingGeo || isSubmitting}
+        message={isSubmitting ? "Submitting..." : "Loading..."}
+        subMessage={isSubmitting ? "Creating your registration" : "Fetching data"}
+      />
+
       {/* Scrollable Form Content */}
       <div
         className="flex-1 overflow-y-auto px-6 py-4 bg-white"
@@ -354,13 +484,13 @@ export default function RegisterScreen() {
               <p className="text-gray-600 font-['Poppins'] text-sm">Tell us about your veterinary institute</p>
             </div>
 
-            {renderSelect('district', 'Select Your District', ['Amritsar', 'Ludhiana', 'Jalandhar', 'Patiala', 'Bathinda', 'Ferozepur', 'Gurdaspur', 'Hoshiarpur'])}
+            {renderSelect('district', 'Select Your District', geoData.districts.map((d: { districtName: string }) => d.districtName))}
 
-            {renderSelect('tehsil', 'Select Your Tehsil', ['Ajnala', 'Amritsar I', 'Amritsar II', 'Tarn Taran', 'Patti', 'Khadoor Sahib', 'Baba Bakala', 'Jandiala Guru'])}
+            {renderSelect('tehsil', 'Select Your Tehsil', geoData.tehsils.map((t: { tehsilName: string }) => t.tehsilName))}
 
-            {renderSelect('village', 'Village of Establishment', ['Ajnala', 'Attari', 'Beas', 'Bhikhiwind', 'Budha Theh', 'Chogawan', 'Dalla', 'Fatehabad', 'Ghalib Kalan', 'Harike'], true)}
+            {renderSelect('village', 'Village of Establishment', geoData.villages.map((v: { villageName: string }) => v.villageName), true)}
 
-            {renderMultiSelect('serviceVillages', 'Other Villages of Service (Optional)', ['Jandiala Guru', 'Kathunangal', 'Lopoke', 'Majitha', 'Naushera Pannuan', 'Ramdass', 'Rayya', 'Sultanwind'])}
+            {renderMultiSelect('serviceVillages', 'Other Villages of Service (Optional)', geoData.villages.filter((v: { villageName: string }) => v.villageName !== formData.village).map((v: { villageName: string }) => v.villageName))}
 
             {/* Location Selection - Accordion Style */}
             <MapPicker
@@ -405,7 +535,7 @@ export default function RegisterScreen() {
               />
             </div>
 
-            {renderSelect('parentInstitute', 'Your Reporting/Parent Institute', ['District Veterinary Hospital Amritsar', 'Regional Veterinary Hospital Tarn Taran', 'Veterinary College Ludhiana', 'Animal Husbandry Department Punjab'])}
+            {renderSelect('parentInstitute', 'Your Reporting/Parent Institute', geoData.parentInstitutes.map((p: { instituteName: string }) => p.instituteName), true)}
           </div>
         )}
 

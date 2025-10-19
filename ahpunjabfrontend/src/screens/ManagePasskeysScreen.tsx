@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { Fingerprint, Trash2, Plus, Smartphone } from 'lucide-react'
 import webauthnService,  { type PasskeyCredential } from '../services/webauthnService'
 import authService from '../services/authService'
-import { ScreenHeader } from '../components/ScreenHeader'
+// import { ScreenHeader } from '../components/ScreenHeader'
 import { SuccessDialog, ErrorDialog } from '../components/DialogBox'
 import DialogBox from '../components/DialogBox'
+import { BackHeader } from '../components/Headers'
 // import {PrimaryButton} from '../components/Button'
 
 export default function ManagePasskeysScreen() {
@@ -119,7 +120,7 @@ export default function ManagePasskeysScreen() {
   return (
     <div className="w-full h-screen max-w-md mx-auto bg-white flex flex-col overflow-hidden">
       {/* Header */}
-      <ScreenHeader
+      <BackHeader
         title="Manage Passkeys"
         onBack={() => navigate(-1)}
       />

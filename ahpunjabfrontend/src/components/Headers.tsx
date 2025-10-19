@@ -1,4 +1,5 @@
-import { Menu, Bell, ArrowLeft } from 'lucide-react'
+import { Menu, Bell } from 'lucide-react'
+import { BackButton } from './Button'
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import api from '../utils/api'
@@ -125,25 +126,32 @@ export function BackHeader({ title, onBack }: BackHeaderProps) {
   }
 
   return (
-    <div className="Header w-full bg-gradient-to-r from-yellow-400 to-yellow-500 shadow-md">
-      <div className="flex items-center justify-between px-6 h-16">
-        {/* Back Button */}
-        <button
-          onClick={handleBack}
-          className="p-2 hover:bg-yellow-400 rounded-lg transition-colors"
-          aria-label="Go back"
-        >
-          <ArrowLeft size={24} className="text-gray-800" />
-        </button>
+    // <div className="Header w-full bg-gradient-to-r from-yellow-400 to-yellow-500 shadow-md">
+    //   <div className="flex items-center justify-between px-6 h-16">
+    //     {/* Back Button */}
+    //     <button
+    //       onClick={handleBack}
+    //       className="p-2 hover:bg-yellow-400 rounded-lg transition-colors"
+    //       aria-label="Go back"
+    //     >
+    //       <ArrowLeft size={24} className="text-gray-800" />
+    //     </button>
 
-        {/* Title */}
-        <h1 className="text-gray-900 text-lg font-bold font-['Poppins']">
-          {title}
-        </h1>
+    //     {/* Title */}
+    //     <h1 className="text-gray-900 text-lg font-bold font-['Poppins']">
+    //       {title}
+    //     </h1>
 
-        {/* Spacer for centering */}
-        <div className="w-10" />
-      </div>
-    </div>
+    //     {/* Spacer for centering */}
+    //     <div className="w-10" />
+    //   </div>
+    // </div>
+        <div className={`flex-shrink-0 flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100`}>
+          <BackButton onClick={handleBack} />
+          <h1 className="text-xl font-semibold text-gray-900 font-['Poppins']">
+            {title}
+          </h1>
+          <div className="w-10"></div> {/* Spacer for center alignment */}
+        </div>
   )
 }
