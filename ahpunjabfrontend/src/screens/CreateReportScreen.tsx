@@ -8,142 +8,28 @@ import {
   Syringe,
   Save,
   Check,
-  AlertCircle,
-  ChevronDown,
-  ChevronUp,
   Copy,
-  Edit2
+  Edit2,
+  X
 } from 'lucide-react';
 import { BackHeader } from '../components/Headers';
-import { FloatingLabelField } from '../components/FloatingLabelField';
 import DialogBox, { DiscardChangesDialog, SuccessDialog, ErrorDialog } from '../components/DialogBox';
-
-// Types
-interface OPDData {
-  equines: { new: string; old: string; beneficiaries: string };
-  bovine: { new: string; old: string; beneficiaries: string };
-  smallAnimals: { new: string; old: string; beneficiaries: string };
-  dogsCats: { new: string; old: string; beneficiaries: string };
-  gaushala: { new: string; old: string; beneficiaries: string };
-  castrations: {
-    largeAnimals: string;
-    smallAnimals: string;
-    beneficiaries: string;
-  };
-  pregnancyDiagnosis: {
-    equine: string;
-    bovine: string;
-    beneficiaries: string;
-  };
-}
-
-interface CertificatesData {
-  healthCertificates: {
-    largeAnimals: string;
-    smallAnimals: string;
-    poultry: string;
-    dogs: string;
-    beneficiaries: string;
-  };
-  postmortem: {
-    largeAnimals: string;
-    smallAnimals: string;
-    poultry: string;
-    vetroLegal: string;
-    dogsVetLegal: string;
-    beneficiaries: string;
-  };
-  exportCertificates: {
-    issued: string;
-    beneficiaries: string;
-  };
-}
-
-interface LabData {
-  bloodTest: { count: string; beneficiaries: string };
-  milkTest: { count: string; beneficiaries: string };
-  fecalTest: { count: string; beneficiaries: string };
-  urineTest: { count: string; beneficiaries: string };
-  xraysPets: { count: string; beneficiaries: string };
-  ultrasoundPets: { count: string; beneficiaries: string };
-  serumAnalysisPets: { count: string; beneficiaries: string };
-  culturePets: { count: string; beneficiaries: string };
-  xrays: { count: string; beneficiaries: string };
-  ultrasound: { count: string; beneficiaries: string };
-  serumAnalysis: { count: string; beneficiaries: string };
-  cultureTest: { count: string; beneficiaries: string };
-}
-
-interface ExtensionData {
-  farmerAwareness: {
-    camps: string;
-    villages: string;
-    farmersAttended: string;
-    animalsTreated: string;
-  };
-  schemeCamps: {
-    camps: string;
-    villages: string;
-    farmersAttended: string;
-    animalsTreated: string;
-  };
-  schoolLectures: {
-    lectures: string;
-    studentsAttended: string;
-  };
-}
-
-interface BreedAIData {
-  current: {
-    ai: string;
-    covered: string;
-    beneficiaries: string;
-  };
-  threeMonthsAgo: {
-    tested: string;
-    positive: string;
-    beneficiaries: string;
-  };
-  sixMonthsAgo: {
-    maleCalves: string;
-    femaleCalves: string;
-    beneficiaries: string;
-  };
-}
-
-interface AIReportsData {
-  localSemen: {
-    hf: BreedAIData;
-    jersey: BreedAIData;
-    cb: BreedAIData;
-    sahiwal: BreedAIData;
-  };
-  girSemen: {
-    gir: BreedAIData;
-    gir2: BreedAIData;
-  };
-  ettImported: {
-    hfETT: BreedAIData;
-    jerseyETT: BreedAIData;
-    hfImp: BreedAIData;
-    jerseyImp: BreedAIData;
-  };
-  sexedSemen: {
-    hfSexed: BreedAIData;
-    jerseySexed: BreedAIData;
-    cbSexed: BreedAIData;
-    sahiwalSexed: BreedAIData;
-  };
-  buffaloes: {
-    murrah: BreedAIData;
-    niliRavi: BreedAIData;
-    surti: BreedAIData;
-    jaffarabadi: BreedAIData;
-  };
-}
-
-type Section = 'opd' | 'certificates' | 'lab' | 'extension' | 'ai';
-type SectionStatus = 'complete' | 'partial' | 'pending';
+import {
+  OPDSection,
+  CertificatesSection,
+  LabSection,
+  ExtensionSection,
+  AIReportsSection,
+  NavButton,
+  type OPDData,
+  type CertificatesData,
+  type LabData,
+  type ExtensionData,
+  type AIReportsData,
+  type BreedAIData,
+  type Section,
+  type SectionStatus,
+} from '../components/ReportComponents';
 
 const CreateReportScreen = () => {
   const navigate = useNavigate();
@@ -380,9 +266,18 @@ const CreateReportScreen = () => {
       {/* Progress Section */}
       <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-3">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700 font-['Poppins']">
-            January 2025
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700 font-['Poppins']">
+              {selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            </span>
+            <button
+              onClick={() => setShowMonthSelector(true)}
+              className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+              aria-label="Change month"
+            >
+              <Edit2 size={16} className="text-gray-600" />
+            </button>
+          </div>
           {lastSaved && (
             <span className="text-xs text-green-600 font-['Poppins']">
               Saved {Math.floor((Date.now() - lastSaved.getTime()) / 60000)}m ago
@@ -416,21 +311,11 @@ const CreateReportScreen = () => {
         className="flex-1 overflow-y-auto"
         style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
       >
-        {activeSection === 'opd' && (
-          <OPDSection data={opdData} setData={setOpdData} />
-        )}
-        {activeSection === 'certificates' && (
-          <CertificatesSection data={certData} setData={setCertData} />
-        )}
-        {activeSection === 'lab' && (
-          <LabSection data={labData} setData={setLabData} />
-        )}
-        {activeSection === 'extension' && (
-          <ExtensionSection data={extensionData} setData={setExtensionData} />
-        )}
-        {activeSection === 'ai' && (
-          <AIReportsSection data={aiReportsData} setData={setAiReportsData} />
-        )}
+        {activeSection === 'opd' && <OPDSection data={opdData} setData={setOpdData} />}
+        {activeSection === 'certificates' && <CertificatesSection data={certData} setData={setCertData} />}
+        {activeSection === 'lab' && <LabSection data={labData} setData={setLabData} />}
+        {activeSection === 'extension' && <ExtensionSection data={extensionData} setData={setExtensionData} />}
+        {activeSection === 'ai' && <AIReportsSection data={aiReportsData} setData={setAiReportsData} />}
       </div>
 
       {/* Fixed Save Button */}
@@ -518,1369 +403,162 @@ const CreateReportScreen = () => {
         onClose={() => setInfoDialog({ isOpen: false, message: '' })}
         confirmText="Got it"
       />
+
+      {/* Month Selector Dialog */}
+      <MonthSelectorDialog
+        isOpen={showMonthSelector}
+        selectedDate={selectedDate}
+        onSelect={(date) => {
+          setSelectedDate(date);
+          setShowMonthSelector(false);
+        }}
+        onClose={() => setShowMonthSelector(false)}
+      />
     </div>
   );
 };
 
-// Bottom Navigation Button Component
-interface NavButtonProps {
-  icon: React.ElementType;
-  label: string;
-  active: boolean;
-  status: SectionStatus;
-  onClick: () => void;
+// Month Selector Dialog Component (Bottom Sheet)
+interface MonthSelectorDialogProps {
+  isOpen: boolean;
+  selectedDate: Date;
+  onSelect: (date: Date) => void;
+  onClose: () => void;
 }
 
-const NavButton = ({ icon: Icon, label, active, status, onClick }: NavButtonProps) => {
-  const getStatusIcon = () => {
-    if (status === 'complete') return <Check size={12} className="text-green-500" />;
-    if (status === 'partial') return <AlertCircle size={12} className="text-yellow-500" />;
-    return <div className="w-2 h-2 rounded-full bg-gray-300" />;
+const MonthSelectorDialog = ({ isOpen, selectedDate, onSelect, onClose }: MonthSelectorDialogProps) => {
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  // TODO: Fetch available months from backend API
+  // For now, generate the last 12 months including current month
+  const getAvailableMonths = () => {
+    const months: Date[] = [];
+    const now = new Date();
+
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(date);
+    }
+
+    return months;
   };
 
+  const availableMonths = getAvailableMonths();
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsAnimating(true);
+    } else {
+      const timer = setTimeout(() => setIsAnimating(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  if (!isAnimating && !isOpen) return null;
+
   return (
-    <button
-      onClick={onClick}
-      className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
-        active ? 'bg-yellow-50' : 'hover:bg-gray-50'
-      }`}
-    >
-      <div className="relative">
-        <Icon size={24} className={active ? 'text-yellow-600' : 'text-gray-600'} />
-        <span className="absolute -top-1 -right-1">
-          {getStatusIcon()}
-        </span>
-      </div>
-      <span
-        className={`text-xs mt-1 font-['Poppins'] ${
-          active ? 'text-yellow-600 font-medium' : 'text-gray-600'
+    <div className='w-full h-screen max-w-md mx-auto'>
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 z-40 transition-opacity duration-500 ease-in-out ${
+          isOpen ? 'opacity-100' : 'opacity-0'
         }`}
+        onClick={onClose}
+        style={{
+          backgroundColor: 'rgba(0, 0, 0, 0.5)'
+        }}
+      />
+
+      {/* Bottom Sheet */}
+      <div
+        className={`fixed left-0 right-0 bottom-0 max-w-md mx-auto bg-white z-50 shadow-2xl transform transition-all duration-500 ease-in-out ${
+          isOpen ? 'translate-y-0' : 'translate-y-full'
+        }`}
+        style={{
+          maxHeight: '80vh',
+          borderTopLeftRadius: '1.5rem',
+          borderTopRightRadius: '1.5rem',
+          transitionProperty: 'transform, opacity',
+          transitionTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+        }}
       >
-        {label}
-      </span>
-    </button>
-  );
-};
-
-// OPD Section Component
-interface OPDSectionProps {
-  data: OPDData;
-  setData: React.Dispatch<React.SetStateAction<OPDData>>;
-}
-
-const OPDSection = ({ data, setData }: OPDSectionProps) => {
-  const updateField = (
-    category: keyof OPDData,
-    field: string,
-    value: string
-  ) => {
-    setData(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category],
-        [field]: value,
-      },
-    }));
-  };
-
-  // Calculate totals
-  const calculateTotals = () => {
-    const categories = ['equines', 'bovine', 'smallAnimals', 'dogsCats', 'gaushala'] as const;
-    return {
-      new: categories.reduce((sum, cat) => sum + (parseInt(data[cat].new) || 0), 0),
-      old: categories.reduce((sum, cat) => sum + (parseInt(data[cat].old) || 0), 0),
-      beneficiaries: categories.reduce((sum, cat) => sum + (parseInt(data[cat].beneficiaries) || 0), 0),
-    };
-  };
-
-  const totals = calculateTotals();
-
-  return (
-    <div className="p-6 pb-32 space-y-6">
-      {/* Section Header */}
-      <div>
-        <h2 className="text-xl font-bold text-gray-900 font-['Poppins']">OPD Cases</h2>
-        <p className="text-sm text-gray-500 font-['Poppins'] mt-1">
-          Record patient visits and procedures
-        </p>
-      </div>
-
-      {/* Patient Cases Card */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-4 py-3 border-b border-blue-200">
-          <h3 className="font-semibold text-gray-900 text-sm font-['Poppins']">Patient Cases</h3>
-        </div>
-
-        <div className="divide-y divide-gray-100">
-          <CompactOPDRow
-            label="Equines"
-            newCases={data.equines.new}
-            oldCases={data.equines.old}
-            beneficiaries={data.equines.beneficiaries}
-            onChange={(field, value) => updateField('equines', field, value)}
-          />
-          <CompactOPDRow
-            label="Bovine"
-            newCases={data.bovine.new}
-            oldCases={data.bovine.old}
-            beneficiaries={data.bovine.beneficiaries}
-            onChange={(field, value) => updateField('bovine', field, value)}
-          />
-          <CompactOPDRow
-            label="Small Animals"
-            newCases={data.smallAnimals.new}
-            oldCases={data.smallAnimals.old}
-            beneficiaries={data.smallAnimals.beneficiaries}
-            onChange={(field, value) => updateField('smallAnimals', field, value)}
-          />
-          <CompactOPDRow
-            label="Dogs/Cats"
-            newCases={data.dogsCats.new}
-            oldCases={data.dogsCats.old}
-            beneficiaries={data.dogsCats.beneficiaries}
-            onChange={(field, value) => updateField('dogsCats', field, value)}
-          />
-          <CompactOPDRow
-            label="Gaushala"
-            newCases={data.gaushala.new}
-            oldCases={data.gaushala.old}
-            beneficiaries={data.gaushala.beneficiaries}
-            onChange={(field, value) => updateField('gaushala', field, value)}
-          />
-
-          {/* Totals Row */}
-          <div className="bg-gray-50 px-4 py-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-gray-700 font-['Poppins']">TOTAL</span>
-              <div className="flex gap-3 text-sm font-semibold text-gray-700 font-['Poppins']">
-                <span className="w-16 text-center">{totals.new}</span>
-                <span className="w-16 text-center">{totals.old}</span>
-                <span className="w-20 text-center">{totals.beneficiaries}</span>
-              </div>
-            </div>
+        {/* Header with Close Button */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 font-['Poppins']">
+              Select Reporting Month
+            </h3>
+            <p className="text-sm text-gray-500 font-['Poppins'] mt-1">
+              Choose the month to file your report
+            </p>
           </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0 ml-4"
+          >
+            <X size={20} className="text-gray-600" />
+          </button>
         </div>
-      </div>
 
-      {/* Castrations Card */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-4 py-3 border-b border-purple-200">
-          <h3 className="font-semibold text-gray-900 text-sm font-['Poppins']">Castrations</h3>
-        </div>
-        <div className="p-4 space-y-3">
-          <div className="grid grid-cols-3 gap-3">
-            <FloatingLabelField
-              field="castrations-large"
-              label="Large Animals"
-              type="number"
-              value={data.castrations.largeAnimals}
-              onChange={(_, val) => updateField('castrations', 'largeAnimals', val)}
-              textSize="sm"
-              truncateLabel
-              min="0"
-            />
-            <FloatingLabelField
-              field="castrations-small"
-              label="Small Animals"
-              type="number"
-              value={data.castrations.smallAnimals}
-              onChange={(_, val) => updateField('castrations', 'smallAnimals', val)}
-              textSize="sm"
-              truncateLabel
-              min="0"
-            />
-            <FloatingLabelField
-              field="castrations-ben"
-              label="Beneficiaries"
-              type="number"
-              value={data.castrations.beneficiaries}
-              onChange={(_, val) => updateField('castrations', 'beneficiaries', val)}
-              textSize="sm"
-              truncateLabel
-              min="0"
-            />
-          </div>
-        </div>
-      </div>
+        {/* Scrollable Month List */}
+        <div
+          className="overflow-y-auto px-6 py-4"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            maxHeight: 'calc(80vh - 140px)' // Account for header and footer
+          }}
+        >
+          <div className="space-y-2">
+            {availableMonths.map((month, index) => {
+              const isSelected =
+                month.getMonth() === selectedDate.getMonth() &&
+                month.getFullYear() === selectedDate.getFullYear();
+              const isCurrent =
+                month.getMonth() === new Date().getMonth() &&
+                month.getFullYear() === new Date().getFullYear();
 
-      {/* Pregnancy Diagnosis Card */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-green-50 to-green-100 px-4 py-3 border-b border-green-200">
-          <h3 className="font-semibold text-gray-900 text-sm font-['Poppins']">
-            Paid Pregnancy Diagnosis
-          </h3>
-        </div>
-        <div className="p-4 space-y-3">
-          <div className="grid grid-cols-3 gap-3">
-            <FloatingLabelField
-              field="pd-equine"
-              label="Equine"
-              type="number"
-              value={data.pregnancyDiagnosis.equine}
-              onChange={(_, val) => updateField('pregnancyDiagnosis', 'equine', val)}
-              textSize="sm"
-              truncateLabel
-              min="0"
-            />
-            <FloatingLabelField
-              field="pd-bovine"
-              label="Bovine"
-              type="number"
-              value={data.pregnancyDiagnosis.bovine}
-              onChange={(_, val) => updateField('pregnancyDiagnosis', 'bovine', val)}
-              textSize="sm"
-              truncateLabel
-              min="0"
-            />
-            <FloatingLabelField
-              field="pd-ben"
-              label="Beneficiaries"
-              type="number"
-              value={data.pregnancyDiagnosis.beneficiaries}
-              onChange={(_, val) => updateField('pregnancyDiagnosis', 'beneficiaries', val)}
-              textSize="sm"
-              truncateLabel
-              min="0"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Compact OPD Row Component
-interface CompactOPDRowProps {
-  label: string;
-  newCases: string;
-  oldCases: string;
-  beneficiaries: string;
-  onChange: (field: string, value: string) => void;
-}
-
-const CompactOPDRow = ({
-  label,
-  newCases,
-  oldCases,
-  beneficiaries,
-  onChange,
-}: CompactOPDRowProps) => {
-  return (
-    <div className="px-4 py-3">
-      <div className="flex items-center gap-3">
-        <div className="flex-1">
-          <div className="text-sm font-medium text-gray-700 font-['Poppins'] mb-2">{label}</div>
-          <div className="flex gap-2">
-            <FloatingLabelField
-              field={`${label}-new`}
-              label="New"
-              type="number"
-              value={newCases}
-              onChange={(_, val) => onChange('new', val)}
-              textSize="sm"
-              truncateLabel
-              min="0"
-            />
-            <FloatingLabelField
-              field={`${label}-old`}
-              label="Old"
-              type="number"
-              value={oldCases}
-              onChange={(_, val) => onChange('old', val)}
-              textSize="sm"
-              truncateLabel
-              min="0"
-            />
-            <FloatingLabelField
-              field={`${label}-ben`}
-              label="Beneficiaries"
-              type="number"
-              value={beneficiaries}
-              onChange={(_, val) => onChange('beneficiaries', val)}
-              textSize="sm"
-              truncateLabel
-              min="0"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Certificates Section Component
-interface CertificatesSectionProps {
-  data: CertificatesData;
-  setData: React.Dispatch<React.SetStateAction<CertificatesData>>;
-}
-
-const CertificatesSection = ({ data, setData }: CertificatesSectionProps) => {
-  const updateField = (
-    category: keyof CertificatesData,
-    field: string,
-    value: string
-  ) => {
-    setData(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category],
-        [field]: value,
-      },
-    }));
-  };
-
-  return (
-    <div className="p-6 pb-32 space-y-6">
-      {/* Section Header */}
-      <div>
-        <h2 className="text-xl font-bold text-gray-900 font-['Poppins']">Certificates</h2>
-        <p className="text-sm text-gray-500 font-['Poppins'] mt-1">
-          Record issued certificates and postmortems
-        </p>
-      </div>
-
-      {/* Health Certificates */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-4 py-3 border-b border-blue-200">
-          <h3 className="font-semibold text-gray-900 text-sm font-['Poppins']">Health Certificates</h3>
-        </div>
-        <div className="p-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="health-large"
-              label="Large Animals"
-              type="number"
-              value={data.healthCertificates.largeAnimals}
-              onChange={(_, val) => updateField('healthCertificates', 'largeAnimals', val)}
-              textSize="sm"
-              truncateLabel
-              min="0"
-            />
-            <FloatingLabelField
-              field="health-small"
-              label="Small Animals"
-              type="number"
-              value={data.healthCertificates.smallAnimals}
-              onChange={(_, val) => updateField('healthCertificates', 'smallAnimals', val)}
-              textSize="sm"
-              truncateLabel
-              min="0"
-            />
-            <FloatingLabelField
-              field="health-poultry"
-              label="Poultry"
-              type="number"
-              value={data.healthCertificates.poultry}
-              onChange={(_, val) => updateField('healthCertificates', 'poultry', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="health-dogs"
-              label="Dogs"
-              type="number"
-              value={data.healthCertificates.dogs}
-              onChange={(_, val) => updateField('healthCertificates', 'dogs', val)}
-              textSize="sm"
-                                min="0"
-            />
-          </div>
-          <FloatingLabelField
-            field="health-ben"
-            label="Beneficiaries"
-            type="number"
-            value={data.healthCertificates.beneficiaries}
-            onChange={(_, val) => updateField('healthCertificates', 'beneficiaries', val)}
-            textSize="sm"
-                                min="0"
-          />
-        </div>
-      </div>
-
-      {/* Postmortem */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-4 py-3 border-b border-purple-200">
-          <h3 className="font-semibold text-gray-900 text-sm font-['Poppins']">Postmortem</h3>
-        </div>
-        <div className="p-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="pm-large"
-              label="Large Animals"
-              type="number"
-              value={data.postmortem.largeAnimals}
-              onChange={(_, val) => updateField('postmortem', 'largeAnimals', val)}
-              textSize="sm"
-              truncateLabel
-              min="0"
-            />
-            <FloatingLabelField
-              field="pm-small"
-              label="Small Animals"
-              type="number"
-              value={data.postmortem.smallAnimals}
-              onChange={(_, val) => updateField('postmortem', 'smallAnimals', val)}
-              textSize="sm"
-              truncateLabel
-              min="0"
-            />
-            <FloatingLabelField
-              field="pm-poultry"
-              label="Poultry"
-              type="number"
-              value={data.postmortem.poultry}
-              onChange={(_, val) => updateField('postmortem', 'poultry', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="pm-vetro"
-              label="Vetro-legal"
-              type="number"
-              value={data.postmortem.vetroLegal}
-              onChange={(_, val) => updateField('postmortem', 'vetroLegal', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="pm-dogs"
-              label="Dogs Vet-legal"
-              type="number"
-              value={data.postmortem.dogsVetLegal}
-              onChange={(_, val) => updateField('postmortem', 'dogsVetLegal', val)}
-              textSize="sm"
-              truncateLabel
-              min="0"
-            />
-          </div>
-          <FloatingLabelField
-            field="pm-ben"
-            label="Beneficiaries"
-            type="number"
-            value={data.postmortem.beneficiaries}
-            onChange={(_, val) => updateField('postmortem', 'beneficiaries', val)}
-            textSize="sm"
-                                min="0"
-          />
-        </div>
-      </div>
-
-      {/* Export Certificates */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-green-50 to-green-100 px-4 py-3 border-b border-green-200">
-          <h3 className="font-semibold text-gray-900 text-sm font-['Poppins']">Export Certificates</h3>
-        </div>
-        <div className="p-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="export-issued"
-              label="Issued Certificates"
-              type="number"
-              value={data.exportCertificates.issued}
-              onChange={(_, val) => updateField('exportCertificates', 'issued', val)}
-              textSize="sm"
-              truncateLabel
-              min="0"
-            />
-            <FloatingLabelField
-              field="export-ben"
-              label="Beneficiaries"
-              type="number"
-              value={data.exportCertificates.beneficiaries}
-              onChange={(_, val) => updateField('exportCertificates', 'beneficiaries', val)}
-              textSize="sm"
-              truncateLabel
-              min="0"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Lab Section Component
-interface LabSectionProps {
-  data: LabData;
-  setData: React.Dispatch<React.SetStateAction<LabData>>;
-}
-
-const LabSection = ({ data, setData }: LabSectionProps) => {
-  const updateField = (
-    testType: keyof LabData,
-    field: string,
-    value: string
-  ) => {
-    setData(prev => ({
-      ...prev,
-      [testType]: {
-        ...prev[testType],
-        [field]: value,
-      },
-    }));
-  };
-
-  return (
-    <div className="p-6 pb-32 space-y-6">
-      {/* Section Header */}
-      <div>
-        <h2 className="text-xl font-bold text-gray-900 font-['Poppins']">Lab Reports</h2>
-        <p className="text-sm text-gray-500 font-['Poppins'] mt-1">
-          Record laboratory tests performed
-        </p>
-      </div>
-
-      {/* General Lab Tests */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-4 py-3 border-b border-blue-200">
-          <h3 className="font-semibold text-gray-900 text-sm font-['Poppins']">General Lab Tests</h3>
-        </div>
-        <div className="p-4 space-y-4">
-          {/* Blood Test */}
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="lab-blood-count"
-              label="Blood Test"
-              type="number"
-              value={data.bloodTest.count}
-              onChange={(_, val) => updateField('bloodTest', 'count', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="lab-blood-ben"
-              label="Beneficiaries"
-              type="number"
-              value={data.bloodTest.beneficiaries}
-              onChange={(_, val) => updateField('bloodTest', 'beneficiaries', val)}
-              textSize="sm"
-                                min="0"
-            />
-          </div>
-
-          {/* Milk Test */}
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="lab-milk-count"
-              label="Milk Test"
-              type="number"
-              value={data.milkTest.count}
-              onChange={(_, val) => updateField('milkTest', 'count', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="lab-milk-ben"
-              label="Beneficiaries"
-              type="number"
-              value={data.milkTest.beneficiaries}
-              onChange={(_, val) => updateField('milkTest', 'beneficiaries', val)}
-              textSize="sm"
-                                min="0"
-            />
-          </div>
-
-          {/* Fecal Test */}
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="lab-fecal-count"
-              label="Fecal Test"
-              type="number"
-              value={data.fecalTest.count}
-              onChange={(_, val) => updateField('fecalTest', 'count', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="lab-fecal-ben"
-              label="Beneficiaries"
-              type="number"
-              value={data.fecalTest.beneficiaries}
-              onChange={(_, val) => updateField('fecalTest', 'beneficiaries', val)}
-              textSize="sm"
-                                min="0"
-            />
-          </div>
-
-          {/* Urine Test */}
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="lab-urine-count"
-              label="Urine Test"
-              type="number"
-              value={data.urineTest.count}
-              onChange={(_, val) => updateField('urineTest', 'count', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="lab-urine-ben"
-              label="Beneficiaries"
-              type="number"
-              value={data.urineTest.beneficiaries}
-              onChange={(_, val) => updateField('urineTest', 'beneficiaries', val)}
-              textSize="sm"
-                                min="0"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Pet Lab Tests */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-4 py-3 border-b border-purple-200">
-          <h3 className="font-semibold text-gray-900 text-sm font-['Poppins']">Pet Lab Tests</h3>
-        </div>
-        <div className="p-4 space-y-4">
-          {/* X-rays Pets */}
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="lab-xrays-pets-count"
-              label="X-rays"
-              type="number"
-              value={data.xraysPets.count}
-              onChange={(_, val) => updateField('xraysPets', 'count', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="lab-xrays-pets-ben"
-              label="Beneficiaries"
-              type="number"
-              value={data.xraysPets.beneficiaries}
-              onChange={(_, val) => updateField('xraysPets', 'beneficiaries', val)}
-              textSize="sm"
-                                min="0"
-            />
-          </div>
-
-          {/* Ultrasound Pets */}
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="lab-us-pets-count"
-              label="Ultrasound"
-              type="number"
-              value={data.ultrasoundPets.count}
-              onChange={(_, val) => updateField('ultrasoundPets', 'count', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="lab-us-pets-ben"
-              label="Beneficiaries"
-              type="number"
-              value={data.ultrasoundPets.beneficiaries}
-              onChange={(_, val) => updateField('ultrasoundPets', 'beneficiaries', val)}
-              textSize="sm"
-                                min="0"
-            />
-          </div>
-
-          {/* Serum Analysis Pets */}
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="lab-serum-pets-count"
-              label="Serum Analysis"
-              type="number"
-              value={data.serumAnalysisPets.count}
-              onChange={(_, val) => updateField('serumAnalysisPets', 'count', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="lab-serum-pets-ben"
-              label="Beneficiaries"
-              type="number"
-              value={data.serumAnalysisPets.beneficiaries}
-              onChange={(_, val) => updateField('serumAnalysisPets', 'beneficiaries', val)}
-              textSize="sm"
-                                min="0"
-            />
-          </div>
-
-          {/* Culture Pets */}
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="lab-culture-pets-count"
-              label="Culture Test"
-              type="number"
-              value={data.culturePets.count}
-              onChange={(_, val) => updateField('culturePets', 'count', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="lab-culture-pets-ben"
-              label="Beneficiaries"
-              type="number"
-              value={data.culturePets.beneficiaries}
-              onChange={(_, val) => updateField('culturePets', 'beneficiaries', val)}
-              textSize="sm"
-                                min="0"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Large Animal Lab Tests */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-green-50 to-green-100 px-4 py-3 border-b border-green-200">
-          <h3 className="font-semibold text-gray-900 text-sm font-['Poppins']">Large Animal Lab Tests</h3>
-        </div>
-        <div className="p-4 space-y-4">
-          {/* X-rays */}
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="lab-xrays-count"
-              label="X-rays"
-              type="number"
-              value={data.xrays.count}
-              onChange={(_, val) => updateField('xrays', 'count', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="lab-xrays-ben"
-              label="Beneficiaries"
-              type="number"
-              value={data.xrays.beneficiaries}
-              onChange={(_, val) => updateField('xrays', 'beneficiaries', val)}
-              textSize="sm"
-                                min="0"
-            />
-          </div>
-
-          {/* Ultrasound */}
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="lab-us-count"
-              label="Ultrasound"
-              type="number"
-              value={data.ultrasound.count}
-              onChange={(_, val) => updateField('ultrasound', 'count', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="lab-us-ben"
-              label="Beneficiaries"
-              type="number"
-              value={data.ultrasound.beneficiaries}
-              onChange={(_, val) => updateField('ultrasound', 'beneficiaries', val)}
-              textSize="sm"
-                                min="0"
-            />
-          </div>
-
-          {/* Serum Analysis */}
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="lab-serum-count"
-              label="Serum Analysis"
-              type="number"
-              value={data.serumAnalysis.count}
-              onChange={(_, val) => updateField('serumAnalysis', 'count', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="lab-serum-ben"
-              label="Beneficiaries"
-              type="number"
-              value={data.serumAnalysis.beneficiaries}
-              onChange={(_, val) => updateField('serumAnalysis', 'beneficiaries', val)}
-              textSize="sm"
-                                min="0"
-            />
-          </div>
-
-          {/* Culture Test */}
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="lab-culture-count"
-              label="Culture Test"
-              type="number"
-              value={data.cultureTest.count}
-              onChange={(_, val) => updateField('cultureTest', 'count', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="lab-culture-ben"
-              label="Beneficiaries"
-              type="number"
-              value={data.cultureTest.beneficiaries}
-              onChange={(_, val) => updateField('cultureTest', 'beneficiaries', val)}
-              textSize="sm"
-                                min="0"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Extension Section Component
-interface ExtensionSectionProps {
-  data: ExtensionData;
-  setData: React.Dispatch<React.SetStateAction<ExtensionData>>;
-}
-
-const ExtensionSection = ({ data, setData }: ExtensionSectionProps) => {
-  const updateField = (
-    category: keyof ExtensionData,
-    field: string,
-    value: string
-  ) => {
-    setData(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category],
-        [field]: value,
-      },
-    }));
-  };
-
-  return (
-    <div className="p-6 pb-32 space-y-6">
-      {/* Section Header */}
-      <div>
-        <h2 className="text-xl font-bold text-gray-900 font-['Poppins']">Extension Work</h2>
-        <p className="text-sm text-gray-500 font-['Poppins'] mt-1">
-          Record awareness camps and educational activities
-        </p>
-      </div>
-
-      {/* Farmer Awareness and Animal Welfare */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-4 py-3 border-b border-blue-200">
-          <h3 className="font-semibold text-gray-900 text-sm font-['Poppins']">
-            Farmer Awareness & Animal Welfare
-          </h3>
-        </div>
-        <div className="p-4 space-y-4">
-          {/* First Row */}
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="fa-camps"
-              label="Number of Camps"
-              type="number"
-              value={data.farmerAwareness.camps}
-              onChange={(_, val) => updateField('farmerAwareness', 'camps', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="fa-villages"
-              label="Villages Covered"
-              type="number"
-              value={data.farmerAwareness.villages}
-              onChange={(_, val) => updateField('farmerAwareness', 'villages', val)}
-              textSize="sm"
-                                min="0"
-            />
-          </div>
-
-          {/* Second Row */}
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="fa-farmers"
-              label="Farmers Attended"
-              type="number"
-              value={data.farmerAwareness.farmersAttended}
-              onChange={(_, val) => updateField('farmerAwareness', 'farmersAttended', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="fa-animals"
-              label="Animals Treated"
-              type="number"
-              value={data.farmerAwareness.animalsTreated}
-              onChange={(_, val) => updateField('farmerAwareness', 'animalsTreated', val)}
-              textSize="sm"
-                                min="0"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Camps Under Any Scheme */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-4 py-3 border-b border-purple-200">
-          <h3 className="font-semibold text-gray-900 text-sm font-['Poppins']">
-            Camps Under Any Scheme
-          </h3>
-        </div>
-        <div className="p-4 space-y-4">
-          {/* First Row */}
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="sc-camps"
-              label="Number of Camps"
-              type="number"
-              value={data.schemeCamps.camps}
-              onChange={(_, val) => updateField('schemeCamps', 'camps', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="sc-villages"
-              label="Villages Covered"
-              type="number"
-              value={data.schemeCamps.villages}
-              onChange={(_, val) => updateField('schemeCamps', 'villages', val)}
-              textSize="sm"
-                                min="0"
-            />
-          </div>
-
-          {/* Second Row */}
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="sc-farmers"
-              label="Farmers Attended"
-              type="number"
-              value={data.schemeCamps.farmersAttended}
-              onChange={(_, val) => updateField('schemeCamps', 'farmersAttended', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="sc-animals"
-              label="Animals Treated"
-              type="number"
-              value={data.schemeCamps.animalsTreated}
-              onChange={(_, val) => updateField('schemeCamps', 'animalsTreated', val)}
-              textSize="sm"
-                                min="0"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* School Lectures */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-green-50 to-green-100 px-4 py-3 border-b border-green-200">
-          <h3 className="font-semibold text-gray-900 text-sm font-['Poppins']">School Lectures</h3>
-        </div>
-        <div className="p-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <FloatingLabelField
-              field="sl-lectures"
-              label="Number of Lectures"
-              type="number"
-              value={data.schoolLectures.lectures}
-              onChange={(_, val) => updateField('schoolLectures', 'lectures', val)}
-              textSize="sm"
-                                min="0"
-            />
-            <FloatingLabelField
-              field="sl-students"
-              label="Students Attended"
-              type="number"
-              value={data.schoolLectures.studentsAttended}
-              onChange={(_, val) => updateField('schoolLectures', 'studentsAttended', val)}
-              textSize="sm"
-                                min="0"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// AI Reports Section Component with Accordion
-interface AIReportsSectionProps {
-  data: AIReportsData;
-  setData: React.Dispatch<React.SetStateAction<AIReportsData>>;
-}
-
-const AIReportsSection = ({ data, setData }: AIReportsSectionProps) => {
-  const [expandedCategory, setExpandedCategory] = useState<string | null>('localSemen');
-  const [expandedBreed, setExpandedBreed] = useState<string | null>(null);
-  const [showCopyDialog, setShowCopyDialog] = useState(false);
-
-  const updateField = (
-    category: keyof AIReportsData,
-    breed: string,
-    period: 'current' | 'threeMonthsAgo' | 'sixMonthsAgo',
-    field: string,
-    value: string
-  ) => {
-    setData(prev => {
-      const categoryData = prev[category] as Record<string, BreedAIData>;
-      const breedData = categoryData[breed];
-      const periodData = breedData[period] as Record<string, string>;
-
-      return {
-        ...prev,
-        [category]: {
-          ...categoryData,
-          [breed]: {
-            ...breedData,
-            [period]: {
-              ...periodData,
-              [field]: value,
-            },
-          },
-        },
-      };
-    });
-  };
-
-  // Calculate completion for a category
-  const getCategoryCompletion = (categoryData: Record<string, BreedAIData>): { completed: number; total: number } => {
-    const breeds = Object.values(categoryData);
-    let completed = 0;
-    breeds.forEach((breed: BreedAIData) => {
-      const allFields = [
-        ...Object.values(breed.current),
-        ...Object.values(breed.threeMonthsAgo),
-        ...Object.values(breed.sixMonthsAgo),
-      ] as string[];
-      if (allFields.every(f => f !== '')) completed++;
-    });
-    return { completed, total: breeds.length };
-  };
-
-  // Get status icon based on completion
-  const getStatusIcon = (completed: number, total: number) => {
-    if (completed === 0) return <div className="w-4 h-4 rounded-full border-2 border-gray-300" />;
-    if (completed === total) return <Check size={16} className="text-green-600" />;
-    return <div className="w-4 h-4 rounded-full border-2 border-yellow-500 bg-yellow-100" />;
-  };
-
-  // Calculate if a breed is complete
-  const isBreedComplete = (breedData: BreedAIData): boolean => {
-    const allFields = [
-      ...Object.values(breedData.current),
-      ...Object.values(breedData.threeMonthsAgo),
-      ...Object.values(breedData.sixMonthsAgo),
-    ] as string[];
-    return allFields.every(f => f !== '');
-  };
-
-  // Category accordion definitions with color schemes
-  const categories = [
-    {
-      id: 'localSemen',
-      name: 'Local Semen',
-      colorScheme: {
-        gradient: 'from-blue-50 to-blue-100',
-        border: 'border-blue-200',
-      },
-      breeds: [
-        { id: 'hf', name: 'HF' },
-        { id: 'jersey', name: 'Jersey' },
-        { id: 'cb', name: 'CB' },
-        { id: 'sahiwal', name: 'Sahiwal' },
-      ],
-    },
-    {
-      id: 'girSemen',
-      name: 'Gir Semen',
-      colorScheme: {
-        gradient: 'from-purple-50 to-purple-100',
-        border: 'border-purple-200',
-      },
-      breeds: [
-        { id: 'gir', name: 'Gir' },
-        { id: 'gir2', name: 'Gir 2' },
-      ],
-    },
-    {
-      id: 'ettImported',
-      name: 'ETT/Imported',
-      colorScheme: {
-        gradient: 'from-green-50 to-green-100',
-        border: 'border-green-200',
-      },
-      breeds: [
-        { id: 'hfETT', name: 'HF ETT' },
-        { id: 'jerseyETT', name: 'Jersey ETT' },
-        { id: 'hfImp', name: 'HF Imp.' },
-        { id: 'jerseyImp', name: 'Jersey Imp.' },
-      ],
-    },
-    {
-      id: 'sexedSemen',
-      name: 'Sexed Semen',
-      colorScheme: {
-        gradient: 'from-blue-50 to-blue-100',
-        border: 'border-blue-200',
-      },
-      breeds: [
-        { id: 'hfSexed', name: 'HF Sexed' },
-        { id: 'jerseySexed', name: 'Jersey Sexed' },
-        { id: 'cbSexed', name: 'CB Sexed' },
-        { id: 'sahiwalSexed', name: 'Sahiwal Sexed' },
-      ],
-    },
-    {
-      id: 'buffaloes',
-      name: 'Buffaloes',
-      colorScheme: {
-        gradient: 'from-purple-50 to-purple-100',
-        border: 'border-purple-200',
-      },
-      breeds: [
-        { id: 'murrah', name: 'Murrah' },
-        { id: 'niliRavi', name: 'Nili Ravi' },
-        { id: 'surti', name: 'Surti' },
-        { id: 'jaffarabadi', name: 'Jaffarabadi' },
-      ],
-    },
-  ];
-
-  const toggleCategory = (categoryId: string) => {
-    setExpandedCategory(prev => (prev === categoryId ? null : categoryId));
-    setExpandedBreed(null); // Close any open breed when switching categories
-  };
-
-  const toggleBreed = (breedId: string) => {
-    setExpandedBreed(prev => (prev === breedId ? null : breedId));
-  };
-
-  return (
-    <div className="p-6 pb-32 space-y-4">
-      {/* Section Header */}
-      <div>
-        <h2 className="text-xl font-bold text-gray-900 font-['Poppins']">AI Reports</h2>
-        <p className="text-sm text-gray-500 font-['Poppins'] mt-1">
-          Record artificial insemination across all semen types
-        </p>
-      </div>
-
-      {/* Category Accordions */}
-      {categories.map(category => {
-        const categoryData = data[category.id as keyof AIReportsData];
-        const { completed, total } = getCategoryCompletion(categoryData);
-        const isExpanded = expandedCategory === category.id;
-
-        return (
-          <div key={category.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            {/* Category Header (Accordion Toggle) */}
-            <button
-              onClick={() => toggleCategory(category.id)}
-              className={`w-full bg-gradient-to-r ${category.colorScheme.gradient} px-4 py-3 border-b ${category.colorScheme.border} flex items-center justify-between hover:opacity-90 transition-opacity`}
-            >
-              <div className="flex items-center gap-2">
-                {getStatusIcon(completed, total)}
-                <h3 className="font-semibold text-gray-900 text-sm font-['Poppins']">
-                  {category.name}
-                </h3>
-                <span className="text-xs text-gray-600 font-medium font-['Poppins']">
-                  ({completed}/{total})
-                </span>
-              </div>
-              {isExpanded ? (
-                <ChevronUp size={18} className="text-gray-700" />
-              ) : (
-                <ChevronDown size={18} className="text-gray-700" />
-              )}
-            </button>
-
-            {/* Category Content (Breeds) */}
-            {isExpanded && (
-              <div className="p-3 space-y-3">
-                {category.breeds.map(breed => {
-                  const breedData = (categoryData as Record<string, BreedAIData>)[breed.id];
-                  const isBreedExpanded = expandedBreed === breed.id;
-                  const breedComplete = isBreedComplete(breedData);
-
-                  // TODO: Context data from previous months - will integrate with backend API
-                  // Using temp data for demonstration
-                  const tempContextData = {
-                    lastMonth: { ai: 45, covered: 42, beneficiaries: 38 },
-                    twoMonthsAgo: { ai: 52, covered: 48, beneficiaries: 45 },
-                  };
-
-                  return (
-                    <div key={breed.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                      {/* Breed Header */}
-                      <button
-                        onClick={() => toggleBreed(breed.id)}
-                        className="w-full bg-white px-3 py-2.5 flex items-center justify-between hover:bg-gray-50 transition-colors border-b border-gray-200"
-                      >
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-semibold text-gray-900 text-sm font-['Poppins']">
-                            {breed.name}
-                          </h4>
-                          {breedComplete && (
-                            <Check size={14} className="text-green-600" />
-                          )}
-                        </div>
-                        {isBreedExpanded ? (
-                          <ChevronUp size={16} className="text-gray-500" />
-                        ) : (
-                          <ChevronDown size={16} className="text-gray-500" />
-                        )}
-                      </button>
-
-                      {/* Breed Content */}
-                      {isBreedExpanded && (
-                        <div className="p-3 space-y-4 bg-white">
-                          {/* Context Data - TODO: Replace with real data from backend */}
-                          <div className="bg-blue-50 border-l-4 border-blue-400 px-3 py-2">
-                            <p className="text-xs text-gray-700 font-['Poppins'] leading-relaxed">
-                              <span className="font-semibold text-blue-700">Previous Month:</span>
-                              <br />
-                              AI: {tempContextData.lastMonth.ai} • Covered: {tempContextData.lastMonth.covered} • Beneficiaries: {tempContextData.lastMonth.beneficiaries}
-                            </p>
-                          </div>
-
-                          {/* Current Month */}
-                          <div className="space-y-3">
-                            <h5 className="text-xs font-bold text-gray-700 font-['Poppins'] uppercase tracking-wide">
-                              Current Month
-                            </h5>
-                            <div className="grid grid-cols-2 gap-3">
-                              <FloatingLabelField
-                                field={`${category.id}-${breed.id}-ai`}
-                                label="AI Done"
-                                type="number"
-                                value={breedData.current.ai}
-                                onChange={(_, val) =>
-                                  updateField(category.id as keyof AIReportsData, breed.id, 'current', 'ai', val)
-                                }
-                                textSize="sm"
-                                min="0"
-                              />
-                              <FloatingLabelField
-                                field={`${category.id}-${breed.id}-covered`}
-                                label="Animals Covered"
-                                type="number"
-                                value={breedData.current.covered}
-                                onChange={(_, val) =>
-                                  updateField(category.id as keyof AIReportsData, breed.id, 'current', 'covered', val)
-                                }
-                                textSize="sm"
-                                min="0"
-                              />
-                            </div>
-                            <FloatingLabelField
-                              field={`${category.id}-${breed.id}-current-ben`}
-                              label="Beneficiaries"
-                              type="number"
-                              value={breedData.current.beneficiaries}
-                              onChange={(_, val) =>
-                                updateField(category.id as keyof AIReportsData, breed.id, 'current', 'beneficiaries', val)
-                              }
-                              textSize="sm"
-                                min="0"
-                            />
-                          </div>
-
-                          <div className="border-t border-gray-200" />
-
-                          {/* 3 Months Ago */}
-                          <div className="space-y-3">
-                            <h5 className="text-xs font-bold text-gray-700 font-['Poppins'] uppercase tracking-wide">
-                              Covered 3 Months Ago
-                            </h5>
-                            <div className="grid grid-cols-2 gap-3">
-                              <FloatingLabelField
-                                field={`${category.id}-${breed.id}-tested`}
-                                label="Tested"
-                                type="number"
-                                value={breedData.threeMonthsAgo.tested}
-                                onChange={(_, val) =>
-                                  updateField(category.id as keyof AIReportsData, breed.id, 'threeMonthsAgo', 'tested', val)
-                                }
-                                textSize="sm"
-                                min="0"
-                              />
-                              <FloatingLabelField
-                                field={`${category.id}-${breed.id}-positive`}
-                                label="Positive"
-                                type="number"
-                                value={breedData.threeMonthsAgo.positive}
-                                onChange={(_, val) =>
-                                  updateField(category.id as keyof AIReportsData, breed.id, 'threeMonthsAgo', 'positive', val)
-                                }
-                                textSize="sm"
-                                min="0"
-                              />
-                            </div>
-                            <FloatingLabelField
-                              field={`${category.id}-${breed.id}-3mo-ben`}
-                              label="Beneficiaries"
-                              type="number"
-                              value={breedData.threeMonthsAgo.beneficiaries}
-                              onChange={(_, val) =>
-                                updateField(category.id as keyof AIReportsData, breed.id, 'threeMonthsAgo', 'beneficiaries', val)
-                              }
-                              textSize="sm"
-                                min="0"
-                            />
-                          </div>
-
-                          <div className="border-t border-gray-200" />
-
-                          {/* 6 Months Ago */}
-                          <div className="space-y-3">
-                            <h5 className="text-xs font-bold text-gray-700 font-['Poppins'] uppercase tracking-wide">
-                              Positive 6 Months Ago
-                            </h5>
-                            <div className="grid grid-cols-2 gap-3">
-                              <FloatingLabelField
-                                field={`${category.id}-${breed.id}-male`}
-                                label="Male Calves"
-                                type="number"
-                                value={breedData.sixMonthsAgo.maleCalves}
-                                onChange={(_, val) =>
-                                  updateField(category.id as keyof AIReportsData, breed.id, 'sixMonthsAgo', 'maleCalves', val)
-                                }
-                                textSize="sm"
-                                min="0"
-                              />
-                              <FloatingLabelField
-                                field={`${category.id}-${breed.id}-female`}
-                                label="Female Calves"
-                                type="number"
-                                value={breedData.sixMonthsAgo.femaleCalves}
-                                onChange={(_, val) =>
-                                  updateField(category.id as keyof AIReportsData, breed.id, 'sixMonthsAgo', 'femaleCalves', val)
-                                }
-                                textSize="sm"
-                                min="0"
-                              />
-                            </div>
-                            <FloatingLabelField
-                              field={`${category.id}-${breed.id}-6mo-ben`}
-                              label="Beneficiaries"
-                              type="number"
-                              value={breedData.sixMonthsAgo.beneficiaries}
-                              onChange={(_, val) =>
-                                updateField(category.id as keyof AIReportsData, breed.id, 'sixMonthsAgo', 'beneficiaries', val)
-                              }
-                              textSize="sm"
-                                min="0"
-                            />
-                          </div>
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => onSelect(month)}
+                  className={`w-full px-4 py-3 rounded-lg transition-all font-['Poppins'] text-left ${
+                    isSelected
+                      ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg'
+                      : 'bg-gray-50 hover:bg-yellow-50 border border-gray-200 hover:border-yellow-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className={`font-semibold ${isSelected ? 'text-white' : 'text-gray-900'}`}>
+                        {month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                      </div>
+                      {isCurrent && (
+                        <div className={`text-xs font-medium mt-0.5 ${isSelected ? 'text-yellow-100' : 'text-green-600'}`}>
+                          Current Month
                         </div>
                       )}
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                    {isSelected && (
+                      <Check size={20} className="text-white" />
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        );
-      })}
+        </div>
 
-      {/* Dialog for Copy from Last Month */}
-      <DialogBox
-        isOpen={showCopyDialog}
-        type="info"
-        title="Coming Soon"
-        message="Copy from last month feature will be available once backend integration is complete. This will allow you to quickly populate fields with previous month's data."
-        onClose={() => setShowCopyDialog(false)}
-        confirmText="Got it"
-      />
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+          <button
+            onClick={onClose}
+            className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 px-4 rounded-lg font-['Poppins'] transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
