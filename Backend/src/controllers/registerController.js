@@ -8,22 +8,7 @@ export async function submitRegistration(request, reply) {
   try {
     const registrationData = request.body
 
-    // Validate required data
-    if (!registrationData.district || !registrationData.tehsil || !registrationData.village) {
-      return reply.code(400).send({
-        success: false,
-        message: 'District, tehsil, and village are required'
-      })
-    }
-
-    if (!registrationData.incharge) {
-      return reply.code(400).send({
-        success: false,
-        message: 'Incharge information is required'
-      })
-    }
-
-    // Submit registration
+    // Submit registration (validation handled by Fastify schema)
     const result = await registerService.createRegistration(registrationData)
 
     return reply.code(201).send({

@@ -7,6 +7,9 @@ import { query } from '../database/db.js'
  */
 export async function createRegistration(data) {
   try {
+    // Track failed operations
+    const failedServiceVillages = []
+
     // Start transaction
     await query('BEGIN')
 
@@ -184,6 +187,11 @@ export async function createRegistration(data) {
             parseInt(populations.poultryBroilers) || 0,
             targetVillageId
           ])
+        } else {
+          // Track villages that could not be found
+          if (!failedServiceVillages.includes(villageName)) {
+            failedServiceVillages.push(villageName)
+          }
         }
       }
     }
@@ -213,6 +221,11 @@ export async function createRegistration(data) {
             ) VALUES ($1, $2, $3)
             ON CONFLICT (institute_id, village_id) DO NOTHING
           `, [institute_id, serviceVillageId, false])
+        } else {
+          // Track villages that could not be found
+          if (!failedServiceVillages.includes(serviceVillageName)) {
+            failedServiceVillages.push(serviceVillageName)
+          }
         }
       }
     }
@@ -234,7 +247,8 @@ export async function createRegistration(data) {
       registrationId: institute_id,
       instituteName: institute_name,
       orgId,
-      status: 'Pending Approval'
+      status: 'Pending Approval',
+      failedServiceVillages
     }
   } catch (error) {
     // Rollback on error

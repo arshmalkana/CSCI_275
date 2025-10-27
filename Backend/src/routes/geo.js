@@ -1,4 +1,5 @@
 import * as geoController from '../controllers/geoController.js'
+import { getValidDesignations } from '../config/designations.js'
 
 /**
  * Geography routes
@@ -306,4 +307,36 @@ export default async function geoRoutes(fastify) {
       }
     }
   }, geoController.getParentInstitutes)
+
+  // GET /geo/designations - Get valid designation types for registration
+  fastify.get('/designations', {
+    schema: {
+      description: 'Get all valid designation types for staff registration',
+      tags: ['Geography'],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'object',
+              properties: {
+                designations: {
+                  type: 'array',
+                  items: { type: 'string' }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }, async (_request, reply) => {
+    return reply.send({
+      success: true,
+      data: {
+        designations: getValidDesignations()
+      }
+    })
+  })
 }

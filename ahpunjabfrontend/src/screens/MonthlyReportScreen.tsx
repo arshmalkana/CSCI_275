@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   FileText,
   Plus,
@@ -142,6 +143,8 @@ function EmptyState({ label }: { label: string }) {
 // --- Main Screen -----------------------------------------------------------
 
 export default function MonthlyReportScreen() {
+  const navigate = useNavigate()
+
   // side menu & notifications to match HomeScreen header
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false)
   const [notifications] = useState(3)
@@ -183,11 +186,11 @@ export default function MonthlyReportScreen() {
 
   // --- Actions -------------------------------------------------------------
   const handleNewReport = () => {
-    // TODO: navigate('/reports/new')
-    console.log('Create new report')
+    navigate('/reports/create')
   }
   const handleOpenReport = (report: Report) => {
-    // TODO: navigate(`/reports/${report.id}`)
+    // TODO: navigate to edit existing report
+    navigate('/reports/create')
     console.log(`Open report: ${report.id}`)
   }
   const handleDownloadReport = (report: Report) => {

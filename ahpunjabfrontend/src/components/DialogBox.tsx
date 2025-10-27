@@ -261,3 +261,139 @@ export function InfoDialog({
     />
   )
 }
+
+interface RegistrationSuccessDialogProps {
+  isOpen: boolean
+  orgId: string
+  registrationId: number
+  instituteName: string
+  status: string
+  failedServiceVillages?: string[]
+  onClose: () => void
+}
+
+export function RegistrationSuccessDialog({
+  isOpen,
+  orgId,
+  registrationId,
+  instituteName,
+  status,
+  failedServiceVillages = [],
+  onClose
+}: RegistrationSuccessDialogProps) {
+  const [isAnimating, setIsAnimating] = useState(false)
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsAnimating(true)
+    } else {
+      const timer = setTimeout(() => setIsAnimating(false), 300)
+      return () => clearTimeout(timer)
+    }
+  }, [isOpen])
+
+  if (!isAnimating && !isOpen) return null
+
+  const config = dialogConfig.success
+  const Icon = config.icon
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 z-40 transition-opacity duration-300 ease-in-out ${
+          isOpen ? 'opacity-100' : 'opacity-0'
+        }`}
+        onClick={onClose}
+        style={{
+          backgroundColor: 'rgba(0, 0, 0, 0.5)'
+        }}
+      />
+
+      {/* Dialog */}
+      <div
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none transition-all duration-300 ease-in-out ${
+          isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+        }`}
+      >
+        <div
+          className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden pointer-events-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Icon Header */}
+          <div className={`bg-gradient-to-br ${config.bgGradient} p-6 flex justify-center`}>
+            <div className={`w-16 h-16 ${config.iconBg} rounded-full flex items-center justify-center`}>
+              <Icon size={32} className={config.iconColor} />
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-6">
+            <h3 className="text-xl font-bold text-gray-900 font-['Poppins'] text-center mb-4">
+              Registration Submitted Successfully!
+            </h3>
+
+            {/* Registration Details */}
+            <div className="bg-gray-50 rounded-lg p-4 space-y-3 mb-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-600 font-['Poppins']">Organization ID:</span>
+                <span className="text-sm font-semibold text-gray-900 font-['Poppins']">{orgId}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-600 font-['Poppins']">Registration ID:</span>
+                <span className="text-sm font-semibold text-gray-900 font-['Poppins']">{registrationId}</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-gray-600 font-['Poppins']">Institute:</span>
+                <span className="text-sm font-semibold text-gray-900 font-['Poppins']">{instituteName}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-600 font-['Poppins']">Status:</span>
+                <span className="text-sm font-semibold text-yellow-600 font-['Poppins']">{status}</span>
+              </div>
+            </div>
+
+            {/* Failed Villages Warning */}
+            {failedServiceVillages.length > 0 && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle size={18} className="text-orange-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-orange-900 font-['Poppins'] mb-2">
+                      Warning: Some villages could not be found
+                    </p>
+                    <ul className="space-y-1">
+                      {failedServiceVillages.map((village, idx) => (
+                        <li key={idx} className="text-xs text-orange-800 font-['Poppins'] ml-2">
+                          • {village}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-xs text-orange-700 font-['Poppins'] mt-2">
+                      Please contact admin to add these villages.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Information Message */}
+            <p className="text-sm text-gray-600 font-['Poppins'] text-center">
+              Your registration is pending admin approval. You will be notified once approved.
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 p-6 pt-0 justify-center">
+            <button
+              onClick={onClose}
+              className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 px-4 rounded-xl font-['Poppins'] transition-colors"
+            >
+              Go to Login
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}

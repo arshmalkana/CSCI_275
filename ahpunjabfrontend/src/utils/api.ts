@@ -133,7 +133,14 @@ export const api = {
     apiPut('/profile/location', location),
 
   uploadProfilePicture: (pictureUrl: string) =>
-    apiPost('/profile/picture', { pictureUrl })
+    apiPost('/profile/picture', { pictureUrl }),
+
+  // Monthly Reports
+  submitMonthlyReport: (reportData: unknown) =>
+    apiPost('/reports/monthly', reportData),
+
+  getMonthlyReport: (month: string) =>
+    apiGet(`/reports/monthly/${month}`)
 }
 
 export default api

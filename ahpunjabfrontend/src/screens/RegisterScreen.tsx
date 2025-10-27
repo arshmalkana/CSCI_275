@@ -10,6 +10,7 @@ import { RadioGroup, Checkbox } from '../components/FormControls'
 import { ChevronRight, UserPlus, Trash2, Plus } from 'lucide-react'
 import { MapPicker } from '../components/MapPicker'
 import { LoadingOverlay } from '../components/LoadingOverlay'
+import { RegistrationSuccessDialog, ErrorDialog } from '../components/DialogBox'
 
 export default function RegisterScreen() {
   const navigate = useNavigate()
@@ -58,6 +59,20 @@ export default function RegisterScreen() {
   const [errors, setErrors] = useState<{[key: string]: string}>({})
   const [employees, setEmployees] = useState<Array<{type: string, name: string, mobile: string, email: string}>>([])
   const [selectedVillageForPopulation, setSelectedVillageForPopulation] = useState<string>('')
+
+  // Dialog states
+  const [successDialog, setSuccessDialog] = useState({
+    isOpen: false,
+    orgId: '',
+    registrationId: 0,
+    instituteName: '',
+    status: '',
+    failedServiceVillages: [] as string[]
+  })
+  const [errorDialog, setErrorDialog] = useState({
+    isOpen: false,
+    message: ''
+  })
 
   // Fetch districts with React Query (cached for 24 hours - rarely changes)
   const { data: districtsData } = useQuery({
@@ -109,6 +124,18 @@ export default function RegisterScreen() {
     },
     enabled: !!formData.district && !!formData.tehsil && !!formData.instituteType,
     staleTime: 30 * 60 * 1000, // 30 minutes
+  })
+
+  // Fetch valid designations (cached for 24 hours - rarely changes)
+  const { data: designationsData } = useQuery({
+    queryKey: ['geo', 'designations'],
+    queryFn: async () => {
+      const response = await fetch('/v1/geo/designations')
+      const data = await response.json()
+      return data.success ? data.data.designations : []
+    },
+    staleTime: 24 * 60 * 60 * 1000, // 24 hours
+    gcTime: 48 * 60 * 60 * 1000, // Keep in cache for 48 hours
   })
 
   // Combine loading states
@@ -361,14 +388,27 @@ export default function RegisterScreen() {
       const data = await response.json()
 
       if (response.ok && data.success) {
-        alert(`Registration submitted successfully!\n\nInstitute: ${data.data.instituteName}\nRegistration ID: ${data.data.registrationId}\n\nStatus: ${data.data.status}\n\nYour registration is pending admin approval. You will be notified once approved.`)
-        navigate('/login')
+        // Show success dialog with registration details
+        setSuccessDialog({
+          isOpen: true,
+          orgId: data.data.orgId,
+          registrationId: data.data.registrationId,
+          instituteName: data.data.instituteName,
+          status: data.data.status,
+          failedServiceVillages: data.data.failedServiceVillages || []
+        })
       } else {
-        alert(`Registration failed: ${data.message || 'Unknown error'}`)
+        setErrorDialog({
+          isOpen: true,
+          message: data.message || 'Unknown error occurred'
+        })
       }
     } catch (error) {
       console.error('Registration error:', error)
-      alert('Failed to submit registration. Please check your internet connection and try again.')
+      setErrorDialog({
+        isOpen: true,
+        message: 'Failed to submit registration. Please check your internet connection and try again.'
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -546,7 +586,7 @@ export default function RegisterScreen() {
               <p className="text-gray-600 font-['Poppins'] text-sm">Information about the institute incharge</p>
             </div>
 
-            {renderSelect('inchargeType', 'Select Incharge Type', ['Veterinary Officer', 'Assistant Veterinary Officer', 'Livestock Inspector', 'Senior Veterinary Officer', 'Chief Veterinary Officer'])}
+            {renderSelect('inchargeType', 'Select Incharge Type', designationsData || [])}
 
             {renderInput('inchargeName', 'Incharge Name', 'text', true)}
 
@@ -614,7 +654,7 @@ export default function RegisterScreen() {
                   <h3 className="text-base font-semibold text-gray-900 font-['Poppins']">Add Team Member</h3>
                 </div>
 
-                {renderSelect('employeeType', 'Select Employee Type', ['Veterinary Officer', 'Assistant Veterinary Officer', 'Livestock Inspector', 'Animal Attendant', 'Lab Technician', 'Field Assistant', 'Data Entry Operator'])}
+                {renderSelect('employeeType', 'Select Employee Type', designationsData || [])}
 
                 {renderInput('employeeName', 'Employee Name', 'text')}
 
@@ -899,6 +939,35 @@ export default function RegisterScreen() {
           )}
         </div>
       </div>
+
+      {/* Success Dialog */}
+      <RegistrationSuccessDialog
+        isOpen={successDialog.isOpen}
+        orgId={successDialog.orgId}
+        registrationId={successDialog.registrationId}
+        instituteName={successDialog.instituteName}
+        status={successDialog.status}
+        failedServiceVillages={successDialog.failedServiceVillages}
+        onClose={() => {
+          setSuccessDialog({
+            isOpen: false,
+            orgId: '',
+            registrationId: 0,
+            instituteName: '',
+            status: '',
+            failedServiceVillages: []
+          })
+          navigate('/login')
+        }}
+      />
+
+      {/* Error Dialog */}
+      <ErrorDialog
+        isOpen={errorDialog.isOpen}
+        title="Registration Failed"
+        message={errorDialog.message}
+        onClose={() => setErrorDialog({ isOpen: false, message: '' })}
+      />
 
     </div>
   )

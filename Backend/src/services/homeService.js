@@ -56,8 +56,8 @@ export async function getHomeDataByUserId(userId) {
       WHERE current_institute_id = $1 AND is_active = TRUE
       ORDER BY
         CASE designation
-          WHEN 'Veterinary Officer' THEN 1
-          WHEN 'Senior Veterinary Officer' THEN 2
+          WHEN 'Senior Veterinary Officer' THEN 1
+          WHEN 'Veterinary Officer' THEN 2
           WHEN 'Veterinary Inspector' THEN 3
           ELSE 4
         END,
