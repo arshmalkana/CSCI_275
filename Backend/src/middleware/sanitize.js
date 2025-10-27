@@ -12,24 +12,28 @@ const DOMPurify = createDOMPurify()
  */
 export async function sanitizeInput(request, reply) {
   try {
-    // Skip sanitization for geography endpoints (already validated by schema)
+    // Skip heavy sanitization for endpoints with large JSON payloads (already validated by schema)
     const isGeoEndpoint = request.url.startsWith('/v1/geo/')
+    const isReportsEndpoint = request.url.startsWith('/v1/reports/')
+    const useLightSanitization = isGeoEndpoint || isReportsEndpoint
 
-    // Sanitize body
+    // Sanitize body (use light sanitization for geo and reports endpoints)
     if (request.body && typeof request.body === 'object') {
-      request.body = sanitizeObject(request.body)
+      request.body = useLightSanitization
+        ? sanitizeObject(request.body, true) // Light sanitization
+        : sanitizeObject(request.body)
     }
 
-    // Sanitize query params (but use lighter sanitization for geo endpoints)
+    // Sanitize query params (but use lighter sanitization for certain endpoints)
     if (request.query && typeof request.query === 'object') {
-      request.query = isGeoEndpoint
+      request.query = useLightSanitization
         ? sanitizeObject(request.query, true) // Light sanitization
         : sanitizeObject(request.query)
     }
 
-    // Sanitize URL params (but use lighter sanitization for geo endpoints)
+    // Sanitize URL params (but use lighter sanitization for certain endpoints)
     if (request.params && typeof request.params === 'object') {
-      request.params = isGeoEndpoint
+      request.params = useLightSanitization
         ? sanitizeObject(request.params, true) // Light sanitization
         : sanitizeObject(request.params)
     }
@@ -97,8 +101,8 @@ function sanitizeString(str, light = false) {
     // Remove null bytes and dangerous control characters
     cleaned = cleaned.replace(/\0/g, '')
     cleaned = cleaned.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '')
-    // Remove SQL injection patterns but keep regular text
-    cleaned = cleaned.replace(/[';"\\/]/g, '')
+    // Remove SQL injection patterns but keep regular text and numbers
+    // DON'T remove quotes - they're needed for JSON values
     cleaned = cleaned.replace(/--|\/\*/g, '')
     return cleaned
   }

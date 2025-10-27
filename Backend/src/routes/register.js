@@ -1,4 +1,5 @@
 import * as registerController from '../controllers/registerController.js'
+import { VALID_DESIGNATIONS } from '../config/designations.js'
 
 /**
  * Registration routes for new institutes
@@ -35,7 +36,7 @@ export default async function registerRoutes(fastify) {
             type: 'object',
             required: ['type', 'name', 'mobile', 'email'],
             properties: {
-              type: { type: 'string', description: 'Designation type' },
+              type: { type: 'string', enum: VALID_DESIGNATIONS, description: 'Designation type' },
               name: { type: 'string', minLength: 2 },
               mobile: { type: 'string', pattern: '^[6-9]\\d{9}$' },
               email: { type: 'string', format: 'email' }
@@ -47,7 +48,7 @@ export default async function registerRoutes(fastify) {
               type: 'object',
               required: ['type', 'name', 'mobile'],
               properties: {
-                type: { type: 'string' },
+                type: { type: 'string', enum: VALID_DESIGNATIONS },
                 name: { type: 'string', minLength: 2 },
                 mobile: { type: 'string', pattern: '^[6-9]\\d{9}$' },
                 email: { type: 'string', format: 'email' }
@@ -87,7 +88,13 @@ export default async function registerRoutes(fastify) {
               properties: {
                 registrationId: { type: 'integer' },
                 instituteName: { type: 'string' },
-                status: { type: 'string' }
+                orgId: { type: 'string' },
+                status: { type: 'string' },
+                failedServiceVillages: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Villages that could not be found in database'
+                }
               }
             }
           }

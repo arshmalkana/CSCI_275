@@ -52,6 +52,7 @@ export default async function (fastify, opts) {
   await fastify.register(import('./routes/home.js'), { prefix: '/v1/home' })
   await fastify.register(import('./routes/profile.js'), { prefix: '/v1/profile' })
   await fastify.register(import('./routes/geo.js'), { prefix: '/v1/geo' })
+  await fastify.register(import('./routes/reports.js'), { prefix: '/v1/reports' })
 
   // Cleanup expired data on server startup (SECURITY FIX)
   fastify.addHook('onReady', async () => {
