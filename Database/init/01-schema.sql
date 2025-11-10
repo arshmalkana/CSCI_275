@@ -175,9 +175,9 @@ CREATE TABLE webauthn_credentials (
     aaguid TEXT,  -- Authenticator AAGUID (identifies authenticator model)
     credential_device_type VARCHAR(50),  -- 'platform' or 'cross-platform'
     transports TEXT[],  -- ['usb', 'nfc', 'ble', 'internal'] - how device connects
-    last_used_at TIMESTAMP,  -- Track when credential was last used for security auditing
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    last_used_at TIMESTAMPTZ,  -- Track when credential was last used for security auditing
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- WebAuthn challenges for registration and authentication
@@ -187,8 +187,8 @@ CREATE TABLE webauthn_challenges (
     challenge TEXT NOT NULL,
     staff_id INTEGER REFERENCES staff(staff_id) ON DELETE CASCADE,
     challenge_type VARCHAR(20) NOT NULL CHECK (challenge_type IN ('registration', 'authentication')),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMPTZ NOT NULL,
     ip_address INET,
     user_agent TEXT
 );
@@ -203,12 +203,12 @@ CREATE TABLE refresh_tokens (
     ip_address INET, -- Client IP address
     device_name VARCHAR(100), -- Parsed device name (e.g., "iPhone (Safari)")
     -- Timestamps
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMPTZ NOT NULL,
     -- Status
     is_revoked BOOLEAN DEFAULT FALSE,
-    revoked_at TIMESTAMP,
+    revoked_at TIMESTAMPTZ,
     revoked_reason TEXT
 );
 
@@ -366,12 +366,12 @@ CREATE TABLE monthly_reports (
     prepared_by INTEGER NOT NULL REFERENCES staff(staff_id),
     verified_by INTEGER REFERENCES staff(staff_id),
     submission_status report_status DEFAULT 'Draft',
-    submitted_at TIMESTAMP,
-    verified_at TIMESTAMP,
+    submitted_at TIMESTAMPTZ,
+    verified_at TIMESTAMPTZ,
     admin_comment TEXT,
     receipt_number VARCHAR(50), -- From sheets: receipt number
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(institute_id, reporting_month)
 );
 
@@ -843,7 +843,85 @@ JOIN tehsils t ON i.tehsil_id = t.tehsil_id
 JOIN staff s ON mr.prepared_by = s.staff_id;
 
 -- ============================================================================
--- 25. COMMENTS FOR DOCUMENTATION
+-- 25. NOTIFICATIONS SYSTEM
+-- ============================================================================
+
+-- Notifications table for in-app and push notifications
+CREATE TABLE notifications (
+    notification_id SERIAL PRIMARY KEY,
+    recipient_id INTEGER NOT NULL REFERENCES staff(staff_id) ON DELETE CASCADE,
+    sender_id INTEGER REFERENCES staff(staff_id) ON DELETE SET NULL, -- NULL for system-generated
+    notification_type VARCHAR(50) NOT NULL, -- 'system', 'broadcast', 'user'
+    category VARCHAR(50) NOT NULL, -- 'report_submitted', 'report_approved', 'deadline_reminder', etc.
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    priority VARCHAR(20) DEFAULT 'normal', -- 'low', 'normal', 'high', 'urgent'
+
+    -- Action buttons (JSONB array)
+    -- Example: [{"label": "View Report", "type": "navigate", "path": "/reports/monthly/2024-06", "requiredPermission": "view_reports"}]
+    actions JSONB,
+
+    -- Attachments (JSONB array)
+    -- Example: [{"type": "pdf", "filename": "circular.pdf", "path": "/attachments/circular.pdf"}]
+    attachments JSONB,
+
+    -- Metadata for linking to related entities
+    related_entity_type VARCHAR(50), -- 'monthly_report', 'circular', 'announcement', etc.
+    related_entity_id INTEGER, -- report_id, circular_id, etc.
+
+    -- State tracking
+    is_read BOOLEAN DEFAULT FALSE,
+    read_at TIMESTAMP,
+    is_archived BOOLEAN DEFAULT FALSE,
+    archived_at TIMESTAMP,
+
+    -- Timestamps and retention
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP, -- Auto-delete after this date (90 days default)
+    deleted_at TIMESTAMP -- Soft delete
+);
+
+-- Indexes for performance
+CREATE INDEX idx_notifications_recipient ON notifications(recipient_id, is_read) WHERE deleted_at IS NULL;
+CREATE INDEX idx_notifications_created ON notifications(created_at DESC) WHERE deleted_at IS NULL;
+CREATE INDEX idx_notifications_expires ON notifications(expires_at) WHERE deleted_at IS NULL AND expires_at IS NOT NULL;
+CREATE INDEX idx_notifications_category ON notifications(category) WHERE deleted_at IS NULL;
+
+-- Push notification subscriptions
+CREATE TABLE push_subscriptions (
+    subscription_id SERIAL PRIMARY KEY,
+    staff_id INTEGER NOT NULL REFERENCES staff(staff_id) ON DELETE CASCADE,
+    endpoint TEXT NOT NULL UNIQUE, -- Push service endpoint URL
+    p256dh_key TEXT NOT NULL, -- Encryption key for push payload
+    auth_key TEXT NOT NULL, -- Authentication secret
+    user_agent TEXT, -- Browser/device identifier
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE INDEX idx_push_subscriptions_staff ON push_subscriptions(staff_id) WHERE is_active = TRUE;
+
+-- Function to auto-set expiry date on notification insert
+CREATE OR REPLACE FUNCTION set_notification_expiry()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Set expiry to 90 days from creation if not explicitly set
+    -- Critical notifications (approvals/rejections) should set expires_at = NULL to keep forever
+    IF NEW.expires_at IS NULL AND NEW.category NOT IN ('report_approved', 'report_rejected') THEN
+        NEW.expires_at := NEW.created_at + INTERVAL '90 days';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_set_notification_expiry
+    BEFORE INSERT ON notifications
+    FOR EACH ROW
+    EXECUTE FUNCTION set_notification_expiry();
+
+-- ============================================================================
+-- 26. COMMENTS FOR DOCUMENTATION
 -- ============================================================================
 
 COMMENT ON TABLE institutes IS 'Veterinary institutes (CVH, CVD, PAIW, etc.) mapped from Google Sheets OrgIds';
@@ -855,7 +933,12 @@ COMMENT ON TABLE webauthn_credentials IS 'Stores WebAuthn/FIDO2 credentials (pas
 COMMENT ON TABLE webauthn_challenges IS 'Stores WebAuthn challenges for registration and authentication flows';
 COMMENT ON TABLE refresh_tokens IS 'Stores active refresh token sessions for security and session management';
 COMMENT ON TABLE institute_targets IS 'Performance targets with historical tracking - stores OPD, AI, and vaccine targets with effective date ranges';
+COMMENT ON TABLE notifications IS 'In-app and push notifications with action buttons and attachments - 90 day retention policy (critical notifications kept forever)';
+COMMENT ON TABLE push_subscriptions IS 'Web Push API subscription endpoints for browser push notifications when PWA is closed';
 COMMENT ON COLUMN staff.profile_picture_url IS 'URL or base64 data for user profile picture';
 COMMENT ON COLUMN staff.passkey_enabled IS 'Indicates if user has WebAuthn passkey authentication enabled';
 COMMENT ON COLUMN institute_targets.effective_until IS 'NULL means currently active, otherwise historical record';
+COMMENT ON COLUMN notifications.actions IS 'JSONB array of action buttons with permission checks - e.g., [{"label": "View Report", "type": "navigate", "path": "/reports/monthly/2024-06"}]';
+COMMENT ON COLUMN notifications.expires_at IS 'Auto-set to 90 days from creation unless category is report_approved/report_rejected (kept forever)';
 COMMENT ON FUNCTION get_active_target IS 'Returns active target for a given institute, target type, and date - supports historical target queries';
+COMMENT ON FUNCTION set_notification_expiry IS 'Auto-sets notification expiry to 90 days unless it is a critical audit notification';

@@ -329,6 +329,86 @@ export default async function reportsRoutes(fastify) {
     }
   }, reportsController.submitReport)
 
+  // GET /reports/fiscal-years - Get available fiscal years
+  fastify.get('/fiscal-years', {
+    // TEMPORARILY DISABLED FOR TESTING - TO RE-ENABLE: Uncomment the line below
+    // preHandler: authenticate,
+    schema: {
+      description: 'Get available fiscal years based on reports',
+      tags: ['Reports'],
+      response: {
+        200: {
+          description: 'Fiscal years retrieved successfully',
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Array of fiscal years in YYYY-YY format (e.g., 2024-25)'
+            }
+          }
+        }
+      }
+    }
+  }, reportsController.getFiscalYears)
+
+  // GET /reports/monthly - List all monthly reports with filters
+  fastify.get('/monthly', {
+    // TEMPORARILY DISABLED FOR TESTING - TO RE-ENABLE: Uncomment the line below
+    // preHandler: authenticate,
+    schema: {
+      description: 'List all monthly reports for the institute with optional filters',
+      tags: ['Reports'],
+      querystring: {
+        type: 'object',
+        properties: {
+          status: {
+            type: 'string',
+            enum: ['all', 'submitted', 'draft', 'pending', 'rejected'],
+            description: 'Filter by report status'
+          },
+          year: {
+            type: 'string',
+            pattern: '^\\d{4}$',
+            description: 'Filter by calendar year (YYYY)'
+          },
+          fiscalYear: {
+            type: 'string',
+            pattern: '^\\d{4}-\\d{2}$',
+            description: 'Filter by fiscal year (e.g., 2024-25 = April 2024 to March 2025)'
+          }
+        }
+      },
+      response: {
+        200: {
+          description: 'Reports retrieved successfully',
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  reportId: { type: 'number' },
+                  month: { type: 'string' },
+                  reportingMonth: { type: 'string' },
+                  status: { type: 'string' },
+                  submittedAt: { type: ['string', 'null'] },
+                  createdAt: { type: 'string' },
+                  updatedAt: { type: 'string' }
+                }
+              }
+            },
+            count: { type: 'number' }
+          }
+        }
+      }
+    }
+  }, reportsController.listReports)
+
   // GET /reports/monthly/:month - Get monthly report for specific month
   fastify.get('/monthly/:month', {
     // TEMPORARILY DISABLED FOR TESTING - TO RE-ENABLE: Uncomment the line below
@@ -349,7 +429,10 @@ export default async function reportsRoutes(fastify) {
           type: 'object',
           properties: {
             success: { type: 'boolean' },
-            data: { type: 'object' }
+            data: {
+              type: 'object',
+              additionalProperties: true
+            }
           }
         },
         404: {
@@ -363,4 +446,42 @@ export default async function reportsRoutes(fastify) {
       }
     }
   }, reportsController.getReport)
+
+  // GET /reports/details/:reportId - Get full report details by ID
+  fastify.get('/details/:reportId', {
+    // TEMPORARILY DISABLED FOR TESTING - TO RE-ENABLE: Uncomment the line below
+    // preHandler: authenticate,
+    schema: {
+      description: 'Get full monthly report details by ID with all sub-details (OPD, certificates, vaccinations, AI, etc.)',
+      tags: ['Reports'],
+      params: {
+        type: 'object',
+        required: ['reportId'],
+        properties: {
+          reportId: { type: 'string', description: 'Report ID' }
+        }
+      },
+      response: {
+        200: {
+          description: 'Report details retrieved successfully',
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'object',
+              additionalProperties: true
+            }
+          }
+        },
+        404: {
+          description: 'Report not found',
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' }
+          }
+        }
+      }
+    }
+  }, reportsController.getReportDetails)
 }

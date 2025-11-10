@@ -12,6 +12,8 @@ import { WebAuthnError, NotFoundError, ValidationError } from '../utils/errors.j
 const RP_NAME = process.env.RP_NAME || 'AH Punjab Reporting'
 const RP_ID = process.env.RP_ID || 'localhost'
 const RP_ORIGIN = process.env.RP_ORIGIN || 'http://localhost:3000'
+// const RP_ID = process.env.RP_ID || 'ahpunjabdev.itsarsh.dev'
+// const RP_ORIGIN = process.env.RP_ORIGIN || 'https://ahpunjabdev.itsarsh.dev'
 
 // Challenge storage now uses database (see webauthn_challenges table)
 // Removed in-memory Map for security and scalability
@@ -31,6 +33,14 @@ const webauthnService = {
     try {
       const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000)
 
+      console.log('[WebAuthn] Storing challenge:', {
+        challengeKey,
+        challengeType,
+        staffId,
+        expiresAt,
+        challengeLength: challenge?.length
+      })
+
       await query(
         `INSERT INTO webauthn_challenges
          (challenge_key, challenge, staff_id, challenge_type, expires_at, ip_address, user_agent)
@@ -43,6 +53,8 @@ const webauthnService = {
            user_agent = EXCLUDED.user_agent`,
         [challengeKey, challenge, staffId, challengeType, expiresAt, ipAddress, userAgent]
       )
+
+      console.log('[WebAuthn] Challenge stored successfully')
     } catch (error) {
       throw new WebAuthnError(`Failed to store challenge: ${error.message}`)
     }
@@ -55,6 +67,8 @@ const webauthnService = {
    */
   async getChallenge(challengeKey) {
     try {
+      console.log('[WebAuthn] Retrieving challenge:', { challengeKey })
+
       const result = await query(
         `SELECT challenge, staff_id, expires_at
          FROM webauthn_challenges
@@ -62,7 +76,24 @@ const webauthnService = {
         [challengeKey]
       )
 
+      console.log('[WebAuthn] Challenge query result:', {
+        challengeKey,
+        rowsFound: result.rows.length,
+        expiresAt: result.rows[0]?.expires_at
+      })
+
       if (result.rows.length === 0) {
+        // Check if challenge exists but expired
+        const expiredCheck = await query(
+          `SELECT expires_at FROM webauthn_challenges WHERE challenge_key = $1`,
+          [challengeKey]
+        )
+        console.log('[WebAuthn] Expired check:', {
+          challengeKey,
+          exists: expiredCheck.rows.length > 0,
+          expiresAt: expiredCheck.rows[0]?.expires_at,
+          now: new Date()
+        })
         return null
       }
 
@@ -170,8 +201,16 @@ const webauthnService = {
    * @returns {Object} Verification result
    */
   async verifyRegistration(staffId, response, deviceName = null, userAgent = '') {
+    console.log('[WebAuthn] Verifying registration for staffId:', staffId)
+
     // Get stored challenge from database
     const storedChallenge = await this.getChallenge(String(staffId))
+
+    console.log('[WebAuthn] Retrieved challenge:', {
+      staffId,
+      found: !!storedChallenge,
+      challengeLength: storedChallenge?.challenge?.length
+    })
 
     if (!storedChallenge) {
       throw new WebAuthnError('Challenge not found or expired', 'registration')

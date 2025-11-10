@@ -56,7 +56,6 @@ interface HomeData {
 }
 
 export default function HomeScreen() {
-  const [notifications] = useState(5) // Temporary notification count, use api to update
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false)
   const [selectedVaccine, setSelectedVaccine] = useState(() => {
     // Load from storage or default to 'FMD'
@@ -76,6 +75,21 @@ export default function HomeScreen() {
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
   })
+
+  // Fetch unread notification count
+  const { data: unreadCountData } = useQuery<{ count: number }>({
+    queryKey: ['unreadNotificationCount'],
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = await api.getUnreadCount() as any
+      return data
+    },
+    staleTime: 30 * 1000, // 30 seconds - refresh more frequently
+    refetchInterval: 60 * 1000, // Auto-refetch every minute
+    retry: 1,
+  })
+
+  const notifications = unreadCountData?.count || 0
 
   // Save vaccine selection to storage
   useEffect(() => {

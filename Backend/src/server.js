@@ -1,6 +1,7 @@
 import userSchema from './schemas/userSchema.js'
 import refreshTokenService from './services/refreshTokenService.js'
 import webauthnService from './services/webauthnService.js'
+import * as notificationsService from './services/notificationsService.js'
 import { sanitizeInput } from './middleware/sanitize.js'
 import { errorHandler } from './utils/errors.js'
 
@@ -53,6 +54,8 @@ export default async function (fastify, opts) {
   await fastify.register(import('./routes/profile.js'), { prefix: '/v1/profile' })
   await fastify.register(import('./routes/geo.js'), { prefix: '/v1/geo' })
   await fastify.register(import('./routes/reports.js'), { prefix: '/v1/reports' })
+  await fastify.register(import('./routes/notifications.js'), { prefix: '/v1/notifications' })
+  await fastify.register(import('./routes/push.js'), { prefix: '/v1/push' })
 
   // Cleanup expired data on server startup (SECURITY FIX)
   fastify.addHook('onReady', async () => {
@@ -64,6 +67,10 @@ export default async function (fastify, opts) {
       // Cleanup expired WebAuthn challenges
       const challengesDeleted = await webauthnService.cleanupExpiredChallenges()
       fastify.log.info({ challengesDeleted }, 'Expired WebAuthn challenges cleaned up on startup')
+
+      // Cleanup expired notifications
+      const notificationsDeleted = await notificationsService.cleanupExpiredNotifications()
+      fastify.log.info({ notificationsDeleted }, 'Expired notifications cleaned up on startup')
     } catch (error) {
       fastify.log.warn('Failed to cleanup expired data on startup:', error.message)
     }
@@ -75,6 +82,7 @@ export default async function (fastify, opts) {
       try {
         await refreshTokenService.cleanupExpiredTokens()
         await webauthnService.cleanupExpiredChallenges()
+        await notificationsService.cleanupExpiredNotifications()
       } catch (error) {
         fastify.log.error('Periodic cleanup error:', error)
       }

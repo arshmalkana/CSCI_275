@@ -168,22 +168,28 @@ const CreateReportScreen = () => {
   useEffect(() => {
     const checkForDraft = async () => {
       const reportIdParam = searchParams.get('reportId');
+      console.log('[DEBUG useEffect] Checking for draft. reportId:', reportIdParam, 'isLoadingDraft:', isLoadingDraft, 'draftData:', !!draftData);
 
       if (reportIdParam && !isLoadingDraft && !draftData) {
         // Load draft from backend using reportId
+        console.log('[DEBUG useEffect] Loading draft from backend with reportId:', reportIdParam);
         try {
           setIsLoadingDraft(true);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const response = await api.getReportDetails(reportIdParam) as any;
+          console.log('[DEBUG useEffect] Got response:', response);
           // Note: apiRequest already extracts the data field, so response is the data object directly
           if (response && response.status === 'Draft') {
+            console.log('[DEBUG useEffect] Setting draft data and showing dialog');
             setDraftData(response);
             setShowDraftDialog(true);
             // Mark this month as processed to prevent re-showing dialog from localStorage
             processedDraftMonth.current = response.reportingMonth;
           } else {
+            console.log('[DEBUG useEffect] Response not a draft. Status:', response?.status);
           }
         } catch (error) {
+          console.error('[DEBUG useEffect] Error loading draft:', error);
           setErrorDialog({
             isOpen: true,
             message: 'Failed to load draft from server. Please try again.'
@@ -198,18 +204,22 @@ const CreateReportScreen = () => {
         // Only check if we haven't already processed this month's draft
         if (processedDraftMonth.current !== reportingMonth) {
           const savedDraft = localStorage.getItem(`monthly-report-draft-${reportingMonth}`);
+          console.log('[DEBUG useEffect] No reportId in URL. Checking localStorage for:', reportingMonth, 'Found:', !!savedDraft);
 
           if (savedDraft) {
             try {
               const draft = JSON.parse(savedDraft);
+              console.log('[DEBUG useEffect] Setting draft data from localStorage');
               setDraftData(draft);
               setShowDraftDialog(true);
               processedDraftMonth.current = reportingMonth;
             } catch (error) {
+              console.error('[DEBUG useEffect] Error parsing local draft:', error);
             }
           }
         }
       } else {
+        console.log('[DEBUG useEffect] Skipping draft check. Condition not met.');
       }
     };
 
@@ -409,6 +419,7 @@ const CreateReportScreen = () => {
         setLastSaved(new Date());
       } catch {
         // Silent fail - localStorage still saved
+        console.log('Auto-save to backend failed, localStorage saved');
       }
     } finally {
       setIsAutoSaving(false);
@@ -575,26 +586,35 @@ const CreateReportScreen = () => {
   const handleCopyFromLastMonth = async () => {
     try {
       // Calculate previous month
+      console.log('[DEBUG] selectedDate:', selectedDate);
+      console.log('[DEBUG] selectedDate month:', selectedDate.getMonth(), 'year:', selectedDate.getFullYear());
 
       const prevMonth = new Date(selectedDate);
+      console.log('[DEBUG] prevMonth before setMonth:', prevMonth);
       prevMonth.setMonth(prevMonth.getMonth() - 1);
+      console.log('[DEBUG] prevMonth after setMonth:', prevMonth);
+      console.log('[DEBUG] prevMonth.getMonth():', prevMonth.getMonth());
 
       const prevMonthStr = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}`;
+      console.log('[DEBUG] prevMonthStr:', prevMonthStr);
 
       // Fetch previous month's report
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const response = await api.getMonthlyReport(prevMonthStr) as any;
 
       if (response && response.reportId) {
+        console.log('[DEBUG] Found report for previous month:', response);
         setCopySourceData(response);
         setShowCopyConfirmDialog(true);
       } else {
+        console.log('[DEBUG] No report found for previous month');
         setErrorDialog({
           isOpen: true,
           message: `No report found for ${prevMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}. Please create reports chronologically.`
         });
       }
     } catch (error) {
+      console.error('[DEBUG] Error fetching previous month report:', error);
       const prevMonth = new Date(selectedDate);
       prevMonth.setMonth(prevMonth.getMonth() - 1);
       setErrorDialog({
@@ -607,9 +627,11 @@ const CreateReportScreen = () => {
   // Handle copying data from previous month
   const handleConfirmCopy = () => {
     if (!copySourceData) {
+      console.error('[DEBUG] No copy source data!');
       return;
     }
 
+    console.log('[DEBUG] Copying data from previous month:', copySourceData);
 
     // Transform and load the data (same logic as loading a draft)
     const isBackendFormat = Array.isArray(copySourceData.opd);
@@ -735,23 +757,28 @@ const CreateReportScreen = () => {
 
     setShowCopyConfirmDialog(false);
     setCopySourceData(null);
+    console.log('[DEBUG] Data copied from previous month successfully');
   };
 
   // Handle loading draft data into form
   const handleLoadDraft = () => {
     if (!draftData) {
+      console.error('[DEBUG] No draft data to load!');
       return;
     }
 
+    console.log('[DEBUG] Loading draft data:', draftData);
 
     // Check if this is from backend API (has opd array) or localStorage (already formatted)
     const isBackendFormat = Array.isArray(draftData.opd);
+    console.log('[DEBUG] Is backend format:', isBackendFormat);
 
     if (isBackendFormat) {
       // Transform backend database format to form format
 
       // Transform OPD data
       if (draftData.opd) {
+        console.log('[DEBUG] Transforming OPD data:', draftData.opd);
         const opdMap: Record<string, any> = {
           'Equine': 'equines',
           'Bovine': 'bovine',
@@ -773,6 +800,7 @@ const CreateReportScreen = () => {
 
         draftData.opd.forEach((item: any) => {
           const formField = opdMap[item.opd_type];
+          console.log(`[DEBUG] Processing OPD: ${item.opd_type} -> ${formField}, category: ${item.case_category}`);
           if (formField && transformedOpd[formField]) {
             if (item.case_category === 'New') {
               transformedOpd[formField].new = String(item.total_cases || '');
@@ -783,6 +811,7 @@ const CreateReportScreen = () => {
           }
         });
 
+        console.log('[DEBUG] Transformed OPD data:', transformedOpd);
         setOpdData(transformedOpd);
       }
 
@@ -900,6 +929,7 @@ const CreateReportScreen = () => {
       // Will implement if needed
     } else {
       // Data is already in localStorage format, load directly
+      console.log('[DEBUG] Loading from localStorage format');
       if (draftData.opd) setOpdData(draftData.opd);
       if (draftData.certificates) setCertData(draftData.certificates);
       if (draftData.lab) setLabData(draftData.lab);
@@ -911,24 +941,29 @@ const CreateReportScreen = () => {
     if (draftData.reportingMonth) {
       const [year, month] = draftData.reportingMonth.split('-');
       const draftDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+      console.log('[DEBUG] Setting selectedDate to:', draftDate);
       setSelectedDate(draftDate);
     }
 
     // Clear the URL parameter to prevent re-loading
     const reportIdParam = searchParams.get('reportId');
     if (reportIdParam) {
+      console.log('[DEBUG] Clearing reportId from URL');
       navigate('/reports/create', { replace: true });
     }
 
     setShowDraftDialog(false);
+    console.log('[DEBUG] Draft loading complete');
   };
 
   // Handle discarding draft and starting fresh
   const handleDiscardDraft = () => {
+    console.log('[DEBUG] Discarding draft and starting fresh');
 
     // Clear the URL parameter
     const reportIdParam = searchParams.get('reportId');
     if (reportIdParam) {
+      console.log('[DEBUG] Clearing reportId from URL');
       navigate('/reports/create', { replace: true });
     }
 

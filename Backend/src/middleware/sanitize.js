@@ -12,7 +12,13 @@ const DOMPurify = createDOMPurify()
  */
 export async function sanitizeInput(request, reply) {
   try {
-    // Skip heavy sanitization for endpoints with large JSON payloads (already validated by schema)
+    // Skip sanitization entirely for WebAuthn (uses cryptographically signed binary data)
+    const isWebAuthnEndpoint = request.url.startsWith('/v1/auth/webauthn/')
+    if (isWebAuthnEndpoint) {
+      return // Skip all sanitization - WebAuthn data is cryptographically verified
+    }
+
+    // Use light sanitization for endpoints with large JSON payloads (already validated by schema)
     const isGeoEndpoint = request.url.startsWith('/v1/geo/')
     const isReportsEndpoint = request.url.startsWith('/v1/reports/')
     const useLightSanitization = isGeoEndpoint || isReportsEndpoint

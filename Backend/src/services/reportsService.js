@@ -1,5 +1,6 @@
 import { query } from '../database/db.js'
 import { getSemenCode } from '../config/semenTypes.js'
+import * as notificationsService from './notificationsService.js'
 
 /**
  * Validate report data for logical consistency and data quality
@@ -461,6 +462,22 @@ export async function saveMonthlyReport(data) {
       }
     }
 
+    // Create notification if report was submitted (not just saved as draft)
+    if (status === 'Submitted' && existingReport.rows.length === 0) {
+      // Only send notification for new submissions, not updates
+      try {
+        await notificationsService.createReportSubmittedNotification(
+          reportId,
+          reportingMonth,
+          staffId,
+          instituteId
+        )
+      } catch (notifError) {
+        // Log but don't fail the transaction if notification fails
+        console.error('Failed to create notification:', notifError)
+      }
+    }
+
     // Commit transaction
     await query('COMMIT')
 
@@ -486,9 +503,17 @@ export async function getMonthlyReport(instituteId, reportingMonth) {
     const reportResult = await query(`
       SELECT
         report_id,
+        institute_id,
         reporting_month,
+        start_date,
+        end_date,
+        prepared_by,
+        verified_by,
         submission_status as status,
         submitted_at,
+        verified_at,
+        admin_comment,
+        receipt_number,
         created_at,
         updated_at
       FROM monthly_reports
@@ -604,19 +629,256 @@ export async function getMonthlyReport(instituteId, reportingMonth) {
 
     return {
       reportId: report.report_id,
+      instituteId: report.institute_id,
       reportingMonth: report.reporting_month,
+      startDate: report.start_date,
+      endDate: report.end_date,
+      preparedBy: report.prepared_by,
+      verifiedBy: report.verified_by,
       status: report.status,
       submittedAt: report.submitted_at,
+      verifiedAt: report.verified_at,
+      adminComment: report.admin_comment,
+      receiptNumber: report.receipt_number,
       createdAt: report.created_at,
       updatedAt: report.updated_at,
       opd: opdResult.rows,
       certificates: certResult.rows,
-      lab: labResult.rows,
-      extension: extensionResult.rows,
+      diagnostics: labResult.rows,
+      extensions: extensionResult.rows,
       aiReports: aiReports
     }
   } catch (error) {
     console.error('Error in getMonthlyReport:', error)
+    throw error
+  }
+}
+
+/**
+ * Get available fiscal years based on reports in the database
+ */
+export async function getAvailableFiscalYears(instituteId) {
+  try {
+    // Get all unique reporting months from reports
+    const result = await query(`
+      SELECT DISTINCT reporting_month
+      FROM monthly_reports
+      WHERE institute_id = $1
+      ORDER BY reporting_month DESC
+    `, [instituteId])
+
+    if (result.rows.length === 0) {
+      // Return current fiscal year if no reports exist
+      const now = new Date()
+      const currentYear = now.getFullYear()
+      const currentMonth = now.getMonth() + 1 // 1-12
+
+      // If we're in Jan-Mar, we're still in the previous fiscal year
+      const fiscalStartYear = currentMonth >= 4 ? currentYear : currentYear - 1
+      return [`${fiscalStartYear}-${String(fiscalStartYear + 1).slice(2)}`]
+    }
+
+    // Convert reporting months to fiscal years
+    // Fiscal year runs from April to March (e.g., 2024-25 = April 2024 to March 2025)
+    const fiscalYears = new Set()
+
+    result.rows.forEach(row => {
+      const [year, month] = row.reporting_month.split('-').map(Number)
+
+      // Determine which fiscal year this month belongs to
+      // April (04) to December (12) = current year's fiscal year (e.g., 2024-25 for 2024-04 to 2024-12)
+      // January (01) to March (03) = previous year's fiscal year (e.g., 2024-25 for 2025-01 to 2025-03)
+      const fiscalStartYear = month >= 4 ? year : year - 1
+      fiscalYears.add(`${fiscalStartYear}-${String(fiscalStartYear + 1).slice(2)}`)
+    })
+
+    return Array.from(fiscalYears).sort().reverse()
+  } catch (error) {
+    console.error('Error in getAvailableFiscalYears:', error)
+    throw error
+  }
+}
+
+/**
+ * List monthly reports for an institute with optional filters
+ */
+export async function listMonthlyReports(instituteId, filters = {}) {
+  try {
+    const { status, year, fiscalYear } = filters
+
+    let queryText = `
+      SELECT
+        report_id,
+        reporting_month,
+        submission_status as status,
+        submitted_at,
+        created_at,
+        updated_at
+      FROM monthly_reports
+      WHERE institute_id = $1
+    `
+
+    const params = [instituteId]
+    let paramCount = 1
+
+    // Filter by status if provided
+    if (status && status !== 'all') {
+      paramCount++
+      queryText += ` AND submission_status = $${paramCount}`
+      // Map frontend status to backend ENUM values
+      const statusMap = {
+        'submitted': 'Submitted',
+        'draft': 'Draft',
+        'rejected': 'Rejected',
+        'pending': 'Submitted' // 'pending' maps to 'Submitted' in backend
+      }
+      params.push(statusMap[status] || status)
+    }
+
+    // Filter by calendar year
+    if (year) {
+      paramCount++
+      queryText += ` AND EXTRACT(YEAR FROM TO_DATE(reporting_month, 'YYYY-MM')) = $${paramCount}`
+      params.push(parseInt(year))
+    }
+
+    // Filter by fiscal year (e.g., "2024-25" includes reports from April 2024 to March 2025)
+    if (fiscalYear) {
+      const [startYear, endYearShort] = fiscalYear.split('-')
+      const startYearNum = parseInt(startYear)
+      const endYearNum = parseInt(`20${endYearShort}`)
+
+      paramCount++
+      queryText += ` AND (
+        (reporting_month >= $${paramCount} AND reporting_month < $${paramCount + 1})
+      )`
+      params.push(`${startYearNum}-04`, `${endYearNum}-04`)
+      paramCount++
+    }
+
+    queryText += ` ORDER BY reporting_month DESC`
+
+    const result = await query(queryText, params)
+
+    return result.rows.map(row => ({
+      id: row.report_id.toString(),
+      reportId: row.report_id,
+      month: row.reporting_month,
+      reportingMonth: row.reporting_month,
+      status: row.status,
+      submittedAt: row.submitted_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }))
+  } catch (error) {
+    console.error('Error in listMonthlyReports:', error)
+    throw error
+  }
+}
+
+/**
+ * Get full monthly report details including all sub-details
+ * @param {number} reportId - Report ID
+ * @returns {Promise<Object>} - Complete report with all details
+ */
+export async function getMonthlyReportDetails(reportId) {
+  try {
+    // Get main report
+    const reportResult = await query(`
+      SELECT
+        report_id,
+        institute_id,
+        reporting_month,
+        start_date,
+        end_date,
+        prepared_by,
+        verified_by,
+        submission_status as status,
+        submitted_at,
+        verified_at,
+        admin_comment,
+        receipt_number,
+        created_at,
+        updated_at
+      FROM monthly_reports
+      WHERE report_id = $1
+    `, [reportId])
+
+    if (reportResult.rows.length === 0) {
+      return null
+    }
+
+    const report = reportResult.rows[0]
+
+    // Get OPD details
+    const opdResult = await query(`
+      SELECT opd_type, case_category, total_cases, beneficiaries_covered
+      FROM opd_report_details
+      WHERE report_id = $1
+    `, [reportId])
+
+    // Get certificate details
+    const certResult = await query(`
+      SELECT certificate_type, total_issued, beneficiaries_covered
+      FROM certificate_report_details
+      WHERE report_id = $1
+    `, [reportId])
+
+    // Get diagnostic details
+    const diagnosticResult = await query(`
+      SELECT diagnostic_type, tests_conducted, beneficiaries_covered
+      FROM diagnostic_report_details
+      WHERE report_id = $1
+    `, [reportId])
+
+    // Get vaccination details
+    const vaccineResult = await query(`
+      SELECT vaccine_id, doses_received, doses_used, animals_vaccinated, beneficiaries_covered
+      FROM vaccination_report_details
+      WHERE report_id = $1
+    `, [reportId])
+
+    // Get AI details
+    const aiResult = await query(`
+      SELECT semen_type_id, total_ai_done, animals_covered, beneficiaries_covered,
+             straws_received, straws_used_inaph, straws_issued_aiw,
+             animals_tested, animals_positive, male_calves, female_calves
+      FROM ai_report_details
+      WHERE report_id = $1
+    `, [reportId])
+
+    // Get extension activities
+    const extensionResult = await query(`
+      SELECT activity_type, events_conducted, locations_covered, total_attendees, animals_treated
+      FROM extension_activities_details
+      WHERE report_id = $1
+    `, [reportId])
+
+    // Return complete report - properly formatted
+    return {
+      reportId: report.report_id,
+      instituteId: report.institute_id,
+      reportingMonth: report.reporting_month,
+      startDate: report.start_date,
+      endDate: report.end_date,
+      preparedBy: report.prepared_by,
+      verifiedBy: report.verified_by,
+      status: report.status,
+      submittedAt: report.submitted_at,
+      verifiedAt: report.verified_at,
+      adminComment: report.admin_comment,
+      receiptNumber: report.receipt_number,
+      createdAt: report.created_at,
+      updatedAt: report.updated_at,
+      opd: opdResult.rows,
+      certificates: certResult.rows,
+      diagnostics: diagnosticResult.rows,
+      vaccinations: vaccineResult.rows,
+      ai: aiResult.rows,
+      extensions: extensionResult.rows
+    }
+  } catch (error) {
+    console.error('Error in getMonthlyReportDetails:', error)
     throw error
   }
 }

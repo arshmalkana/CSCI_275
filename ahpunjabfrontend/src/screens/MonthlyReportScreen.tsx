@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import {
   FileText,
   Plus,
@@ -12,37 +13,22 @@ import { SearchableSelect } from '../components/SearchableSelect'
 import SideMenu from '../components/SideMenu'
 import { MainHeader } from '../components/Headers'
 import { InfoDialog } from '../components/DialogBox'
+import api from '../utils/api'
 
 // --- Types -----------------------------------------------------------------
 
-type ReportStatus = 'submitted' | 'draft' | 'rejected' | 'pending'
+type ReportStatus = 'Submitted' | 'Draft' | 'Rejected' | 'Approved'
 
 type Report = {
   id: string
-  month: string
-  year: string // e.g. "2024"
+  reportId: number
+  month: string // "YYYY-MM" format from backend
+  reportingMonth: string
   status: ReportStatus
-  submittedAt?: string
+  submittedAt?: string | null
+  createdAt: string
+  updatedAt: string
 }
-
-// --- Mock Data (replace with API) ------------------------------------------
-
-const ACADEMIC_YEARS = ['2024-25', '2023-24', '2022-23', '2021-22']
-
-const MOCK_REPORTS: Report[] = [
-  // 2024-25 academic year reports
-  { id: 'r8', month: 'June', year: '2024', status: 'submitted', submittedAt: '2024-07-05' },
-  { id: 'r9', month: 'May', year: '2024', status: 'submitted', submittedAt: '2024-06-03' },
-  { id: 'r10', month: 'April', year: '2024', status: 'submitted', submittedAt: '2024-05-02' },
-  { id: 'r5', month: 'August', year: '2024', status: 'draft' },
-  { id: 'r6', month: 'September', year: '2024', status: 'pending' },
-  { id: 'r7', month: 'October', year: '2024', status: 'rejected' },
-  // 2023-24 academic year reports
-  { id: 'r1', month: 'June', year: '2023', status: 'submitted', submittedAt: '2023-07-02' },
-  { id: 'r2', month: 'May', year: '2023', status: 'submitted', submittedAt: '2023-06-02' },
-  { id: 'r3', month: 'April', year: '2023', status: 'submitted', submittedAt: '2023-05-02' },
-  { id: 'r4', month: 'January', year: '2023', status: 'submitted', submittedAt: '2023-02-02' }
-]
 
 // --- Small UI Building Blocks (encapsulation) ------------------------------
 
@@ -66,12 +52,12 @@ function InfoBanner() {
 
 function StatusBadge({ status }: { status: ReportStatus }) {
   const map: Record<ReportStatus, { bg: string; text: string; label: string; dot: string }> = {
-    submitted: { bg: 'bg-green-50', text: 'text-green-700', label: 'Submitted', dot: 'bg-green-500' },
-    draft: { bg: 'bg-gray-50', text: 'text-gray-700', label: 'Draft', dot: 'bg-gray-400' },
-    rejected: { bg: 'bg-red-50', text: 'text-red-700', label: 'Rejected', dot: 'bg-red-500' },
-    pending: { bg: 'bg-yellow-50', text: 'text-yellow-800', label: 'Pending', dot: 'bg-yellow-500' }
+    'Submitted': { bg: 'bg-green-50', text: 'text-green-700', label: 'Submitted', dot: 'bg-green-500' },
+    'Draft': { bg: 'bg-gray-50', text: 'text-gray-700', label: 'Draft', dot: 'bg-gray-400' },
+    'Rejected': { bg: 'bg-red-50', text: 'text-red-700', label: 'Rejected', dot: 'bg-red-500' },
+    'Approved': { bg: 'bg-blue-50', text: 'text-blue-700', label: 'Approved', dot: 'bg-blue-500' }
   }
-  const s = map[status]
+  const s = map[status] || map['Draft']
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${s.bg} ${s.text} border ${s.text.replace('text-', 'border-').replace('700', '200').replace('800', '200')}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`}></span>
@@ -85,11 +71,26 @@ function ReportRow({ report, onOpen, onDownload }: {
   onOpen: (r: Report) => void
   onDownload: (r: Report) => void
 }) {
+  // Format YYYY-MM to "Month Year"
+  const formatMonth = (monthStr: string) => {
+    const [year, month] = monthStr.split('-')
+    const date = new Date(parseInt(year), parseInt(month) - 1, 1)
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  }
+
   return (
     <div className="group">
-      <button
-        className="w-full flex items-center justify-between py-3 px-3 hover:bg-gray-50 rounded-lg transition-colors"
+      <div
+        className="w-full flex items-center justify-between py-3 px-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
         onClick={() => onOpen(report)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onOpen(report);
+          }
+        }}
       >
         <div className="flex items-center gap-3 flex-1">
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-100 to-yellow-200 flex items-center justify-center shadow-sm">
@@ -97,7 +98,7 @@ function ReportRow({ report, onOpen, onDownload }: {
           </div>
           <div className="text-left flex-1">
             <div className="text-sm font-semibold text-gray-900 font-['Poppins']">
-              {report.month} {report.year}
+              {formatMonth(report.month)}
             </div>
             <div className="text-xs text-gray-500 font-['Poppins'] mt-0.5">
               {report.submittedAt
@@ -109,10 +110,10 @@ function ReportRow({ report, onOpen, onDownload }: {
 
         <div className="flex items-center gap-2">
           <StatusBadge status={report.status} />
-          {report.status === 'submitted' && (
+          {(report.status === 'Submitted' || report.status === 'Approved') && (
             <button
               className="p-2 rounded-lg hover:bg-yellow-100 transition-colors"
-              aria-label="Request email"
+              aria-label="Download PDF"
               onClick={(e) => {
                 e.stopPropagation()
                 onDownload(report)
@@ -123,7 +124,7 @@ function ReportRow({ report, onOpen, onDownload }: {
           )}
           <ChevronRight size={18} className="text-gray-400 group-hover:text-yellow-600 transition-colors" />
         </div>
-      </button>
+      </div>
     </div>
   )
 }
@@ -150,56 +151,74 @@ export default function MonthlyReportScreen() {
   const [notifications] = useState(3)
 
   // filters & selection
-  const [selectedYear, setSelectedYear] = useState('2024-25')
-  const [statusFilter, setStatusFilter] = useState<'all' | ReportStatus>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'Submitted' | 'Draft' | 'Rejected' | 'Approved'>('all')
 
   // Dialog state
   const [infoDialog, setInfoDialog] = useState({ isOpen: false, message: '' })
 
-  // Derived list based on filters
-  const filteredReports = useMemo(() => {
-    const [startYear] = selectedYear.split('-').map(Number)
-    const reportsForYear = MOCK_REPORTS.filter(r => {
-      const y = Number(r.year)
-      // Include reports from the academic year (e.g., 2024-25 includes reports from 2024 and 2025)
-      return y === startYear || y === (startYear + 1)
-    })
-    if (statusFilter === 'all') return reportsForYear
-    return reportsForYear.filter(r => r.status === statusFilter)
-  }, [selectedYear, statusFilter])
+  // Fetch fiscal years from API
+  const { data: fiscalYears = [], isLoading: isLoadingYears } = useQuery({
+    queryKey: ['fiscalYears'],
+    queryFn: () => api.getFiscalYears()
+  })
+
+  // Default to first fiscal year (most recent)
+  const [selectedYear, setSelectedYear] = useState('')
+
+  // Set default year once fiscal years are loaded
+  if (fiscalYears.length > 0 && !selectedYear) {
+    setSelectedYear(fiscalYears[0])
+  }
+
+  // Fetch reports from API
+  const { data: reports = [], isLoading: isLoadingReports } = useQuery({
+    queryKey: ['monthlyReports', selectedYear, statusFilter],
+    queryFn: () => api.listMonthlyReports({
+      fiscalYear: selectedYear,
+      status: statusFilter
+    }),
+    enabled: !!selectedYear // Only fetch when fiscal year is selected
+  })
+
+  const isLoading = isLoadingYears || isLoadingReports
 
   // Count reports by status for the selected year
   const statusCounts = useMemo(() => {
-    const [startYear] = selectedYear.split('-').map(Number)
-    const yearReports = MOCK_REPORTS.filter(r => {
-      const y = Number(r.year)
-      return y === startYear || y === (startYear + 1)
-    })
     return {
-      all: yearReports.length,
-      submitted: yearReports.filter(r => r.status === 'submitted').length,
-      draft: yearReports.filter(r => r.status === 'draft').length,
-      pending: yearReports.filter(r => r.status === 'pending').length,
-      rejected: yearReports.filter(r => r.status === 'rejected').length
+      all: reports.length,
+      Submitted: reports.filter(r => r.status === 'Submitted').length,
+      Draft: reports.filter(r => r.status === 'Draft').length,
+      Approved: reports.filter(r => r.status === 'Approved').length,
+      Rejected: reports.filter(r => r.status === 'Rejected').length
     }
-  }, [selectedYear])
+  }, [reports])
 
   // --- Actions -------------------------------------------------------------
   const handleNewReport = () => {
     navigate('/reports/create')
   }
   const handleOpenReport = (report: Report) => {
-    // TODO: navigate to edit existing report
-    navigate('/reports/create')
-    console.log(`Open report: ${report.id}`)
+    // Only navigate with reportId for drafts
+    if (report.status === 'Draft') {
+      navigate(`/reports/create?reportId=${report.reportId}`)
+    } else {
+      // For submitted/approved reports, just navigate to view mode (to be implemented)
+      navigate('/reports/create')
+    }
   }
   const handleDownloadReport = (report: Report) => {
-    // TODO: API call to request email
-    console.log(`Request email for report: ${report.id}`)
-    setInfoDialog({
-      isOpen: true,
-      message: `Report for ${report.month} ${report.year} will be sent to your registered email.`
-    })
+    // Temporary solution: Download PDF from public directory
+    // Format: /reports/YYYY-MM-report.pdf
+    const pdfUrl = `/reports/${report.month}-report.pdf`;
+
+    // Create a temporary link and trigger download
+    const link = document.createElement('a');
+    link.href = pdfUrl;
+    link.download = `Monthly_Report_${report.month}.pdf`;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   return (
@@ -237,18 +256,22 @@ export default function MonthlyReportScreen() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-bold text-gray-900 font-['Poppins']">Previous Reports</h2>
           <div className="w-32">
-            <SearchableSelect
-              value={selectedYear}
-              onChange={(val: string) => setSelectedYear(val)}
-              options={ACADEMIC_YEARS}
-              placeholder="Year"
-            />
+            {isLoadingYears ? (
+              <div className="h-9 bg-gray-100 rounded-lg animate-pulse" />
+            ) : (
+              <SearchableSelect
+                value={selectedYear}
+                onChange={(val: string) => setSelectedYear(val)}
+                options={fiscalYears}
+                placeholder="Year"
+              />
+            )}
           </div>
         </div>
 
         {/* Status filter chips */}
         <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-          {(['all', 'submitted', 'draft', 'pending', 'rejected'] as const).map(tag => {
+          {(['all', 'Submitted', 'Draft', 'Approved', 'Rejected'] as const).map(tag => {
             const count = statusCounts[tag]
             return (
               <button
@@ -260,7 +283,7 @@ export default function MonthlyReportScreen() {
                     : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'
                 }`}
               >
-                {tag[0].toUpperCase() + tag.slice(1)} {count > 0 && `(${count})`}
+                {tag === 'all' ? 'All' : tag} {count > 0 && `(${count})`}
               </button>
             )
           })}
@@ -268,11 +291,18 @@ export default function MonthlyReportScreen() {
 
         {/* Reports List */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          {filteredReports.length === 0 ? (
+          {isLoading ? (
+            <div className="text-center py-16">
+              <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                <FileText size={28} className="text-gray-400 animate-pulse" />
+              </div>
+              <p className="text-gray-500 font-['Poppins'] text-sm font-medium">Loading reports...</p>
+            </div>
+          ) : reports.length === 0 ? (
             <EmptyState label={`No ${statusFilter === 'all' ? '' : statusFilter} reports for ${selectedYear}`} />
           ) : (
             <div className="divide-y divide-gray-100">
-              {filteredReports.map(r => (
+              {reports.map(r => (
                 <ReportRow
                   key={r.id}
                   report={r}

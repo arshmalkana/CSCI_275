@@ -4,6 +4,7 @@ import RegisterScreen from './screens/RegisterScreen'
 import ChangePasswordScreen from './screens/ChangePasswordScreen'
 import ForgetPasswordScreen from './screens/ForgetPasswordScreen'
 import NotificationsScreen from './screens/NotificationsScreen'
+import NotificationSettingsScreen from './screens/NotificationSettingsScreen'
 import HomeScreen from './screens/HomeScreen'
 import ProfileScreen from './screens/ProfileScreen'
 import VaccineDistributionScreen from './screens/VaccineDistributionScreen'
@@ -94,6 +95,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <NotificationsScreen />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications/settings"
+            element={
+              <ProtectedRoute>
+                <NotificationSettingsScreen />
               </ProtectedRoute>
             }
           />

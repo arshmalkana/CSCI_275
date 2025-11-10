@@ -136,11 +136,63 @@ export const api = {
     apiPost('/profile/picture', { pictureUrl }),
 
   // Monthly Reports
+  getFiscalYears: () =>
+    apiGet<string[]>('/reports/fiscal-years'),
+
+  listMonthlyReports: (filters?: { status?: string; year?: string; fiscalYear?: string }) => {
+    const queryParams = new URLSearchParams()
+    if (filters?.status) queryParams.append('status', filters.status)
+    if (filters?.year) queryParams.append('year', filters.year)
+    if (filters?.fiscalYear) queryParams.append('fiscalYear', filters.fiscalYear)
+
+    const queryString = queryParams.toString()
+    return apiGet(`/reports/monthly${queryString ? `?${queryString}` : ''}`)
+  },
+
   submitMonthlyReport: (reportData: unknown) =>
     apiPost('/reports/monthly', reportData),
 
   getMonthlyReport: (month: string) =>
-    apiGet(`/reports/monthly/${month}`)
+    apiGet(`/reports/monthly/${month}`),
+
+  getReportDetails: (reportId: number | string) =>
+    apiGet(`/reports/details/${reportId}`),
+
+  // Notifications
+  getNotifications: (params?: { limit?: number; offset?: number; unreadOnly?: boolean }) => {
+    const queryParams = new URLSearchParams()
+    if (params?.limit) queryParams.append('limit', params.limit.toString())
+    if (params?.offset) queryParams.append('offset', params.offset.toString())
+    if (params?.unreadOnly) queryParams.append('unreadOnly', 'true')
+
+    const queryString = queryParams.toString()
+    return apiGet(`/notifications${queryString ? `?${queryString}` : ''}`)
+  },
+
+  getUnreadCount: () =>
+    apiGet<{ count: number }>('/notifications/unread-count'),
+
+  markNotificationAsRead: (notificationId: number) =>
+    apiRequest(`/notifications/${notificationId}/read`, { method: 'PATCH' }),
+
+  markAllNotificationsAsRead: () =>
+    apiRequest('/notifications/read-all', { method: 'PATCH' }),
+
+  deleteNotification: (notificationId: number) =>
+    apiDelete(`/notifications/${notificationId}`),
+
+  // Push Notifications
+  getVapidPublicKey: () =>
+    apiGet('/push/vapid-public-key'),
+
+  subscribePush: (subscription: unknown) =>
+    apiPost('/push/subscribe', { subscription }),
+
+  unsubscribePush: (endpoint: string) =>
+    apiPost('/push/unsubscribe', { endpoint }),
+
+  sendTestPush: () =>
+    apiPost('/push/test', {})
 }
 
 export default api
