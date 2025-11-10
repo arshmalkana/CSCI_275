@@ -84,7 +84,7 @@ export default function HomeScreen() {
       const data = await api.getUnreadCount() as any
       return data
     },
-    staleTime: 30 * 1000, // 30 seconds - refresh more frequently
+    staleTime: 0, // Always treat as stale, refetch immediately when invalidated
     refetchInterval: 60 * 1000, // Auto-refetch every minute
     retry: 1,
   })

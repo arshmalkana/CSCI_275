@@ -153,46 +153,7 @@ export async function getReport(request, reply) {
   }
 }
 
-/**
- * GET /reports/details/:reportId
- * Get full monthly report details by ID with all sub-details
- */
-export async function getReportDetails(request, reply) {
-  try {
-    const { reportId } = request.params
-
-    const reportIdNum = parseInt(reportId)
-    if (isNaN(reportIdNum)) {
-      return reply.code(400).send({
-        success: false,
-        message: 'Invalid report ID'
-      })
-    }
-
-    const report = await reportsService.getMonthlyReportDetails(reportIdNum)
-
-    console.log('[DEBUG] Report details:', JSON.stringify(report, null, 2))
-
-    if (!report) {
-      return reply.code(404).send({
-        success: false,
-        message: 'Report not found'
-      })
-    }
-
-    const response = {
-      success: true,
-      data: report
-    }
-
-    console.log('[DEBUG] Response:', JSON.stringify(response, null, 2))
-
-    return reply.send(response)
-  } catch (error) {
-    request.log.error('Get report details error:', error)
-    return reply.code(500).send({
-      success: false,
-      message: 'Failed to retrieve report details'
-    })
-  }
-}
+// NOTE: getReportDetails function has been REMOVED for security reasons.
+// The /details/:reportId endpoint exposed sequential numeric IDs which can be enumerated.
+// Use getReport (GET /monthly/:month) instead, which uses natural keys (month + instituteId).
+// This is more secure and prevents information leakage about other institutes' reports.

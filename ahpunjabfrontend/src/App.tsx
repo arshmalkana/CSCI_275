@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import LoginScreen from './screens/LoginScreen'
 import RegisterScreen from './screens/RegisterScreen'
 import ChangePasswordScreen from './screens/ChangePasswordScreen'
@@ -15,6 +16,7 @@ import MonthlyReportScreen from './screens/MonthlyReportScreen'
 import CreateReportScreen from './screens/CreateReportScreen'
 import AllScreensScreen from './screens/AllScreensScreen'
 import authService from './services/authService'
+import { initializePushNotifications } from './utils/pushNotifications'
 
 // Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -39,6 +41,14 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  // Initialize push notifications on app load
+  useEffect(() => {
+    // Only initialize if user is authenticated
+    if (authService.isAuthenticated()) {
+      initializePushNotifications()
+    }
+  }, [])
+
   return (
     <BrowserRouter>
       <div className="h-full w-full overflow-hidden bg-gray-100 font-sans">

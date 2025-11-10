@@ -148,7 +148,21 @@ export default function MonthlyReportScreen() {
 
   // side menu & notifications to match HomeScreen header
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false)
-  const [notifications] = useState(3)
+
+  // Fetch unread notification count
+  const { data: unreadCountData } = useQuery<{ count: number }>({
+    queryKey: ['unreadNotificationCount'],
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = await api.getUnreadCount() as any
+      return data
+    },
+    staleTime: 0, // Always treat as stale, refetch immediately when invalidated
+    refetchInterval: 60 * 1000, // Auto-refetch every minute
+    retry: 1,
+  })
+
+  const notifications = unreadCountData?.count || 0
 
   // filters & selection
   const [statusFilter, setStatusFilter] = useState<'all' | 'Submitted' | 'Draft' | 'Rejected' | 'Approved'>('all')
@@ -198,9 +212,9 @@ export default function MonthlyReportScreen() {
     navigate('/reports/create')
   }
   const handleOpenReport = (report: Report) => {
-    // Only navigate with reportId for drafts
+    // Only navigate with month for drafts (more secure than reportId)
     if (report.status === 'Draft') {
-      navigate(`/reports/create?reportId=${report.reportId}`)
+      navigate(`/reports/create?month=${report.month}`)
     } else {
       // For submitted/approved reports, just navigate to view mode (to be implemented)
       navigate('/reports/create')

@@ -45,8 +45,8 @@ export default async function reportsRoutes(fastify) {
   })
   // POST /reports/monthly - Submit or save draft monthly report
   fastify.post('/monthly', {
-    // TEMPORARILY DISABLED FOR TESTING - TO RE-ENABLE: Uncomment the line below
-    // preHandler: authenticate, // Requires authentication
+    
+    preHandler: authenticate, // Requires authentication
     schema: {
       description: 'Submit or save draft monthly report',
       tags: ['Reports'],
@@ -331,8 +331,8 @@ export default async function reportsRoutes(fastify) {
 
   // GET /reports/fiscal-years - Get available fiscal years
   fastify.get('/fiscal-years', {
-    // TEMPORARILY DISABLED FOR TESTING - TO RE-ENABLE: Uncomment the line below
-    // preHandler: authenticate,
+    
+    preHandler: authenticate,
     schema: {
       description: 'Get available fiscal years based on reports',
       tags: ['Reports'],
@@ -355,8 +355,8 @@ export default async function reportsRoutes(fastify) {
 
   // GET /reports/monthly - List all monthly reports with filters
   fastify.get('/monthly', {
-    // TEMPORARILY DISABLED FOR TESTING - TO RE-ENABLE: Uncomment the line below
-    // preHandler: authenticate,
+    
+    preHandler: authenticate,
     schema: {
       description: 'List all monthly reports for the institute with optional filters',
       tags: ['Reports'],
@@ -411,8 +411,8 @@ export default async function reportsRoutes(fastify) {
 
   // GET /reports/monthly/:month - Get monthly report for specific month
   fastify.get('/monthly/:month', {
-    // TEMPORARILY DISABLED FOR TESTING - TO RE-ENABLE: Uncomment the line below
-    // preHandler: authenticate,
+    
+    preHandler: authenticate,
     schema: {
       description: 'Get monthly report for a specific month',
       tags: ['Reports'],
@@ -447,41 +447,7 @@ export default async function reportsRoutes(fastify) {
     }
   }, reportsController.getReport)
 
-  // GET /reports/details/:reportId - Get full report details by ID
-  fastify.get('/details/:reportId', {
-    // TEMPORARILY DISABLED FOR TESTING - TO RE-ENABLE: Uncomment the line below
-    // preHandler: authenticate,
-    schema: {
-      description: 'Get full monthly report details by ID with all sub-details (OPD, certificates, vaccinations, AI, etc.)',
-      tags: ['Reports'],
-      params: {
-        type: 'object',
-        required: ['reportId'],
-        properties: {
-          reportId: { type: 'string', description: 'Report ID' }
-        }
-      },
-      response: {
-        200: {
-          description: 'Report details retrieved successfully',
-          type: 'object',
-          properties: {
-            success: { type: 'boolean' },
-            data: {
-              type: 'object',
-              additionalProperties: true
-            }
-          }
-        },
-        404: {
-          description: 'Report not found',
-          type: 'object',
-          properties: {
-            success: { type: 'boolean' },
-            message: { type: 'string' }
-          }
-        }
-      }
-    }
-  }, reportsController.getReportDetails)
+  // NOTE: The /details/:reportId endpoint has been REMOVED for security reasons.
+  // Use GET /monthly/:month instead, which uses natural keys and is more secure.
+  // Numeric IDs are sequential and can be enumerated, exposing other institutes' data.
 }

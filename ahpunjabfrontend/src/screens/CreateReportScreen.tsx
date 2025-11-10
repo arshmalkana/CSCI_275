@@ -167,14 +167,14 @@ const CreateReportScreen = () => {
   // Check for draft - either from URL param or existing draft for selected month
   useEffect(() => {
     const checkForDraft = async () => {
-      const reportIdParam = searchParams.get('reportId');
+      const monthParam = searchParams.get('month');
 
-      if (reportIdParam && !isLoadingDraft && !draftData) {
-        // Load draft from backend using reportId
+      if (monthParam && !isLoadingDraft && !draftData) {
+        // Load draft from backend using month
         try {
           setIsLoadingDraft(true);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const response = await api.getReportDetails(reportIdParam) as any;
+          const response = await api.getMonthlyReport(monthParam) as any;
           // Note: apiRequest already extracts the data field, so response is the data object directly
           if (response && response.status === 'Draft') {
             setDraftData(response);
@@ -191,7 +191,7 @@ const CreateReportScreen = () => {
         } finally {
           setIsLoadingDraft(false);
         }
-      } else if (!reportIdParam && !showDraftDialog) {
+      } else if (!monthParam && !showDraftDialog) {
         // Check if there's a draft for the selected month (from localStorage or backend)
         const reportingMonth = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
 
@@ -915,8 +915,8 @@ const CreateReportScreen = () => {
     }
 
     // Clear the URL parameter to prevent re-loading
-    const reportIdParam = searchParams.get('reportId');
-    if (reportIdParam) {
+    const monthParam = searchParams.get('month');
+    if (monthParam) {
       navigate('/reports/create', { replace: true });
     }
 
@@ -927,8 +927,8 @@ const CreateReportScreen = () => {
   const handleDiscardDraft = () => {
 
     // Clear the URL parameter
-    const reportIdParam = searchParams.get('reportId');
-    if (reportIdParam) {
+    const monthParam = searchParams.get('month');
+    if (monthParam) {
       navigate('/reports/create', { replace: true });
     }
 

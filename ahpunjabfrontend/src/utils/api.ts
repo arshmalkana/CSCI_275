@@ -26,10 +26,15 @@ async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  }
+  // Only set Content-Type header if there's a body
+  const headers: HeadersInit = options.body
+    ? {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      }
+    : {
+        ...options.headers,
+      }
 
   const url = `${API_BASE_URL}${endpoint}`
 
@@ -155,8 +160,8 @@ export const api = {
   getMonthlyReport: (month: string) =>
     apiGet(`/reports/monthly/${month}`),
 
-  getReportDetails: (reportId: number | string) =>
-    apiGet(`/reports/details/${reportId}`),
+  // NOTE: getReportDetails removed for security - use getMonthlyReport instead
+  // Numeric IDs are sequential and expose internal database structure
 
   // Notifications
   getNotifications: (params?: { limit?: number; offset?: number; unreadOnly?: boolean }) => {

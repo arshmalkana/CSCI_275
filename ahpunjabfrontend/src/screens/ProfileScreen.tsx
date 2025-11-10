@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FloatingLabelField } from '../components/FloatingLabelField';
 import { PrimaryButton } from '../components/Button';
 import { validateEmail, validatePhone } from '../utils/validation';
-import { Camera, User, Mail, Phone, Lock, Fingerprint, Shield, ArrowLeft, Loader } from 'lucide-react';
+import { Camera, User, Mail, Phone, Lock, Fingerprint, Shield, ArrowLeft, Loader, Bell } from 'lucide-react';
 import { MapPicker } from '../components/MapPicker';
 import api from '../utils/api';
 import ImageCropModal from '../components/ImageCropModal';
@@ -273,6 +273,10 @@ export default function ProfileScreen() {
     navigate('/active-sessions');
   };
 
+  const handleNotificationSettings = () => {
+    navigate('/notifications/settings');
+  };
+
   return (
     <div className="ProfileScreen w-full h-screen max-w-md mx-auto bg-white flex flex-col overflow-hidden">
 
@@ -443,6 +447,29 @@ export default function ProfileScreen() {
                   <div className="text-left">
                     <p className="text-sm font-medium text-gray-900 font-['Poppins']">Active Sessions</p>
                     <p className="text-xs text-gray-500 font-['Poppins']">Manage logged-in devices</p>
+                  </div>
+                </div>
+                <ArrowLeft size={20} className="text-gray-400 rotate-180" />
+              </button>
+            </div>
+          </div>
+
+          {/* App Settings Card */}
+          <div className="bg-white rounded-xl p-6 shadow-sm">
+            <h2 className="text-base font-semibold text-gray-900 font-['Poppins'] mb-4">App Settings</h2>
+
+            <div className="space-y-3">
+              <button
+                onClick={handleNotificationSettings}
+                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors duration-200"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                    <Bell size={20} className="text-purple-600" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-gray-900 font-['Poppins']">Push Notifications</p>
+                    <p className="text-xs text-gray-500 font-['Poppins']">Manage notification preferences</p>
                   </div>
                 </div>
                 <ArrowLeft size={20} className="text-gray-400 rotate-180" />

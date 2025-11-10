@@ -92,7 +92,7 @@ export async function subscribeToPushNotifications(): Promise<boolean> {
     })
 
     // Send subscription to backend
-    // await api.subscribe Push(subscription.toJSON())
+    await api.subscribePush(subscription.toJSON())
 
     console.log('Successfully subscribed to push notifications')
     return true

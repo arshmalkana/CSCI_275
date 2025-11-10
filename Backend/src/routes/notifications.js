@@ -1,11 +1,20 @@
 import * as notificationsController from '../controllers/notificationsController.js'
+import { authenticate } from '../middleware/authenticate.js'
 
 export default async function notificationsRoutes(fastify, options) {
-  // Get user's notifications
+  // Get user's notifications (requires authentication)
   fastify.get('/', {
+    preHandler: authenticate,
+    config: {
+      rateLimit: {
+        max: 30,
+        timeWindow: '1 minute'
+      }
+    },
     schema: {
-      description: 'Get user notifications with pagination',
+      description: 'Get user notifications with pagination (requires JWT)',
       tags: ['notifications'],
+      security: [{ bearerAuth: [] }],
       querystring: {
         type: 'object',
         properties: {
@@ -35,11 +44,19 @@ export default async function notificationsRoutes(fastify, options) {
     handler: notificationsController.getNotifications
   })
 
-  // Get unread notification count
+  // Get unread notification count (requires authentication)
   fastify.get('/unread-count', {
+    preHandler: authenticate,
+    config: {
+      rateLimit: {
+        max: 60,
+        timeWindow: '1 minute'
+      }
+    },
     schema: {
-      description: 'Get count of unread notifications',
+      description: 'Get count of unread notifications (requires JWT)',
       tags: ['notifications'],
+      security: [{ bearerAuth: [] }],
       response: {
         200: {
           description: 'Unread count retrieved successfully',
@@ -59,11 +76,19 @@ export default async function notificationsRoutes(fastify, options) {
     handler: notificationsController.getUnreadCount
   })
 
-  // Get notification by ID
+  // Get notification by ID (requires authentication)
   fastify.get('/:id', {
+    preHandler: authenticate,
+    config: {
+      rateLimit: {
+        max: 30,
+        timeWindow: '1 minute'
+      }
+    },
     schema: {
-      description: 'Get notification details by ID',
+      description: 'Get notification details by ID (requires JWT)',
       tags: ['notifications'],
+      security: [{ bearerAuth: [] }],
       params: {
         type: 'object',
         required: ['id'],
@@ -88,11 +113,19 @@ export default async function notificationsRoutes(fastify, options) {
     handler: notificationsController.getNotification
   })
 
-  // Mark notification as read
+  // Mark notification as read (requires authentication)
   fastify.patch('/:id/read', {
+    preHandler: authenticate,
+    config: {
+      rateLimit: {
+        max: 30,
+        timeWindow: '1 minute'
+      }
+    },
     schema: {
-      description: 'Mark notification as read',
+      description: 'Mark notification as read (requires JWT)',
       tags: ['notifications'],
+      security: [{ bearerAuth: [] }],
       params: {
         type: 'object',
         required: ['id'],
@@ -114,11 +147,19 @@ export default async function notificationsRoutes(fastify, options) {
     handler: notificationsController.markAsRead
   })
 
-  // Mark all notifications as read
+  // Mark all notifications as read (requires authentication)
   fastify.patch('/read-all', {
+    preHandler: authenticate,
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 minute'
+      }
+    },
     schema: {
-      description: 'Mark all notifications as read',
+      description: 'Mark all notifications as read (requires JWT)',
       tags: ['notifications'],
+      security: [{ bearerAuth: [] }],
       response: {
         200: {
           description: 'All notifications marked as read',
@@ -139,11 +180,19 @@ export default async function notificationsRoutes(fastify, options) {
     handler: notificationsController.markAllAsRead
   })
 
-  // Delete notification
+  // Delete notification (requires authentication)
   fastify.delete('/:id', {
+    preHandler: authenticate,
+    config: {
+      rateLimit: {
+        max: 30,
+        timeWindow: '1 minute'
+      }
+    },
     schema: {
-      description: 'Delete a notification',
+      description: 'Delete a notification (requires JWT)',
       tags: ['notifications'],
+      security: [{ bearerAuth: [] }],
       params: {
         type: 'object',
         required: ['id'],
