@@ -12,6 +12,7 @@ import ManagePasskeysScreen from './screens/ManagePasskeysScreen'
 import ActiveSessionsScreen from './screens/ActiveSessionsScreen'
 import AllScreensScreen from './screens/AllScreensScreen'
 import authService from './services/authService'
+import AttendanceReport from './screens/AttendanceReportScreen'
 
 // Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -126,6 +127,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <ActiveSessionsScreen />
+              </ProtectedRoute>
+            }
+          />
+           <Route
+            path="/attendance-report"
+            element={
+              <ProtectedRoute>
+                <AttendanceReport />
               </ProtectedRoute>
             }
           />

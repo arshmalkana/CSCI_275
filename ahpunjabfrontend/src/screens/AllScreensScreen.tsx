@@ -15,6 +15,7 @@ export default function AllScreensScreen() {
     { name: 'Vaccine Distribution', path: '/vaccine-distribution' },
     { name: 'Setup Passkey', path: '/setup-passkey' },
     { name: 'Manage Passkeys', path: '/manage-passkeys' },
+    { name: 'Attendance Report', path: '/attendance-report' },
   ]
 
   return (
