@@ -20,8 +20,11 @@ services:
       - ./init/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
       # 02: Complete Punjab geography (21 districts, 84 tehsils, 12,354 villages)
       - ./init/02-geo-seed.sql:/docker-entrypoint-initdb.d/02-geo-seed.sql
+      - ./init/02-seed-semen-types.sql:/docker-entrypoint-initdb.d/02-seed-semen-types.sql
       # 03: Test data with "test" user (username: test, password: test)
       - ./init/03-test-seed.sql:/docker-entrypoint-initdb.d/03-test-seed.sql
+      - ./init/04-seed-monthly-reports.sql:/docker-entrypoint-initdb.d/04-seed-monthly-reports.sql
+      - ./init/05-seed-notifications.sql:/docker-entrypoint-initdb.d/05-seed-notifications.sql
 
       # ====================================================================
       # DATA PERSISTENCE CONTROL
