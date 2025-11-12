@@ -10,14 +10,18 @@
     "preview": "vite preview --host"
   },
   "dependencies": {
+    "@simplewebauthn/browser": "^13.2.2",
     "@tailwindcss/vite": "^4.1.13",
+    "@tanstack/react-query": "^5.90.5",
     "@types/leaflet": "^1.9.20",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.544.0",
     "react": "^19.1.1",
     "react-datepicker": "^8.7.0",
     "react-dom": "^19.1.1",
+    "react-easy-crop": "^5.5.3",
     "react-leaflet": "^5.0.0",
+    "react-router-dom": "^7.9.4",
     "tailwindcss": "^4.1.13"
   },
   "devDependencies": {

@@ -1,0 +1,53 @@
+@startuml Passkey Registration
+title WebAuthn Passkey Registration (FIDO2)
+
+actor User
+participant Browser
+participant Frontend
+participant Backend
+participant Database
+participant "Device\nAuthenticator" as Device
+
+== Registration Start ==
+User -> Browser: Navigate to Profile\nClick "Add Passkey"
+Browser -> Frontend: Load Manage Passkeys
+Frontend -> Backend: POST /v1/auth/webauthn/register/options\nAuthorization: Bearer {accessToken}
+
+Backend -> Database: SELECT credential_id\nFROM webauthn_credentials\nWHERE staff_id = $1
+note right: Get existing credentials\nto exclude from registration
+
+Database --> Backend: existing_credentials[]
+
+Backend -> Backend: Generate registration options:\n- RP_ID: 'localhost'\n- RP_ORIGIN: 'http://localhost:3001'\n- userID: Buffer(staff_id)\n- timeout: 5 minutes\n- authenticatorSelection:\n  • residentKey: 'preferred'\n  • userVerification: 'preferred'\n  • authenticatorAttachment: 'platform'
+
+Backend -> Backend: Store challenge in memory\nchallengeStore.set(staff_id,\n{challenge, timestamp})\nExpires in 5 minutes
+
+Backend --> Frontend: {publicKey: options}
+
+Frontend -> Browser: navigator.credentials.create({\n  publicKey: options\n})
+Browser -> Device: Show biometric prompt\n(Face ID, Touch ID, Windows Hello)
+
+alt User Authenticates
+    Device --> Browser: Attestation response\n(publicKey, clientData, attestation)
+    Browser --> Frontend: Registration response
+
+    Frontend -> Backend: POST /v1/auth/webauthn/register/verify\n{username, response, deviceName}
+
+    Backend -> Backend: Retrieve challenge\nfrom memory
+
+    Backend -> Backend: Verify using @simplewebauthn:\n- Challenge matches\n- Origin matches\n- RP_ID matches\n- Signature valid
+
+    Backend -> Backend: Delete used challenge\n(prevent replay)
+
+    Backend -> Database: INSERT INTO webauthn_credentials\n(staff_id, credential_id,\npublic_key, counter,\ndevice_name, transports,\ncreated_at)
+
+    Backend --> Frontend: 200 OK {success, credential}
+    Frontend -> Browser: Show success message\nReload passkey list
+
+else User Cancels
+    Device --> Browser: NotAllowedError
+    Browser --> Frontend: User cancelled
+    Frontend -> Browser: Show "Cancelled" message
+end
+
+@enduml

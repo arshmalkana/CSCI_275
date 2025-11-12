@@ -1,0 +1,182 @@
+
+@startuml Overall Authentication Architecture
+title Complete Authentication System Architecture
+
+!define RECTANGLE class
+
+package "Frontend (React PWA)" {
+  [LoginScreen] as Login
+  [ManagePasskeysScreen] as Passkeys
+  [ActiveSessionsScreen] as Sessions
+  [ProfileScreen] as Profile
+
+  package "Services" {
+    [authService] as AuthSvc
+    [webauthnService] as WebAuthnSvc
+    [apiClient] as API
+  }
+
+  package "Storage" {
+    [Memory\naccessToken] as MemToken
+    [localStorage\nuser data] as LocalUser
+    [sessionStorage] as Session
+  }
+}
+
+package "Backend (Fastify)" {
+  package "Routes" {
+    [/auth/*] as AuthRoutes
+    [/auth/webauthn/*] as WebAuthnRoutes
+    [/protected/*] as ProtectedRoutes
+  }
+
+  package "Middlewares" {
+    [authenticate] as AuthMW
+    [CORS] as CORS
+    [Cookie Parser] as CookieParser
+  }
+
+  package "Controllers" {
+    [authController] as AuthCtrl
+    [webauthnController] as WebAuthnCtrl
+  }
+
+  package "Services" {
+    [authService] as BAuthSvc
+    [webauthnService] as BWebAuthnSvc
+    [refreshTokenService] as TokenSvc
+  }
+
+  package "Utils" {
+    [jwt.js] as JWT
+    [@simplewebauthn/server] as WebAuthnLib
+  }
+}
+
+package "Database (PostgreSQL)" {
+  database "Tables" {
+    [staff] as StaffTable
+    [webauthn_credentials] as CredsTable
+    [refresh_tokens] as TokenTable
+  }
+
+  database "Functions" {
+    [cleanup_expired_refresh_tokens()] as CleanupFn
+  }
+
+  database "Jobs" {
+    [pg_cron\nDaily 2 AM] as Cron
+  }
+}
+
+package "External Services" {
+  [Browser WebAuthn API] as WebAuthnAPI
+  [Device Authenticator\n(Face ID, Touch ID, etc)] as Device
+}
+
+' Frontend connections
+Login --> AuthSvc
+Login --> WebAuthnSvc
+Passkeys --> WebAuthnSvc
+Sessions --> AuthSvc
+Profile --> AuthSvc
+
+AuthSvc --> API
+WebAuthnSvc --> API
+API --> MemToken : read/write
+AuthSvc --> LocalUser : read/write
+
+' API to Backend
+API --> AuthRoutes : HTTP
+API --> WebAuthnRoutes : HTTP
+API --> ProtectedRoutes : HTTP
+
+' Backend routes
+AuthRoutes --> AuthMW : protected routes
+WebAuthnRoutes --> AuthMW : some routes
+ProtectedRoutes --> AuthMW : all routes
+
+AuthRoutes --> CookieParser
+AuthRoutes --> CORS
+
+AuthRoutes --> AuthCtrl
+WebAuthnRoutes --> WebAuthnCtrl
+
+' Controllers to Services
+AuthCtrl --> BAuthSvc
+AuthCtrl --> TokenSvc
+WebAuthnCtrl --> BWebAuthnSvc
+WebAuthnCtrl --> TokenSvc
+
+' Services to Utils
+BAuthSvc --> JWT
+BWebAuthnSvc --> WebAuthnLib
+TokenSvc --> JWT
+
+' Services to Database
+BAuthSvc --> StaffTable
+BWebAuthnSvc --> CredsTable
+BWebAuthnSvc --> StaffTable
+TokenSvc --> TokenTable
+
+' Database maintenance
+Cron --> CleanupFn
+CleanupFn --> TokenTable
+
+' Frontend to External
+WebAuthnSvc --> WebAuthnAPI
+WebAuthnAPI --> Device
+
+note right of MemToken
+Access Token stored in memory only
+- Never in localStorage
+- Cleared on page refresh
+- Short-lived (15 min)
+end note
+
+note right of LocalUser
+User data in localStorage
+- Non-sensitive info only
+- For UI personalization
+- Persists across refreshes
+end note
+
+note right of AuthMW
+Middleware validates:
+1. Extract Bearer token from header
+2. Verify JWT signature
+3. Check expiration
+4. Add user to request object
+5. Issue new rolling token
+6. Send via X-New-Token header
+end note
+
+note right of TokenTable
+Refresh token security:
+- Stored as SHA-256 hash
+- Token rotation on every refresh
+- Old token revoked immediately
+- Tracks device & IP
+- Auto cleanup of expired
+end note
+
+note right of WebAuthnLib
+FIDO2 WebAuthn implementation:
+- Challenge generation
+- Response verification
+- Counter validation (replay attack prevention)
+- Attestation support
+- RP_ID: localhost (dev)
+- RP_ORIGIN: http://localhost:3001
+end note
+
+note right of Device
+Platform Authenticators:
+- Touch ID (iOS/Mac)
+- Face ID (iOS/Mac)
+- Windows Hello (Windows)
+- Fingerprint (Android)
+- Hardware keys (YubiKey)
+end note
+
+@enduml

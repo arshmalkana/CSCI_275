@@ -12,15 +12,27 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      # Mount schema and seed files (numbered for execution order)
+      # ====================================================================
+      # AUTOMATIC MIGRATIONS (run on every docker-compose up)
+      # Migrations run automatically when volume is NOT persisted
+      # ====================================================================
+      # 01: Complete schema with all tables (includes WebAuthn, auth, etc.)
       - ./init/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-      - ./init/02-seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
-      - ./init/03-villages-full.sql:/docker-entrypoint-initdb.d/03-villages-full.sql
-      - ./init/04-test-users.sql:/docker-entrypoint-initdb.d/04-test-users.sql
-      # Comment out for dev to reseed every time, uncomment for production
+      # 02: Complete Punjab geography (21 districts, 84 tehsils, 12,354 villages)
+      - ./init/02-geo-seed.sql:/docker-entrypoint-initdb.d/02-geo-seed.sql
+      # 03: Test data with "test" user (username: test, password: test)
+      - ./init/03-test-seed.sql:/docker-entrypoint-initdb.d/03-test-seed.sql
+
+      # ====================================================================
+      # DATA PERSISTENCE CONTROL
+      # ====================================================================
+      # COMMENTED OUT: Data is NOT persisted - migrations run on every startup
+      # This is ideal for development to always have fresh, consistent data
       # - postgres_data:/var/lib/postgresql/data
-      # Persist data even when container stops
-      - postgres_data:/var/lib/postgresql/data
+
+      # UNCOMMENT FOR PRODUCTION: Data persists between restarts
+      # Migrations only run once when volume is first created
+      # postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ahpunjab -d ahpunjab_db"]
       interval: 10s

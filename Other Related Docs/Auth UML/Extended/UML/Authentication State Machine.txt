@@ -1,0 +1,65 @@
+
+@startuml Authentication State Machine
+title Authentication State Machine & Token Lifecycle
+
+[*] --> Unauthenticated
+
+Unauthenticated --> Authenticating : User submits login\n(password or passkey)
+Authenticating --> Authenticated : Success\n- Store access token (memory)\n- Store refresh token (HttpOnly cookie)\n- Store user data (localStorage)
+Authenticating --> Unauthenticated : Failed\n- Show error\n- Clear any stored data
+
+state Authenticated {
+  [*] --> Active
+
+  Active --> RefreshingToken : Access token expired\n(< 15 min old)
+  Active --> Active : API request\n- Send access token\n- Receive new access token\n- Update token in memory
+
+  RefreshingToken --> Active : Refresh success\n- Old refresh token revoked\n- New tokens issued\n- Retry original request
+  RefreshingToken --> Unauthenticated : Refresh failed\n- Refresh token expired\n- Refresh token revoked\n- Clear all data\n- Redirect to login
+
+  Active --> LoggingOut : User clicks logout
+  LoggingOut --> Unauthenticated : Logout complete\n- Revoke refresh token\n- Clear cookie\n- Clear memory & storage
+
+  Active --> LoggingOutAll : User clicks\n"Logout all devices"
+  LoggingOutAll --> Active : Success\n- Revoke other tokens\n- Keep current session\n- Show confirmation
+}
+
+Authenticated --> Unauthenticated : Session expired\n(7 or 90 days)
+Authenticated --> Unauthenticated : Manual token revocation\n(security event)
+
+note right of Authenticated
+Token Lifecycle:
+1. Access Token (15 min)
+   - Stored in memory only
+   - Rolling refresh on each request
+   - Cleared on page refresh → auto-refresh
+
+2. Refresh Token (7d or 90d)
+   - Stored in HttpOnly cookie
+   - Rotated on every refresh
+   - Hash stored in database
+   - Revoked immediately after use
+
+3. User Data
+   - Stored in localStorage
+   - Non-sensitive only
+   - Used for UI state
+   - Cleared on logout
+end note
+
+note right of RefreshingToken
+Refresh Token Rotation:
+1. Send old refresh token
+2. Verify token is valid & not revoked
+3. Generate new access + refresh tokens
+4. Revoke old refresh token in DB
+5. Store new refresh token hash
+6. Return new tokens
+7. Update cookies
+
+Security: Old token is single-use only
+If old token used again → possible
+token theft → revoke all user tokens
+end note
+
+@enduml

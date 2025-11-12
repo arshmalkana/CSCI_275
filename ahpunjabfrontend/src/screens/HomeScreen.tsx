@@ -1,16 +1,95 @@
 import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import SideMenu from '../components/SideMenu'
+import { MainHeader } from '../components/Headers'
 import { Card, CardTitle, StatCard, StatusBadge } from '../components/Card'
-import { Menu, Bell, User, ChevronDown, ChevronRight, BellRing, Phone, Mail } from 'lucide-react'
+import { ChevronDown, ChevronRight, BellRing, Phone, Mail, CloudAlert } from 'lucide-react'
 import { getStorageItem, setStorageItem } from '../utils/storage'
+import api from '../utils/api'
+import { SuccessDialog } from '../components/DialogBox'
+import { LoadingOverlay } from '../components/LoadingOverlay'
+
+// Types for API response
+interface VaccineData {
+  name: string
+  monthly: { completed: number }
+  annual: { completed: number; target: number }
+}
+
+interface HomeData {
+  name: string
+  welcomeMessage: string
+  location: { lat: string; lng: string }
+  stats: {
+    opd: { monthly: { completed: number }; annual: { completed: number; target: number } }
+    aiCow: { monthly: { completed: number }; annual: { completed: number; target: number } }
+    aiBuf: { monthly: { completed: number }; annual: { completed: number; target: number } }
+  }
+  vaccines: Record<string, VaccineData>
+  staff: Array<{
+    name: string
+    role: string
+    phone: string
+    email: string
+    whatsapp: string
+  }>
+  villages: Array<{
+    name: string
+    population: number
+    animalPopulation: {
+      equine: number
+      buffaloes: number
+      cows: number
+      pigs: number
+      goat: number
+      sheep: number
+      poultryLayers: number
+      poultryBroilers: number
+    }
+  }>
+  reportingStatus: string
+  attachedInstitutes: Array<{
+    name: string
+    reportStatus: string
+    statusType: string
+  }>
+}
 
 export default function HomeScreen() {
-  const [notifications] = useState(5) // Temproray notification count, use api to update
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false)
   const [selectedVaccine, setSelectedVaccine] = useState(() => {
     // Load from storage or default to 'FMD'
     return getStorageItem('selectedVaccine') || 'FMD'
   })
+
+  // Dialog state
+  const [successDialog, setSuccessDialog] = useState({ isOpen: false, message: '' })
+
+  // Fetch home data with React Query (automatic caching and refetching)
+  const { data: instituteData, isLoading, error } = useQuery<HomeData>({
+    queryKey: ['homeData'],
+    queryFn: async () => {
+      const data = await api.getHomeData()
+      return data as HomeData
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+  })
+
+  // Fetch unread notification count
+  const { data: unreadCountData } = useQuery<{ count: number }>({
+    queryKey: ['unreadNotificationCount'],
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = await api.getUnreadCount() as any
+      return data
+    },
+    staleTime: 0, // Always treat as stale, refetch immediately when invalidated
+    refetchInterval: 60 * 1000, // Auto-refetch every minute
+    retry: 1,
+  })
+
+  const notifications = unreadCountData?.count || 0
 
   // Save vaccine selection to storage
   useEffect(() => {
@@ -32,158 +111,50 @@ export default function HomeScreen() {
 
   const handleSendReminder = (instituteName: string) => {
     // TODO: Implement API call to send reminder
-    alert(`Reminder sent to ${instituteName}`)
+    setSuccessDialog({
+      isOpen: true,
+      message: `Reminder sent to ${instituteName}`
+    })
   }
 
-  // Vaccine types with their targets and completed counts
-  const vaccineData = {
-    'FMD': {
-      name: 'FMD',
-      monthly: { completed: 350},
-      annual: { completed: 3850, target: 6000 }
-    },
-    'HS': {
-      name: 'HS',
-      monthly: { completed: 280 },
-      annual: { completed: 3120, target: 3600 }
-    },
-    'BQ': {
-      name: 'Black Quarter',
-      monthly: { completed: 150 },
-      annual: { completed: 1650, target: 2400 }
-    },
-    'BRUC': {
-      name: 'Brucellosis',
-      monthly: { completed: 120 },
-      annual: { completed: 1320, target: 1800 }
-    },
-    'THEI': {
-      name: 'Theilaria',
-      monthly: { completed: 95},
-      annual: { completed: 1045, target: 1200 }
-    },
-    'RABIES': {
-      name: 'Rabies',
-      monthly: { completed: 70},
-      annual: { completed: 770, target: 960 }
-    },
-    'ETV': {
-      name: 'Entero Toximia',
-      monthly: { completed: 100},
-      annual: { completed: 1100, target: 1440 }
-    }
-  }
-
-  // Sample data for the dashboard
-  const instituteData = {
-    name: "Veterinary Dispensary Kotra Kalan",
-    welcomeMessage: "Welcome Dr. Rajdeep Sandhu",
-    location: {
-      lat: "30.4681° N",
-      lng: "72.6503° E"
-    },
-    stats: {
-      opd: {
-        monthly: { completed: 45 },
-        annual: { completed: 495, target: 1200 }
+  // Vaccine data from API with fallback
+  const vaccineData = JSON.stringify(instituteData?.vaccines) == '{}' ? {
+      'FMD': {
+        name: 'FMD',
+        monthly: { completed: 350},
+        annual: { completed: 3850, target: 6000 }
       },
-      aiCow: {
-        monthly: { completed: 35},
-        annual: { completed: 385, target: 600 }
+      'HS': {
+        name: 'HS',
+        monthly: { completed: 280 },
+        annual: { completed: 3120, target: 3600 }
       },
-      aiBuf: {
-        monthly: { completed: 25},
-        annual: { completed: 275, target: 360 }
+      'BQ': {
+        name: 'Black Quarter',
+        monthly: { completed: 150 },
+        annual: { completed: 1650, target: 2400 }
+      },
+      'BRUC': {
+        name: 'Brucellosis',
+        monthly: { completed: 120 },
+        annual: { completed: 1320, target: 1800 }
+      },
+      'THEI': {
+        name: 'Theilaria',
+        monthly: { completed: 95},
+        annual: { completed: 1045, target: 1200 }
+      },
+      'RABIES': {
+        name: 'Rabies',
+        monthly: { completed: 70},
+        annual: { completed: 770, target: 960 }
+      },
+      'ETV': {
+        name: 'Entero Toximia',
+        monthly: { completed: 100},
+        annual: { completed: 1100, target: 1440 }
       }
-    },
-    staff: [
-      {
-        name: "Dr. Rajdeep Sandhu",
-        role: "Veterinary Officer",
-        phone: "+91 98345 62107",
-        email: "rajdeep.sandhu@ahpunjab.gov.in",
-        whatsapp: "+919834562107"
-      },
-      {
-        name: "Manpreet Kaur",
-        role: "Assistant",
-        phone: "+91 98720 41356",
-        email: "manpreet.kaur@ahpunjab.gov.in",
-        whatsapp: "+919872041356"
-      },
-      {
-        name: "Arvinder Singh",
-        role: "Lab Technician",
-        phone: "+91 97981 25463",
-        email: "arvinder.singh@ahpunjab.gov.in",
-        whatsapp: "+919798125463"
-      }
-    ],
-    villages: [
-      {
-        name: "Kotra Kalan",
-        population: 3050,
-        animalPopulation: {
-          equine: 28,
-          buffaloes: 295,
-          cows: 540,
-          pigs: 9,
-          goat: 225,
-          sheep: 165,
-          poultryLayers: 1320,
-          poultryBroilers: 710
-        }
-      },
-      {
-        name: "Bhucho Khurd",
-        population: 2740,
-        animalPopulation: {
-          equine: 31,
-          buffaloes: 255,
-          cows: 510,
-          pigs: 7,
-          goat: 205,
-          sheep: 145,
-          poultryLayers: 1180,
-          poultryBroilers: 630
-        }
-      },
-      {
-        name: "Lehra Mohabbat",
-        population: 2080,
-        animalPopulation: {
-          equine: 19,
-          buffaloes: 190,
-          cows: 360,
-          pigs: 6,
-          goat: 150,
-          sheep: 100,
-          poultryLayers: 860,
-          poultryBroilers: 450
-        }
-      },
-      {
-        name: "Ghuman Mandi",
-        population: 2510,
-        animalPopulation: {
-          equine: 33,
-          buffaloes: 245,
-          cows: 470,
-          pigs: 11,
-          goat: 185,
-          sheep: 125,
-          poultryLayers: 1060,
-          poultryBroilers: 560
-        }
-      }
-    ],
-    reportingStatus: "On Time", // Could be "Late", "Pending", or maybe "Dead".
-    attachedInstitutes: [
-      { name: "Veterinary Dispensary Bhucho Khurd", reportStatus: "Submitted", statusType: "success" },
-      { name: "Veterinary Dispensary Lehra", reportStatus: "Late", statusType: "error" },
-      { name: "Veterinary Dispensary Ghuman", reportStatus: "Pending", statusType: "warning" }
-    ]
-  }
+  } : instituteData?.vaccines || {}
 
   // Get color based on category (fixed colors)
   const getCategoryColor = (category: 'opd' | 'aiCow' | 'aiBuf' | 'vaccine'): 'blue' | 'green' | 'orange' | 'yellow' | 'red' => {
@@ -199,40 +170,17 @@ export default function HomeScreen() {
   return (
     <div className="HomeScreen w-full max-w-md mx-auto h-screen flex flex-col bg-white justify-center overflow-hidden">
       {/* Header */}
-      <div className="Header w-full h-20 bg-yellow-500 sticky top-0 z-10">
-        <div className="flex items-center justify-between px-4 h-full">
-          {/* Hamburger Menu */}
-          <button
-            className="w-6 h-6"
-            onClick={() => setIsSideMenuOpen(true)}
-          >
-            <Menu size={24} />
-          </button>
+      <MainHeader
+        onMenuClick={() => setIsSideMenuOpen(true)}
+        notifications={notifications}
+      />
 
-          {/* App Title */}
-          <div className="text-black text-lg font-semibold font-['Poppins']">
-            AH Punjab
-          </div>
-
-          {/* Right Icons */}
-          <div className="flex items-center gap-3">
-            {/* Notification Bell */}
-            <button className="relative">
-              <Bell size={24} />
-              {notifications > 0 && (
-                <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">
-                  {notifications}
-                </div>
-              )}
-            </button>
-
-            {/* Profile Icon */}
-            <button className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-              <User size={16} />
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Loading Overlay */}
+      <LoadingOverlay
+        isLoading={isLoading}
+        message="Loading..."
+        subMessage="Fetching your dashboard data"
+      />
 
       {/* Main Content */}
       <div className="MainContent flex-1 bg-gray-50 overflow-y-auto"
@@ -241,19 +189,37 @@ export default function HomeScreen() {
           overscrollBehavior: 'contain'
         }}
       >
-        <div className="p-4 space-y-4">
+        {!instituteData && !isLoading ? (
+          // Error state when data failed to load
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center px-6">
+              <div className="text-red-600 flex justify-center mb-4"><CloudAlert size={96} /></div>
+              <h2 className="text-xl font-bold text-gray-900 font-['Poppins'] mb-2">Failed to Load Data</h2>
+              <p className="text-gray-600 font-['Poppins'] mb-4">
+                {error instanceof Error ? error.message : 'Unable to fetch homepage data'}
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="bg-red-600 text-white px-6 py-2 rounded-lg font-['Poppins'] hover:bg-yellow-600"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        ) : instituteData ? (
+          <div className="p-4 space-y-4">
 
-          {/* Institute Info Card */}
-          <Card className="InstituteCard">
-            <div className="text-black text-lg font-semibold font-['Poppins'] mb-2">
-              {instituteData.name}
-            </div>
-            <div className="text-black text-sm font-normal font-['Poppins'] mb-3">
-              {instituteData.welcomeMessage}
-            </div>
-            <div className="flex justify-between text-xs text-gray-600 font-['Poppins']">
-              <span>{instituteData.location.lat}</span>
-              <span>{instituteData.location.lng}</span>
+            {/* Institute Info Card */}
+            <Card className="InstituteCard">
+              <div className="text-black text-lg font-semibold font-['Poppins'] mb-2">
+                {instituteData.name}
+              </div>
+              <div className="text-black text-sm font-normal font-['Poppins'] mb-3">
+                {instituteData.welcomeMessage}
+              </div>
+              <div className="flex justify-between text-xs text-gray-600 font-['Poppins']">
+                <span>{instituteData.location.lat}</span>
+                <span>{instituteData.location.lng}</span>
             </div>
           </Card>
 
@@ -300,13 +266,11 @@ export default function HomeScreen() {
                   <span className="text-sm font-medium font-['Poppins']">OPD</span>
                   <span className="text-sm font-bold font-['Poppins']">
                     {statsMode== 'annual' ? instituteData.stats.opd[statsMode].completed + "/" + instituteData.stats.opd[statsMode].target : instituteData.stats.opd[statsMode].completed}
-                    {/* {instituteData.stats.opd[statsMode].completed}/{instituteData.stats.opd[statsMode].target} */}
                   </span>
                 </div>
                 <StatCard
                   label=""
                   value={instituteData.stats.opd[statsMode].completed}
-                  // max={instituteData.stats.opd[statsMode].target}
                   max={statsMode== 'annual' ? instituteData.stats.opd.annual.target : instituteData.stats.opd.annual.target/12}
                   color={getCategoryColor('opd')}
                 />
@@ -318,13 +282,11 @@ export default function HomeScreen() {
                   <span className="text-sm font-medium font-['Poppins']">AI Cow</span>
                   <span className="text-sm font-bold font-['Poppins']">
                     {statsMode== 'annual' ? instituteData.stats.aiCow[statsMode].completed + "/" + instituteData.stats.aiCow[statsMode].target : instituteData.stats.aiCow[statsMode].completed}
-                    {/* {instituteData.stats.aiCow[statsMode].completed}/{instituteData.stats.aiCow[statsMode].target} */}
                   </span>
                 </div>
                 <StatCard
                   label=""
                   value={instituteData.stats.aiCow[statsMode].completed}
-                  // max={instituteData.stats.aiCow[statsMode].target}
                   max={statsMode== 'annual' ? instituteData.stats.aiCow.annual.target : instituteData.stats.aiCow.annual.target/12}
                   color={getCategoryColor('aiCow')}
                 />
@@ -336,13 +298,11 @@ export default function HomeScreen() {
                   <span className="text-sm font-medium font-['Poppins']">AI Buffalo</span>
                   <span className="text-sm font-bold font-['Poppins']">
                     {statsMode== 'annual' ? instituteData.stats.aiBuf[statsMode].completed + "/" + instituteData.stats.aiBuf[statsMode].target : instituteData.stats.aiBuf[statsMode].completed}
-                    {/* {instituteData.stats.aiBuf[statsMode].completed}/{instituteData.stats.aiBuf[statsMode].target} */}
                   </span>
                 </div>
                 <StatCard
                   label=""
                   value={instituteData.stats.aiBuf[statsMode].completed}
-                  // max={instituteData.stats.aiBuf[statsMode].target}
                   max={statsMode== 'annual' ? instituteData.stats.aiBuf.annual.target : instituteData.stats.aiBuf.annual.target/12}
                   color={getCategoryColor('aiBuf')}
                 />
@@ -357,7 +317,7 @@ export default function HomeScreen() {
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium font-['Poppins']">
-                      {vaccineData[selectedVaccine as keyof typeof vaccineData].name}
+                      {vaccineData[selectedVaccine as keyof typeof vaccineData]?.name || 'Select Vaccine'}
                     </span>
                     <ChevronDown
                       size={16}
@@ -365,9 +325,9 @@ export default function HomeScreen() {
                     />
                   </div>
                   <span className="text-sm font-bold font-['Poppins']">
-                    {statsMode== 'annual' ? vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].completed + "/" + vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].target : vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].completed}
-                    {/* {vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].completed}/
-                    {vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].target} */}
+                    {statsMode== 'annual' && vaccineData[selectedVaccine as keyof typeof vaccineData]
+                      ? vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].completed + "/" + vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].target
+                      : vaccineData[selectedVaccine as keyof typeof vaccineData]?.[statsMode]?.completed || 0}
                   </span>
                 </div>
 
@@ -392,13 +352,14 @@ export default function HomeScreen() {
                 )}
 
                 {/* Progress Bar */}
-                <StatCard
-                  label=""
-                  value={vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].completed}
-                  // max={vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].target}
-                  max={statsMode== 'annual' ? vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].target : vaccineData[selectedVaccine as keyof typeof vaccineData]["annual"].target/12}
-                  color={getCategoryColor('vaccine')}
-                />
+                {vaccineData[selectedVaccine as keyof typeof vaccineData] && (
+                  <StatCard
+                    label=""
+                    value={vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].completed}
+                    max={statsMode== 'annual' ? vaccineData[selectedVaccine as keyof typeof vaccineData][statsMode].target : vaccineData[selectedVaccine as keyof typeof vaccineData]["annual"].target/12}
+                    color={getCategoryColor('vaccine')}
+                  />
+                )}
               </div>
             </div>
           </Card>
@@ -507,7 +468,7 @@ export default function HomeScreen() {
                         <span className="text-sm font-medium font-['Poppins'] text-gray-800">{village.name}</span>
                       </div>
                       <span className="text-xs font-semibold font-['Poppins'] text-gray-600">
-                        Population: {village.population.toLocaleString()}
+                        Population: {village.population}
                       </span>
                     </div>
                   </div>
@@ -526,56 +487,56 @@ export default function HomeScreen() {
                         <div className="flex justify-between items-center">
                           <span className="text-xs font-['Poppins'] text-gray-600">Equine</span>
                           <span className="text-sm font-semibold font-['Poppins'] text-gray-900">
-                            {village.animalPopulation.equine.toLocaleString()}
+                            {village.animalPopulation.equine}
                           </span>
                         </div>
 
                         <div className="flex justify-between items-center">
                           <span className="text-xs font-['Poppins'] text-gray-600">Buffaloes</span>
                           <span className="text-sm font-semibold font-['Poppins'] text-gray-900">
-                            {village.animalPopulation.buffaloes.toLocaleString()}
+                            {village.animalPopulation.buffaloes}
                           </span>
                         </div>
 
                         <div className="flex justify-between items-center">
                           <span className="text-xs font-['Poppins'] text-gray-600">Cows</span>
                           <span className="text-sm font-semibold font-['Poppins'] text-gray-900">
-                            {village.animalPopulation.cows.toLocaleString()}
+                            {village.animalPopulation.cows}
                           </span>
                         </div>
 
                         <div className="flex justify-between items-center">
                           <span className="text-xs font-['Poppins'] text-gray-600">Pigs</span>
                           <span className="text-sm font-semibold font-['Poppins'] text-gray-900">
-                            {village.animalPopulation.pigs.toLocaleString()}
+                            {village.animalPopulation.pigs}
                           </span>
                         </div>
 
                         <div className="flex justify-between items-center">
                           <span className="text-xs font-['Poppins'] text-gray-600">Goat</span>
                           <span className="text-sm font-semibold font-['Poppins'] text-gray-900">
-                            {village.animalPopulation.goat.toLocaleString()}
+                            {village.animalPopulation.goat}
                           </span>
                         </div>
 
                         <div className="flex justify-between items-center">
                           <span className="text-xs font-['Poppins'] text-gray-600">Sheep</span>
                           <span className="text-sm font-semibold font-['Poppins'] text-gray-900">
-                            {village.animalPopulation.sheep.toLocaleString()}
+                            {village.animalPopulation.sheep}
                           </span>
                         </div>
 
                         <div className="flex justify-between items-center">
                           <span className="text-xs font-['Poppins'] text-gray-600">Layers</span>
                           <span className="text-sm font-semibold font-['Poppins'] text-gray-900">
-                            {village.animalPopulation.poultryLayers.toLocaleString()}
+                            {village.animalPopulation.poultryLayers}
                           </span>
                         </div>
 
                         <div className="flex justify-between items-center">
                           <span className="text-xs font-['Poppins'] text-gray-600">Broilers</span>
                           <span className="text-sm font-semibold font-['Poppins'] text-gray-900">
-                            {village.animalPopulation.poultryBroilers.toLocaleString()}
+                            {village.animalPopulation.poultryBroilers}
                           </span>
                         </div>
                       </div>
@@ -587,49 +548,172 @@ export default function HomeScreen() {
           </Card>
 
           {/* Attached Institutes Report Status */}
-          <Card className="InstituteStatusSection">
-            <CardTitle>Attached Institutes</CardTitle>
-            <div className="space-y-2">
-              {instituteData.attachedInstitutes.map((institute, index) => (
-                <div key={index} className="border border-gray-200 rounded-lg overflow-hidden bg-white">
-                  <div className="p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium font-['Poppins'] text-gray-900 mb-1">
-                          {institute.name}
+          {instituteData.attachedInstitutes && instituteData.attachedInstitutes.length > 0 && (
+            <Card className="InstituteStatusSection">
+              <CardTitle>Attached Institutes</CardTitle>
+              <div className="space-y-2">
+                {instituteData.attachedInstitutes.map((institute, index) => (
+                  <div key={index} className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                    <div className="p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium font-['Poppins'] text-gray-900 mb-1">
+                            {institute.name}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500 font-['Poppins']">Report Status:</span>
+                            <StatusBadge
+                              status={institute.reportStatus}
+                              type={institute.statusType as 'success' | 'warning' | 'error'}
+                            />
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500 font-['Poppins']">Report Status:</span>
-                          <StatusBadge
-                            status={institute.reportStatus}
-                            type={institute.statusType as 'success' | 'warning' | 'error'}
-                          />
-                        </div>
+                        {institute.reportStatus !== 'Submitted' && (
+                          <button
+                            onClick={() => handleSendReminder(institute.name)}
+                            className="flex-shrink-0 flex items-center justify-center gap-1.5 bg-yellow-50 hover:bg-yellow-100 active:bg-yellow-200 border border-yellow-300 text-yellow-700 text-xs font-medium font-['Poppins'] py-1.5 px-3 rounded-md transition-colors"
+                          >
+                            <BellRing size={13} />
+                            Remind
+                          </button>
+                        )}
                       </div>
-                      {institute.reportStatus !== 'Submitted' && (
-                        <button
-                          onClick={() => handleSendReminder(institute.name)}
-                          className="flex-shrink-0 flex items-center justify-center gap-1.5 bg-yellow-50 hover:bg-yellow-100 active:bg-yellow-200 border border-yellow-300 text-yellow-700 text-xs font-medium font-['Poppins'] py-1.5 px-3 rounded-md transition-colors"
-                        >
-                          <BellRing size={13} />
-                          Remind
-                        </button>
-                      )}
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </Card>
+                ))}
+              </div>
+            </Card>
+          )}
 
-        </div>
+          </div>
+        ) : null}
       </div>
 
-      {/* Side Menu PLEASE WORKKKKKKKKKK*/}
+      {/* Side Menu */}
       <SideMenu
         isOpen={isSideMenuOpen}
         onClose={() => setIsSideMenuOpen(false)}
       />
+
+      {/* Success Dialog */}
+      <SuccessDialog
+        isOpen={successDialog.isOpen}
+        message={successDialog.message}
+        onClose={() => setSuccessDialog({ isOpen: false, message: '' })}
+      />
     </div>
   )
 }
+
+// // Mock data as fallback
+// const MOCK_INSTITUTE_DATA: HomeData = {
+//     name: "Veterinary Dispensary Kotra Kalan",
+//     welcomeMessage: "Welcome Dr. Rajdeep Sandhu",
+//     location: {
+//       lat: "30.4681° N",
+//       lng: "72.6503° E"
+//     },
+//     stats: {
+//       opd: {
+//         monthly: { completed: 45 },
+//         annual: { completed: 495, target: 1200 }
+//       },
+//       aiCow: {
+//         monthly: { completed: 35},
+//         annual: { completed: 385, target: 600 }
+//       },
+//       aiBuf: {
+//         monthly: { completed: 25},
+//         annual: { completed: 275, target: 360 }
+//       }
+//     },
+//     staff: [
+//       {
+//         name: "Dr. Rajdeep Sandhu",
+//         role: "Veterinary Officer",
+//         phone: "+91 98345 62107",
+//         email: "rajdeep.sandhu@ahpunjab.gov.in",
+//         whatsapp: "+919834562107"
+//       },
+//       {
+//         name: "Manpreet Kaur",
+//         role: "Assistant",
+//         phone: "+91 98720 41356",
+//         email: "manpreet.kaur@ahpunjab.gov.in",
+//         whatsapp: "+919872041356"
+//       },
+//       {
+//         name: "Arvinder Singh",
+//         role: "Lab Technician",
+//         phone: "+91 97981 25463",
+//         email: "arvinder.singh@ahpunjab.gov.in",
+//         whatsapp: "+919798125463"
+//       }
+//     ],
+//     villages: [
+//       {
+//         name: "Kotra Kalan",
+//         population: 3050,
+//         animalPopulation: {
+//           equine: 28,
+//           buffaloes: 295,
+//           cows: 540,
+//           pigs: 9,
+//           goat: 225,
+//           sheep: 165,
+//           poultryLayers: 1320,
+//           poultryBroilers: 710
+//         }
+//       },
+//       {
+//         name: "Bhucho Khurd",
+//         population: 2740,
+//         animalPopulation: {
+//           equine: 31,
+//           buffaloes: 255,
+//           cows: 510,
+//           pigs: 7,
+//           goat: 205,
+//           sheep: 145,
+//           poultryLayers: 1180,
+//           poultryBroilers: 630
+//         }
+//       },
+//       {
+//         name: "Lehra Mohabbat",
+//         population: 2080,
+//         animalPopulation: {
+//           equine: 19,
+//           buffaloes: 190,
+//           cows: 360,
+//           pigs: 6,
+//           goat: 150,
+//           sheep: 100,
+//           poultryLayers: 860,
+//           poultryBroilers: 450
+//         }
+//       },
+//       {
+//         name: "Ghuman Mandi",
+//         population: 2510,
+//         animalPopulation: {
+//           equine: 33,
+//           buffaloes: 245,
+//           cows: 470,
+//           pigs: 11,
+//           goat: 185,
+//           sheep: 125,
+//           poultryLayers: 1060,
+//           poultryBroilers: 560
+//         }
+//       }
+//     ],
+    
+//     reportingStatus: "On Time",
+//     attachedInstitutes: [
+//       { name: "Veterinary Dispensary Bhucho Khurd", reportStatus: "Submitted", statusType: "success" },
+//       { name: "Veterinary Dispensary Lehra", reportStatus: "Late", statusType: "error" },
+//       { name: "Veterinary Dispensary Ghuman", reportStatus: "Pending", statusType: "warning" }
+//     ]
+//   }
+

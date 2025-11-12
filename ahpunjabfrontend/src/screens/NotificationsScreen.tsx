@@ -1,85 +1,145 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { BackButton } from '../components/Button'
 import { NotificationIcon } from '../components/NotificationIcon'
 import { Bell, X } from 'lucide-react'
+import api from '../utils/api'
+
+interface NotificationAction {
+  label: string
+  type: 'navigate'
+  path: string
+  requiredPermission?: string
+}
 
 interface Notification {
-  id: number
-  heading: string
-  content: string
-  timestamp: string
-  type: 'reminder' | 'info' | 'announcement' | 'urgent'
-  isRead: boolean
+  notification_id: number
+  category: string
+  title: string
+  message: string
+  priority: string
+  actions?: NotificationAction[]
+  is_read: boolean
+  created_at: string
+  sender_name?: string
 }
 
 export default function NotificationsScreen() {
-  // Chatgpt generated notifications data cuz m lazyyyyy
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: 1,
-      heading: "Monthly Report Submission Reminder",
-      content: "Please submit your monthly livestock report by the end of this week. All vaccination records and animal census data must be included.",
-      timestamp: "2 hours ago",
-      type: "urgent",
-      isRead: false
-    },
-    {
-      id: 2,
-      heading: "New Vaccine Batch Available",
-      content: "A new batch of FMD vaccines has arrived at the district headquarters. CVH and CVD officers can collect their allocated stock from Monday to Friday.",
-      timestamp: "1 day ago",
-      type: "info",
-      isRead: false
-    },
-    {
-      id: 3,
-      heading: "Training Program Announcement",
-      content: "Department is organizing a training program on modern veterinary practices next month. All field officers are encouraged to participate.",
-      timestamp: "3 days ago",
-      type: "announcement",
-      isRead: true
-    },
-    {
-      id: 4,
-      heading: "System Maintenance Notice",
-      content: "The reporting system will be under maintenance this Sunday from 2 AM to 6 AM. Please plan your submissions accordingly.",
-      timestamp: "1 week ago",
-      type: "info",
-      isRead: true
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch notifications from API
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = await api.getNotifications() as any
+        setNotifications(Array.isArray(data) ? data : [])
+      } catch (err) {
+        setError('Failed to load notifications')
+        console.error('Error fetching notifications:', err)
+      } finally {
+        setIsLoading(false)
+      }
     }
-  ])
+
+    fetchNotifications()
+  }, [])
 
   const handleBack = () => {
-    console.log('Navigate back')
-    // ADD THIS NAVIGATION LOGIC - same as VaccineDistribution
-    window.location.reload(); // This will take you back to the screen selection
+    navigate(-1)
   }
 
-  const handleNotificationClick = (notification: Notification) => {
-    // see if read when clicked
-    setNotifications(prev =>
-      prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n)
-    )
-    console.log('Notification clicked:', notification.id)
+  const handleNotificationClick = async (notification: Notification) => {
+    // Mark as read
+    if (!notification.is_read) {
+      try {
+        await api.markNotificationAsRead(notification.notification_id)
+        setNotifications(prev =>
+          prev.map(n => n.notification_id === notification.notification_id ? { ...n, is_read: true } : n)
+        )
+        // Invalidate unread count cache to refresh the count on HomeScreen
+        queryClient.invalidateQueries({ queryKey: ['unreadNotificationCount'] })
+      } catch (err) {
+        console.error('Error marking notification as read:', err)
+      }
+    }
+
+    // Handle action buttons
+    if (notification.actions && notification.actions.length > 0) {
+      const firstAction = notification.actions[0]
+      if (firstAction.type === 'navigate') {
+        navigate(firstAction.path)
+      }
+    }
   }
 
-  const deleteNotification = (notificationId: number, event: React.MouseEvent) => {
-    // Prevent the notification click event from firing
+  const deleteNotification = async (notificationId: number, event: React.MouseEvent) => {
     event.stopPropagation()
-    setNotifications(prev => prev.filter(n => n.id !== notificationId))
+    try {
+      await api.deleteNotification(notificationId)
+      setNotifications(prev => prev.filter(n => n.notification_id !== notificationId))
+      // Invalidate unread count cache
+      queryClient.invalidateQueries({ queryKey: ['unreadNotificationCount'] })
+    } catch (err) {
+      console.error('Error deleting notification:', err)
+    }
   }
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
+  const markAllAsRead = async () => {
+    try {
+      await api.markAllNotificationsAsRead()
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+      // Invalidate unread count cache
+      queryClient.invalidateQueries({ queryKey: ['unreadNotificationCount'] })
+    } catch (err) {
+      console.error('Error marking all as read:', err)
+    }
   }
 
-  const clearAllNotifications = () => {
-    // if (window.confirm('Are you sure you want to delete all notifications? This action cannot be undone.')) {
+  const clearAllNotifications = async () => {
+    try {
+      // Delete all notifications one by one
+      await Promise.all(notifications.map(n => api.deleteNotification(n.notification_id)))
       setNotifications([])
-    // }
+      // Invalidate unread count cache
+      queryClient.invalidateQueries({ queryKey: ['unreadNotificationCount'] })
+    } catch (err) {
+      console.error('Error clearing notifications:', err)
+    }
   }
 
-  const unreadCount = notifications.filter(n => !n.isRead).length
+  // Helper function to format timestamp
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? 's' : ''} ago`
+    return date.toLocaleDateString()
+  }
+
+  // Map category to notification type for icon
+  const getCategoryType = (category: string): 'urgent' | 'info' | 'announcement' | 'default' => {
+    if (category === 'deadline_reminder' || category === 'report_rejected') return 'urgent'
+    if (category === 'announcement' || category === 'target_achievement') return 'announcement'
+    return 'info'
+  }
+
+  const unreadCount = notifications.filter(n => !n.is_read).length
 
   return (
     <div className="NotificationsScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col">
@@ -142,76 +202,105 @@ export default function NotificationsScreen() {
           overscrollBehavior: 'contain'
         }}
       >
-        {notifications.length > 0 ? (
-          notifications.map((notification) => (
-            <div
-              key={notification.id}
-              className={`group bg-white rounded-xl p-4 shadow-sm border transition-all duration-200 hover:shadow-md cursor-pointer ${
-                !notification.isRead
-                  ? 'border-yellow-200 bg-gradient-to-r from-yellow-50/50 to-white'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-              onClick={() => handleNotificationClick(notification)}
-            >
-              <div className="flex items-start space-x-3">
-                {/* Notification Icon */}
-                <NotificationIcon type={notification.type as 'urgent' | 'info' | 'announcement' | 'default'} />
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="w-12 h-12 border-4 border-yellow-200 border-t-yellow-500 rounded-full animate-spin mb-4"></div>
+            <p className="text-gray-500 font-['Poppins']">Loading notifications...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <X className="w-8 h-8 text-red-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 font-['Poppins'] mb-2">Error</h3>
+            <p className="text-gray-500 font-['Poppins'] text-sm">{error}</p>
+          </div>
+        ) : notifications.length > 0 ? (
+          notifications.map((notification) => {
+            const categoryType = getCategoryType(notification.category)
+            return (
+              <div
+                key={notification.notification_id}
+                className={`group bg-white rounded-xl p-4 shadow-sm border transition-all duration-200 hover:shadow-md cursor-pointer ${
+                  !notification.is_read
+                    ? 'border-yellow-200 bg-gradient-to-r from-yellow-50/50 to-white'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => handleNotificationClick(notification)}
+              >
+                <div className="flex items-start space-x-3">
+                  <NotificationIcon type={categoryType} />
 
-                {/* Notification Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className={`font-semibold font-['Poppins'] text-base leading-tight ${
-                      !notification.isRead ? 'text-gray-900' : 'text-gray-700'
-                    }`}>
-                      {notification.heading}
-                    </h3>
-                    <div className="flex items-center space-x-2 ml-2 flex-shrink-0">
-                      {!notification.isRead && (
-                        <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                      )}
-                      {/* Delete Button */}
-                      <button
-                        onClick={(e) => deleteNotification(notification.id, e)}
-                        className="w-6 h-6 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center text-red-400 hover:text-red-600 transition-all duration-200 md:opacity-0 md:group-hover:opacity-100"
-                        title="Delete notification"
-                      >
-                        <X size={12} />
-                      </button>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className={`font-semibold font-['Poppins'] text-base leading-tight ${
+                        !notification.is_read ? 'text-gray-900' : 'text-gray-700'
+                      }`}>
+                        {notification.title}
+                      </h3>
+                      <div className="flex items-center space-x-2 ml-2 flex-shrink-0">
+                        {!notification.is_read && (
+                          <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                        )}
+                        <button
+                          onClick={(e) => deleteNotification(notification.notification_id, e)}
+                          className="w-6 h-6 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center text-red-400 hover:text-red-600 transition-all duration-200 md:opacity-0 md:group-hover:opacity-100"
+                          title="Delete notification"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
-                  <p className={`font-['Poppins'] text-sm leading-relaxed mb-3 ${
-                    !notification.isRead ? 'text-gray-700' : 'text-gray-600'
-                  }`}>
-                    {notification.content}
-                  </p>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-500 text-xs font-['Poppins']">
-                      {notification.timestamp}
-                    </span>
-
-                    {/* Type Badge */}
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium font-['Poppins'] ${
-                      notification.type === 'urgent' ? 'bg-red-100 text-red-700' :
-                      notification.type === 'info' ? 'bg-blue-100 text-blue-700' :
-                      notification.type === 'announcement' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-gray-100 text-gray-700'
+                    <p className={`font-['Poppins'] text-sm leading-relaxed mb-3 ${
+                      !notification.is_read ? 'text-gray-700' : 'text-gray-600'
                     }`}>
-                      {notification.type.charAt(0).toUpperCase() + notification.type.slice(1)}
-                    </span>
+                      {notification.message}
+                    </p>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-500 text-xs font-['Poppins']">
+                        {formatTimestamp(notification.created_at)}
+                      </span>
+
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium font-['Poppins'] ${
+                        notification.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                        notification.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                        notification.priority === 'normal' ? 'bg-blue-100 text-blue-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {notification.priority.charAt(0).toUpperCase() + notification.priority.slice(1)}
+                      </span>
+                    </div>
+
+                    {/* Action buttons */}
+                    {notification.actions && notification.actions.length > 0 && (
+                      <div className="mt-3 flex gap-2">
+                        {notification.actions.map((action, index) => (
+                          <button
+                            key={index}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (action.type === 'navigate') {
+                                navigate(action.path)
+                              }
+                            }}
+                            className="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-xs font-medium font-['Poppins'] transition-colors"
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-            </div>
-          ))
+            )
+          })
         ) : (
-          // nothing there anymore
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4 4h7m0 0v8m0-8l3 3m6 0V4a1.5 1.5 0 00-1.5-1.5H9.5A1.5 1.5 0 008 4v1m0 0l-3 3v8a1.5 1.5 0 001.5 1.5h11A1.5 1.5 0 0019 15.5V8l-3-3" />
-              </svg>
+              <Bell className="w-8 h-8 text-gray-400" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 font-['Poppins'] mb-2">No notifications</h3>
             <p className="text-gray-500 font-['Poppins'] text-sm">

@@ -1,0 +1,69 @@
+@startuml Passkey Login
+title WebAuthn Passkey Login (FIDO2)
+
+actor User
+participant Browser
+participant Frontend
+participant Backend
+participant Database
+participant "Device\nAuthenticator" as Device
+
+== Step 1: Get Authentication Options ==
+User -> Browser: Enter username\nClick "Login"
+Browser -> Frontend: handleNextStep()
+Frontend -> Backend: POST /v1/auth/webauthn/login/options\n{username: "admin"}
+
+Backend -> Database: SELECT staff_id FROM staff\nWHERE LOWER(user_id) = LOWER($1)
+Database --> Backend: staff_id
+
+Backend -> Database: SELECT credential_id, transports\nFROM webauthn_credentials\nWHERE staff_id = $1
+Database --> Backend: credentials[]
+
+Backend -> Backend: Generate auth options:\n- rpID: 'localhost'\n- timeout: 5 minutes\n- userVerification: 'preferred'\n- allowCredentials: credentials[]
+
+Backend -> Backend: Store challenge\nchallengeStore.set(staff_id,\n{challenge, timestamp})
+
+Backend --> Frontend: 200 OK {publicKey: options}
+Frontend -> Frontend: setShowPasskeyOption(true)\nsetStep(2)
+Frontend -> Browser: Show "Login with Passkey" button
+
+== Step 2: Authenticate ==
+User -> Browser: Click "Login with Passkey"
+Browser -> Frontend: handlePasskeyLogin()
+Frontend -> Browser: navigator.credentials.get({\n  publicKey: options\n})
+Browser -> Device: Show biometric prompt
+
+alt User Authenticates
+    Device --> Browser: Assertion response\n(authenticatorData, signature,\nclientDataJSON)
+    Browser --> Frontend: Authentication response
+
+    Frontend -> Backend: POST /v1/auth/webauthn/login/verify\n{username, response, rememberMe}
+
+    Backend -> Database: SELECT * FROM webauthn_credentials\nWHERE staff_id = $1\nAND credential_id = $2
+    Database --> Backend: credential\n(public_key, counter)
+
+    Backend -> Backend: Retrieve challenge
+
+    Backend -> Backend: Verify using @simplewebauthn:\n- Challenge matches\n- Origin matches\n- Signature valid (using public_key)\n- Counter > stored counter\n  (replay attack prevention)
+
+    Backend -> Backend: Delete used challenge
+
+    Backend -> Database: UPDATE webauthn_credentials\nSET counter = $1,\nlast_used_at = NOW()\nWHERE credential_id = $2
+    note right: Update counter to\nprevent replay attacks
+
+    Backend -> Backend: Generate JWT tokens:\n- Access: 15 min\n- Refresh: 7d or 90d
+
+    Backend -> Database: INSERT INTO refresh_tokens
+
+    Backend -> Backend: Set HttpOnly cookie
+
+    Backend --> Frontend: 200 OK {user, accessToken}
+    Frontend -> Frontend: Store tokens\nNavigate to /home
+
+else User Cancels
+    Device --> Browser: NotAllowedError
+    Browser --> Frontend: User cancelled
+    Frontend -> Browser: Can switch to password mode
+end
+
+@enduml

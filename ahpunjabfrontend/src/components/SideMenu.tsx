@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { User, X } from 'lucide-react'
 
 interface SideMenuProps {
@@ -7,18 +8,19 @@ interface SideMenuProps {
 }
 
 export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
+  const navigate = useNavigate()
   const [isAnimating, setIsAnimating] = useState(false);
-//aiiiiiiiiiii
+
   const menuItems = [
-    { name: "Home", icon: "🏠" },
-    { name: "Monthly Reporting", icon: "📊" },
-    { name: "Attendance Report", icon: "👥" },
-    { name: "Vaccination Reports", icon: "💉" },
-    { name: "Vaccine Distribution", icon: "🚚" },
-    { name: "Semen Distribution", icon: "🐄" },
-    { name: "Summary Report", icon: "📈" },
-    { name: "Manage Transfer", icon: "🔄" },
-    { name: "Contact other Institutes", icon: "📞" },
+    { name: "Home", icon: "🏠", path: "/home" },
+    { name: "Monthly Reporting", icon: "📊", path: "/reports/monthly" },
+    { name: "Attendance Report", icon: "👥", path: "/reports/attendance" },
+    { name: "Vaccination Reports", icon: "💉", path: "/reports/vaccination" },
+    { name: "Vaccine Distribution", icon: "🚚", path: "/vaccine-distribution" },
+    { name: "Semen Distribution", icon: "🐄", path: "/semen-distribution" },
+    { name: "Summary Report", icon: "📈", path: "/reports/summary" },
+    // { name: "Manage Transfer", icon: "🔄", path: "/reports/manage-transfer" },
+    { name: "Contact other Institutes", icon: "📞", path: "/contact-institutes" },
   ];
 
   useEffect(() => {
@@ -31,14 +33,20 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
   }, [isOpen]);
 
   const handleMenuItemClick = (item: string) => {
-    console.log('Menu item clicked:', item);
     onClose(); // Close menu after selection
+    navigate(menuItems.find(i => i.name === item)?.path || '/home');
   };
 
   const handleLogout = () => {
-    console.log('Logout clicked');
-    onClose();
-  };
+    localStorage.clear()
+    navigate('/login')
+    onClose()
+  }
+
+  const handleProfileClick = () => {
+    navigate('/profile')
+    onClose()
+  }
 
   if (!isAnimating && !isOpen) return null;
 
@@ -51,8 +59,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
         }`}
         onClick={onClose}
         style={{
-          backdropFilter: 'blur(8px)',
-          backgroundColor: 'rgba(255, 255, 255, 0.1)'
+          backgroundColor: 'rgba(0, 0, 0, 0.5)'
         }}
       />
 
@@ -69,8 +76,8 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
 
         {/* Header with Close Button */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center">
+          <div className="flex items-center space-x-3 cursor-pointer" onClick={handleProfileClick}>
+            <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center hover:bg-yellow-600 transition-colors">
               <User size={24} className="text-white" />
             </div>
             <div>

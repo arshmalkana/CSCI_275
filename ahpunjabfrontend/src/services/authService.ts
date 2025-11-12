@@ -6,6 +6,7 @@ const API_BASE_URL = import.meta.env.PROD
 export interface LoginCredentials {
   username: string
   password: string
+  rememberMe?: boolean
 }
 
 export interface User {
@@ -32,10 +33,21 @@ export interface LoginResponse {
 }
 
 class AuthService {
-  async login(credentials: LoginCredentials): Promise<LoginResponse> {
+  // Convenience method for simple login
+  async login(username: string, password: string, rememberMe?: boolean): Promise<LoginResponse>
+  async login(credentials: LoginCredentials): Promise<LoginResponse>
+  async login(
+    usernameOrCredentials: string | LoginCredentials,
+    password?: string,
+    rememberMe: boolean = false
+  ): Promise<LoginResponse> {
+    const credentials: LoginCredentials =
+      typeof usernameOrCredentials === 'string'
+        ? { username: usernameOrCredentials, password: password!, rememberMe }
+        : usernameOrCredentials
+
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      // const response = await fetch(`http://127.0.0.1:8080/v1/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -104,9 +116,13 @@ class AuthService {
         credentials: 'include', // Send refresh token cookie
       })
 
+      if (!response.ok) {
+        return false
+      }
+
       const data = await response.json()
 
-      if (response.ok && data.token) {
+      if (data.token) {
         localStorage.setItem('authToken', data.token)
         localStorage.setItem('tokenExpiry', String(Date.now() + 15 * 60 * 1000))
         return true
@@ -133,11 +149,22 @@ class AuthService {
 
     if (!token || !expiry) return false
 
-    // Check if token is expired
-    if (Date.now() > parseInt(expiry)) {
-      // Token expired, try to refresh
-      this.refreshAccessToken()
+    // Check if token is expired or will expire soon (within 1 minute)
+    const expiryTime = parseInt(expiry)
+    const now = Date.now()
+    const oneMinute = 60 * 1000
+
+    // If token expired, return false (apiClient will handle refresh on next request)
+    if (now > expiryTime) {
       return false
+    }
+
+    // If token expires within 1 minute, trigger background refresh
+    if (expiryTime - now < oneMinute) {
+      // Don't await - refresh in background for better UX
+      this.refreshAccessToken().catch(err =>
+        console.error('Background token refresh failed:', err)
+      )
     }
 
     return true

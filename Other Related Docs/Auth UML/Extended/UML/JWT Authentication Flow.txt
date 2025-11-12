@@ -1,0 +1,148 @@
+@startuml JWT Authentication Flow
+title JWT Authentication Flow - Access Token & Refresh Token with Rotation
+
+actor User
+participant "Browser" as Browser
+participant "Frontend\n(React)" as Frontend
+participant "Backend\n(Fastify)" as Backend
+participant "authService" as AuthService
+participant "refreshTokenService" as TokenService
+participant "PostgreSQL\nDatabase" as DB
+participant "JWT Utils" as JWT
+
+== Initial Login ==
+User -> Browser: Enter credentials
+Browser -> Frontend: Submit login form
+Frontend -> Backend: POST /v1/auth/login\n{username, password, rememberMe}
+Backend -> AuthService: login(credentials)
+AuthService -> DB: SELECT * FROM staff\nWHERE LOWER(user_id) = LOWER($1)
+DB --> AuthService: User data
+AuthService -> AuthService: verifyPassword(plaintext, hash)
+note right: Currently plain text\n(TODO: Argon2id)
+
+alt Password Valid
+    AuthService -> JWT: generateTokens(user)
+    JWT -> JWT: Create Access Token\n(15 min expiry)
+    JWT -> JWT: Create Refresh Token\n(7 or 90 days)
+    JWT --> AuthService: {accessToken, refreshToken}
+
+    AuthService -> TokenService: storeToken({token, staffId,\nuserAgent, ipAddress, expiresIn})
+    TokenService -> TokenService: hashToken(refreshToken)\nusing SHA-256
+    TokenService -> DB: INSERT INTO refresh_tokens\n(token_hash, staff_id,\nuser_agent, ip_address,\nexpires_at, device_name)
+    DB --> TokenService: token_id
+
+    AuthService -> Backend: Return tokens + user data
+    Backend -> Backend: Set HttpOnly Cookie\nrefreshToken, maxAge,\nsecure, sameSite: strict
+    Backend --> Frontend: 200 OK\n{user, token, expiresIn: "15m"}
+    Frontend -> Frontend: Store accessToken in memory\nStore user in localStorage
+    Frontend --> Browser: Logged in
+else Password Invalid
+    AuthService -> Backend: throw error
+    Backend --> Frontend: 401 Unauthorized\n{message: "Invalid credentials"}
+    Frontend --> Browser: Show error
+end
+
+== Authenticated Request (Rolling JWT) ==
+User -> Browser: Navigate to protected page
+Browser -> Frontend: Request protected resource
+Frontend -> Backend: GET /v1/protected/resource\nAuthorization: Bearer {accessToken}
+Backend -> Backend: authenticate middleware
+Backend -> JWT: verifyAccessToken(token)
+
+alt Token Valid (not expired)
+    JWT --> Backend: Decoded user data
+    Backend -> Backend: Process request
+    Backend -> JWT: generateTokens(user)
+    JWT --> Backend: New {accessToken, refreshToken}
+
+    Backend -> TokenService: updateLastUsed(oldRefreshToken)
+    TokenService -> DB: UPDATE refresh_tokens\nSET last_used_at = NOW()
+
+    Backend -> TokenService: storeToken(newRefreshToken)
+    TokenService -> DB: INSERT new token
+
+    Backend -> Backend: Set new refresh cookie
+    Backend --> Frontend: 200 OK + Data\nX-New-Token: {newAccessToken}
+    Frontend -> Frontend: Update accessToken in memory
+    Frontend --> Browser: Show protected data
+
+else Token Expired (< 15 min)
+    JWT --> Backend: TokenExpiredError
+    Backend --> Frontend: 401 Unauthorized\n{message: "Token expired"}
+    Frontend -> Frontend: Trigger token refresh
+    note right: See "Token Refresh Flow" below
+end
+
+== Token Refresh Flow ==
+Frontend -> Backend: POST /v1/auth/refresh\nCookie: refreshToken={token}
+Backend -> Backend: Extract refresh token from cookie
+Backend -> TokenService: verifyAndRefresh(token)
+TokenService -> TokenService: hashToken(token)
+TokenService -> DB: SELECT * FROM refresh_tokens\nWHERE token_hash = $1\nAND is_revoked = FALSE\nAND expires_at > NOW()
+
+alt Valid Refresh Token
+    DB --> TokenService: Token record
+    TokenService -> DB: SELECT user FROM staff\nWHERE staff_id = $1
+    DB --> TokenService: User data
+
+    TokenService -> JWT: generateTokens(user)
+    JWT --> TokenService: New {accessToken, refreshToken}
+
+    TokenService -> DB: UPDATE refresh_tokens\nSET is_revoked = TRUE,\nrevoked_reason = 'Token rotated'\nWHERE token_id = $1
+    note right: Revoke old token
+
+    TokenService -> TokenService: hashToken(newRefreshToken)
+    TokenService -> DB: INSERT INTO refresh_tokens\n(new token data)
+    DB --> TokenService: new token_id
+
+    TokenService -> Backend: New tokens + user
+    Backend -> Backend: Set new HttpOnly cookie
+    Backend --> Frontend: 200 OK\n{token, user, expiresIn: "15m"}
+    Frontend -> Frontend: Update accessToken
+    Frontend -> Frontend: Retry original request
+
+else Invalid/Expired/Revoked Token
+    DB --> TokenService: No record / Expired / Revoked
+    TokenService -> Backend: throw error
+    Backend --> Frontend: 401 Unauthorized
+    Frontend -> Frontend: Clear stored data
+    Frontend -> Browser: Redirect to /login
+end
+
+== Logout (Single Device) ==
+User -> Browser: Click logout
+Browser -> Frontend: Logout action
+Frontend -> Backend: POST /v1/auth/logout\nCookie: refreshToken={token}
+Backend -> TokenService: revokeToken(token, "User logged out")
+TokenService -> TokenService: hashToken(token)
+TokenService -> DB: UPDATE refresh_tokens\nSET is_revoked = TRUE,\nrevoked_at = NOW(),\nrevoked_reason = 'User logged out'\nWHERE token_hash = $1
+DB --> TokenService: Updated
+Backend -> Backend: Clear refreshToken cookie
+Backend --> Frontend: 200 OK
+Frontend -> Frontend: Clear accessToken from memory\nClear user from localStorage
+Frontend --> Browser: Redirect to /login
+
+== Logout All Devices ==
+User -> Browser: Click "Logout All Devices"
+Browser -> Frontend: Logout all action
+Frontend -> Backend: POST /v1/auth/logout-all\nAuthorization: Bearer {accessToken}
+Backend -> TokenService: revokeAllOtherTokens(staffId, currentToken)
+TokenService -> TokenService: hashToken(currentToken)
+TokenService -> DB: UPDATE refresh_tokens\nSET is_revoked = TRUE,\nrevoked_at = NOW(),\nrevoked_reason = 'Logout from all other devices'\nWHERE staff_id = $1\nAND token_hash != $2\nAND is_revoked = FALSE
+DB --> TokenService: Updated N tokens
+Backend --> Frontend: 200 OK\n{message: "Logged out from N devices"}
+Frontend --> Browser: Show success message
+
+== Automatic Token Cleanup ==
+note over DB: Daily at 2 AM via pg_cron
+DB -> DB: SELECT cleanup_expired_refresh_tokens()
+DB -> DB: DELETE FROM refresh_tokens\nWHERE expires_at < NOW()\nOR (is_revoked = TRUE\nAND revoked_at < NOW() - INTERVAL '30 days')
+DB -> DB: Log cleanup count
+
+note over Backend: On server startup
+Backend -> TokenService: cleanupExpiredTokens()
+TokenService -> DB: SELECT cleanup_expired_refresh_tokens()
+DB --> TokenService: Cleanup count
+TokenService --> Backend: Log result
+
+@enduml

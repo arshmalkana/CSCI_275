@@ -1,7 +1,8 @@
 -- AH Punjab Reporting System - PostgreSQL Database Schema
--- Optimized based on existing Google Sheets implementation
+-- Comprehensive schema with all tables and extensions
+-- Version: 2.0 - Includes WebAuthn, refresh tokens, and profile features
 
--- Enable UUID extension for better ID generation
+-- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================================================
@@ -137,6 +138,8 @@ CREATE TABLE staff (
     current_institute_id INTEGER REFERENCES institutes(institute_id),
     is_first_time BOOLEAN DEFAULT TRUE, -- From sheets: Is First Time
     is_active BOOLEAN DEFAULT TRUE,
+    passkey_enabled BOOLEAN DEFAULT FALSE, -- WebAuthn passkey support
+    profile_picture_url TEXT, -- Profile picture URL or base64 data
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -159,7 +162,58 @@ ALTER TABLE institutes ADD CONSTRAINT fk_institutes_incharge
     FOREIGN KEY (current_incharge_id) REFERENCES staff(staff_id);
 
 -- ============================================================================
--- 4. SERVICE CHARGES & FEE STRUCTURE
+-- 4. AUTHENTICATION & SECURITY
+-- ============================================================================
+
+-- WebAuthn/Passkey credentials storage
+CREATE TABLE webauthn_credentials (
+    credential_id TEXT PRIMARY KEY,  -- Base64URL encoded credential ID from authenticator
+    staff_id INTEGER NOT NULL REFERENCES staff(staff_id) ON DELETE CASCADE,
+    public_key TEXT NOT NULL,  -- Base64URL encoded public key for signature verification
+    counter BIGINT NOT NULL DEFAULT 0,  -- Signature counter for replay attack protection
+    device_name VARCHAR(100),  -- User-friendly device name (e.g., "iPhone 15", "Windows Hello")
+    aaguid TEXT,  -- Authenticator AAGUID (identifies authenticator model)
+    credential_device_type VARCHAR(50),  -- 'platform' or 'cross-platform'
+    transports TEXT[],  -- ['usb', 'nfc', 'ble', 'internal'] - how device connects
+    last_used_at TIMESTAMPTZ,  -- Track when credential was last used for security auditing
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- WebAuthn challenges for registration and authentication
+CREATE TABLE webauthn_challenges (
+    challenge_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    challenge_key VARCHAR(255) NOT NULL UNIQUE, -- staffId for registration, auth_{userId} for login
+    challenge TEXT NOT NULL,
+    staff_id INTEGER REFERENCES staff(staff_id) ON DELETE CASCADE,
+    challenge_type VARCHAR(20) NOT NULL CHECK (challenge_type IN ('registration', 'authentication')),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMPTZ NOT NULL,
+    ip_address INET,
+    user_agent TEXT
+);
+
+-- Refresh token sessions for JWT authentication
+CREATE TABLE refresh_tokens (
+    token_id SERIAL PRIMARY KEY,
+    token_hash VARCHAR(64) NOT NULL UNIQUE, -- SHA256 hash of the refresh token
+    staff_id INTEGER NOT NULL REFERENCES staff(staff_id) ON DELETE CASCADE,
+    -- Session information
+    device_info TEXT, -- User agent string
+    ip_address INET, -- Client IP address
+    device_name VARCHAR(100), -- Parsed device name (e.g., "iPhone (Safari)")
+    -- Timestamps
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMPTZ NOT NULL,
+    -- Status
+    is_revoked BOOLEAN DEFAULT FALSE,
+    revoked_at TIMESTAMPTZ,
+    revoked_reason TEXT
+);
+
+-- ============================================================================
+-- 5. SERVICE CHARGES & FEE STRUCTURE
 -- ============================================================================
 
 CREATE TYPE service_category AS ENUM (
@@ -199,7 +253,7 @@ CREATE TABLE fee_changes_history (
 );
 
 -- ============================================================================
--- 5. SEMEN TYPES
+-- 6. SEMEN TYPES
 -- ============================================================================
 
 CREATE TYPE animal_species AS ENUM ('Cattle', 'Buffalo', 'Goat', 'Sheep', 'Pig', 'Poultry', 'Dog');
@@ -216,7 +270,7 @@ CREATE TABLE semen_types (
 );
 
 -- ============================================================================
--- 6. VACCINE MASTER
+-- 7. VACCINE MASTER
 -- ============================================================================
 
 CREATE TABLE vaccines (
@@ -239,7 +293,7 @@ CREATE TABLE vaccine_species_dosage (
 );
 
 -- ============================================================================
--- 7. SEMEN BANK MANAGEMENT (From Semen Bank Management Sheet)
+-- 8. SEMEN BANK MANAGEMENT (From Semen Bank Management Sheet)
 -- ============================================================================
 
 CREATE TYPE transaction_type AS ENUM ('Received', 'Issued', 'Adjustment');
@@ -271,7 +325,7 @@ CREATE TABLE semen_stock (
 );
 
 -- ============================================================================
--- 8. VACCINE DISTRIBUTION
+-- 9. VACCINE DISTRIBUTION
 -- ============================================================================
 
 CREATE TABLE vaccine_transactions (
@@ -298,7 +352,7 @@ CREATE TABLE vaccine_stock (
 );
 
 -- ============================================================================
--- 9. MONTHLY REPORTS (Main Report from Form Responses Sheet)
+-- 10. MONTHLY REPORTS (Main Report from Form Responses Sheet)
 -- ============================================================================
 
 CREATE TYPE report_status AS ENUM ('Draft', 'Submitted', 'Rejected', 'Approved');
@@ -312,17 +366,17 @@ CREATE TABLE monthly_reports (
     prepared_by INTEGER NOT NULL REFERENCES staff(staff_id),
     verified_by INTEGER REFERENCES staff(staff_id),
     submission_status report_status DEFAULT 'Draft',
-    submitted_at TIMESTAMP,
-    verified_at TIMESTAMP,
+    submitted_at TIMESTAMPTZ,
+    verified_at TIMESTAMPTZ,
     admin_comment TEXT,
     receipt_number VARCHAR(50), -- From sheets: receipt number
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(institute_id, reporting_month)
 );
 
 -- ============================================================================
--- 10. OPD SERVICES REPORTING (From Form Responses)
+-- 11. OPD SERVICES REPORTING (From Form Responses)
 -- ============================================================================
 
 CREATE TYPE opd_case_type AS ENUM ('Equine', 'Bovine', 'Others', 'Dogs', 'Small', 'Poultry', 'Pet');
@@ -340,7 +394,7 @@ CREATE TABLE opd_report_details (
 );
 
 -- ============================================================================
--- 11. SURGERY/PROCEDURES REPORTING
+-- 12. SURGERY/PROCEDURES REPORTING
 -- ============================================================================
 
 CREATE TABLE surgery_report_details (
@@ -354,7 +408,7 @@ CREATE TABLE surgery_report_details (
 );
 
 -- ============================================================================
--- 12. CERTIFICATE SERVICES
+-- 13. CERTIFICATE SERVICES
 -- ============================================================================
 
 CREATE TYPE certificate_type AS ENUM ('Health', 'PostMortem', 'VetroLegal', 'Export');
@@ -370,7 +424,7 @@ CREATE TABLE certificate_report_details (
 );
 
 -- ============================================================================
--- 13. VACCINATION REPORTING (From Form Responses)
+-- 14. VACCINATION REPORTING (From Form Responses)
 -- ============================================================================
 
 CREATE TABLE vaccination_report_details (
@@ -385,7 +439,7 @@ CREATE TABLE vaccination_report_details (
 );
 
 -- ============================================================================
--- 14. AI SERVICES REPORTING (From Form Responses - Very Detailed)
+-- 15. AI SERVICES REPORTING (From Form Responses - Very Detailed)
 -- ============================================================================
 
 CREATE TABLE ai_report_details (
@@ -411,7 +465,7 @@ CREATE TABLE ai_report_details (
 );
 
 -- ============================================================================
--- 15. DIAGNOSTIC/LAB SERVICES
+-- 16. DIAGNOSTIC/LAB SERVICES
 -- ============================================================================
 
 CREATE TYPE diagnostic_type AS ENUM ('Fecal', 'Blood', 'Urine', 'Milk', 'Other');
@@ -427,7 +481,7 @@ CREATE TABLE diagnostic_report_details (
 );
 
 -- ============================================================================
--- 16. EXTENSION ACTIVITIES
+-- 17. EXTENSION ACTIVITIES
 -- ============================================================================
 
 CREATE TYPE activity_type AS ENUM ('Camp', 'SchoolLecture', 'FarmerTraining', 'Awareness', 'Other');
@@ -444,7 +498,7 @@ CREATE TABLE extension_activities_details (
 );
 
 -- ============================================================================
--- 17. FINANCIAL SUMMARY (Calculated from all report details)
+-- 18. FINANCIAL SUMMARY (Calculated from all report details)
 -- ============================================================================
 
 CREATE TABLE financial_summaries (
@@ -457,7 +511,7 @@ CREATE TABLE financial_summaries (
 );
 
 -- ============================================================================
--- 18. AUDIT TRAIL (Report Edits by Tehsil/District Admins)
+-- 19. AUDIT TRAIL (Report Edits by Tehsil/District Admins)
 -- ============================================================================
 
 CREATE TABLE report_edits_audit (
@@ -473,7 +527,113 @@ CREATE TABLE report_edits_audit (
 );
 
 -- ============================================================================
--- 19. INDEXES FOR PERFORMANCE
+-- 20. PERFORMANCE TARGETS (Historical tracking with effective dates)
+-- ============================================================================
+
+CREATE TYPE target_type AS ENUM ('OPD', 'AI_Cattle', 'AI_Buffalo', 'Vaccine');
+
+CREATE TABLE institute_targets (
+    target_id SERIAL PRIMARY KEY,
+    institute_id INTEGER REFERENCES institutes(institute_id) ON DELETE CASCADE,
+    institute_type institute_type, -- For type-based defaults (CVH, CVD, etc.)
+    target_type target_type NOT NULL,
+    vaccine_id INTEGER REFERENCES vaccines(vaccine_id), -- Only for Vaccine targets
+    annual_target INTEGER NOT NULL,
+    monthly_target INTEGER, -- Optional: can be calculated as annual_target/12
+    effective_from DATE NOT NULL,
+    effective_until DATE, -- NULL means currently active
+    financial_year VARCHAR(10), -- e.g., "2025-26"
+    notes TEXT, -- Reason for target change
+    created_by INTEGER REFERENCES staff(staff_id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- Ensure no overlapping date ranges for same institute/type/vaccine
+    CONSTRAINT check_date_range CHECK (effective_until IS NULL OR effective_until >= effective_from),
+    -- Vaccine targets must have vaccine_id, others must not
+    CONSTRAINT check_vaccine_target CHECK (
+        (target_type = 'Vaccine' AND vaccine_id IS NOT NULL) OR
+        (target_type != 'Vaccine' AND vaccine_id IS NULL)
+    ),
+    -- Either institute_id OR institute_type must be set, but not both
+    CONSTRAINT check_institute_or_type CHECK (
+        (institute_id IS NOT NULL AND institute_type IS NULL) OR
+        (institute_id IS NULL AND institute_type IS NOT NULL)
+    )
+);
+
+-- Function to get active target for a specific date
+-- This checks institute-specific targets first, then falls back to institute type defaults
+CREATE OR REPLACE FUNCTION get_active_target(
+    p_institute_id INTEGER,
+    p_target_type target_type,
+    p_vaccine_id INTEGER,
+    p_date DATE
+)
+RETURNS INTEGER AS $$
+DECLARE
+    v_target INTEGER;
+    v_institute_type institute_type;
+BEGIN
+    -- First, try to get institute-specific target
+    SELECT annual_target INTO v_target
+    FROM institute_targets
+    WHERE institute_id = p_institute_id
+      AND target_type = p_target_type
+      AND (vaccine_id = p_vaccine_id OR (vaccine_id IS NULL AND p_vaccine_id IS NULL))
+      AND effective_from <= p_date
+      AND (effective_until IS NULL OR effective_until >= p_date)
+    ORDER BY effective_from DESC
+    LIMIT 1;
+
+    -- If no institute-specific target, get institute type and look for type-based default
+    IF v_target IS NULL THEN
+        SELECT i.institute_type INTO v_institute_type
+        FROM institutes i
+        WHERE i.institute_id = p_institute_id;
+
+        IF v_institute_type IS NOT NULL THEN
+            SELECT annual_target INTO v_target
+            FROM institute_targets
+            WHERE institute_targets.institute_type = v_institute_type
+              AND target_type = p_target_type
+              AND (vaccine_id = p_vaccine_id OR (vaccine_id IS NULL AND p_vaccine_id IS NULL))
+              AND effective_from <= p_date
+              AND (effective_until IS NULL OR effective_until >= p_date)
+            ORDER BY effective_from DESC
+            LIMIT 1;
+        END IF;
+    END IF;
+
+    RETURN COALESCE(v_target, 0);
+END;
+$$ LANGUAGE plpgsql;
+
+-- View to show current active targets
+CREATE VIEW v_current_targets AS
+SELECT
+    it.target_id,
+    it.institute_id,
+    i.institute_name,
+    it.institute_type,
+    it.target_type,
+    it.vaccine_id,
+    v.vaccine_name,
+    it.annual_target,
+    it.monthly_target,
+    it.effective_from,
+    it.financial_year,
+    CASE
+        WHEN it.institute_id IS NOT NULL THEN 'Institute-Specific'
+        WHEN it.institute_type IS NOT NULL THEN 'Type-Default'
+    END AS target_scope
+FROM institute_targets it
+LEFT JOIN institutes i ON it.institute_id = i.institute_id
+LEFT JOIN vaccines v ON it.vaccine_id = v.vaccine_id
+WHERE it.effective_until IS NULL OR it.effective_until >= CURRENT_DATE
+ORDER BY target_scope, i.institute_name, it.institute_type, it.target_type, v.vaccine_name;
+
+-- ============================================================================
+-- 21. INDEXES FOR PERFORMANCE
 -- ============================================================================
 
 -- Geographic indexes
@@ -493,6 +653,15 @@ CREATE INDEX idx_institutes_location ON institutes(latitude, longitude);
 CREATE INDEX idx_staff_institute ON staff(current_institute_id);
 CREATE INDEX idx_staff_user_id ON staff(user_id);
 CREATE INDEX idx_staff_postings_current ON staff_postings(staff_id, is_current);
+CREATE INDEX idx_staff_profile_picture ON staff(staff_id) WHERE profile_picture_url IS NOT NULL;
+
+-- Authentication indexes
+CREATE INDEX idx_webauthn_staff_id ON webauthn_credentials(staff_id);
+CREATE INDEX idx_webauthn_challenges_key ON webauthn_challenges(challenge_key);
+CREATE INDEX idx_webauthn_challenges_expires ON webauthn_challenges(expires_at);
+CREATE INDEX idx_refresh_tokens_staff_id ON refresh_tokens(staff_id);
+CREATE INDEX idx_refresh_tokens_token_hash ON refresh_tokens(token_hash);
+CREATE INDEX idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);
 
 -- Reporting indexes
 CREATE INDEX idx_monthly_reports_month ON monthly_reports(reporting_month);
@@ -504,8 +673,16 @@ CREATE INDEX idx_semen_transactions_date ON semen_transactions(transaction_date)
 CREATE INDEX idx_semen_transactions_month ON semen_transactions(month);
 CREATE INDEX idx_vaccine_transactions_date ON vaccine_transactions(transaction_date);
 
+-- Target indexes
+CREATE INDEX idx_institute_targets_institute ON institute_targets(institute_id) WHERE institute_id IS NOT NULL;
+CREATE INDEX idx_institute_targets_inst_type ON institute_targets(institute_type) WHERE institute_type IS NOT NULL;
+CREATE INDEX idx_institute_targets_target_type ON institute_targets(target_type);
+CREATE INDEX idx_institute_targets_vaccine ON institute_targets(vaccine_id) WHERE vaccine_id IS NOT NULL;
+CREATE INDEX idx_institute_targets_effective ON institute_targets(effective_from, effective_until);
+CREATE INDEX idx_institute_targets_active ON institute_targets(institute_id, target_type, effective_from, effective_until) WHERE institute_id IS NOT NULL;
+
 -- ============================================================================
--- 20. TRIGGERS FOR AUTO-UPDATE timestamps
+-- 22. TRIGGERS FOR AUTO-UPDATE timestamps
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -534,8 +711,42 @@ CREATE TRIGGER update_staff_updated_at BEFORE UPDATE ON staff
 CREATE TRIGGER update_monthly_reports_updated_at BEFORE UPDATE ON monthly_reports
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER trigger_webauthn_credentials_updated_at
+    BEFORE UPDATE ON webauthn_credentials
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_institute_targets_updated_at BEFORE UPDATE ON institute_targets
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- ============================================================================
--- 21. VIEWS FOR COMMON QUERIES
+-- 23. CLEANUP FUNCTIONS FOR SECURITY
+-- ============================================================================
+
+-- Auto-cleanup expired WebAuthn challenges
+CREATE OR REPLACE FUNCTION cleanup_expired_challenges()
+RETURNS INTEGER AS $$
+DECLARE
+    deleted_count INTEGER;
+BEGIN
+    DELETE FROM webauthn_challenges WHERE expires_at < NOW();
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Cleanup expired refresh tokens
+CREATE OR REPLACE FUNCTION cleanup_expired_refresh_tokens()
+RETURNS void AS $$
+BEGIN
+    DELETE FROM refresh_tokens
+    WHERE expires_at < CURRENT_TIMESTAMP
+       OR (is_revoked = TRUE AND revoked_at < CURRENT_TIMESTAMP - INTERVAL '7 days');
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- 24. VIEWS FOR COMMON QUERIES
 -- ============================================================================
 
 -- Complete institute hierarchy view with location and features
@@ -632,7 +843,85 @@ JOIN tehsils t ON i.tehsil_id = t.tehsil_id
 JOIN staff s ON mr.prepared_by = s.staff_id;
 
 -- ============================================================================
--- COMMENTS FOR DOCUMENTATION
+-- 25. NOTIFICATIONS SYSTEM
+-- ============================================================================
+
+-- Notifications table for in-app and push notifications
+CREATE TABLE notifications (
+    notification_id SERIAL PRIMARY KEY,
+    recipient_id INTEGER NOT NULL REFERENCES staff(staff_id) ON DELETE CASCADE,
+    sender_id INTEGER REFERENCES staff(staff_id) ON DELETE SET NULL, -- NULL for system-generated
+    notification_type VARCHAR(50) NOT NULL, -- 'system', 'broadcast', 'user'
+    category VARCHAR(50) NOT NULL, -- 'report_submitted', 'report_approved', 'deadline_reminder', etc.
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    priority VARCHAR(20) DEFAULT 'normal', -- 'low', 'normal', 'high', 'urgent'
+
+    -- Action buttons (JSONB array)
+    -- Example: [{"label": "View Report", "type": "navigate", "path": "/reports/monthly/2024-06", "requiredPermission": "view_reports"}]
+    actions JSONB,
+
+    -- Attachments (JSONB array)
+    -- Example: [{"type": "pdf", "filename": "circular.pdf", "path": "/attachments/circular.pdf"}]
+    attachments JSONB,
+
+    -- Metadata for linking to related entities
+    related_entity_type VARCHAR(50), -- 'monthly_report', 'circular', 'announcement', etc.
+    related_entity_id INTEGER, -- report_id, circular_id, etc.
+
+    -- State tracking
+    is_read BOOLEAN DEFAULT FALSE,
+    read_at TIMESTAMP,
+    is_archived BOOLEAN DEFAULT FALSE,
+    archived_at TIMESTAMP,
+
+    -- Timestamps and retention
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP, -- Auto-delete after this date (90 days default)
+    deleted_at TIMESTAMP -- Soft delete
+);
+
+-- Indexes for performance
+CREATE INDEX idx_notifications_recipient ON notifications(recipient_id, is_read) WHERE deleted_at IS NULL;
+CREATE INDEX idx_notifications_created ON notifications(created_at DESC) WHERE deleted_at IS NULL;
+CREATE INDEX idx_notifications_expires ON notifications(expires_at) WHERE deleted_at IS NULL AND expires_at IS NOT NULL;
+CREATE INDEX idx_notifications_category ON notifications(category) WHERE deleted_at IS NULL;
+
+-- Push notification subscriptions
+CREATE TABLE push_subscriptions (
+    subscription_id SERIAL PRIMARY KEY,
+    staff_id INTEGER NOT NULL REFERENCES staff(staff_id) ON DELETE CASCADE,
+    endpoint TEXT NOT NULL UNIQUE, -- Push service endpoint URL
+    p256dh_key TEXT NOT NULL, -- Encryption key for push payload
+    auth_key TEXT NOT NULL, -- Authentication secret
+    user_agent TEXT, -- Browser/device identifier
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE INDEX idx_push_subscriptions_staff ON push_subscriptions(staff_id) WHERE is_active = TRUE;
+
+-- Function to auto-set expiry date on notification insert
+CREATE OR REPLACE FUNCTION set_notification_expiry()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Set expiry to 90 days from creation if not explicitly set
+    -- Critical notifications (approvals/rejections) should set expires_at = NULL to keep forever
+    IF NEW.expires_at IS NULL AND NEW.category NOT IN ('report_approved', 'report_rejected') THEN
+        NEW.expires_at := NEW.created_at + INTERVAL '90 days';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_set_notification_expiry
+    BEFORE INSERT ON notifications
+    FOR EACH ROW
+    EXECUTE FUNCTION set_notification_expiry();
+
+-- ============================================================================
+-- 26. COMMENTS FOR DOCUMENTATION
 -- ============================================================================
 
 COMMENT ON TABLE institutes IS 'Veterinary institutes (CVH, CVD, PAIW, etc.) mapped from Google Sheets OrgIds';
@@ -640,3 +929,16 @@ COMMENT ON TABLE staff IS 'Staff members with login credentials (user_id = OrgId
 COMMENT ON TABLE monthly_reports IS 'Main monthly reporting form mapped from Form Responses sheet';
 COMMENT ON TABLE semen_transactions IS 'Semen bank management from Semen Bank Management sheet';
 COMMENT ON TABLE service_charges IS 'Fee structure from Fees Management sheet';
+COMMENT ON TABLE webauthn_credentials IS 'Stores WebAuthn/FIDO2 credentials (passkeys) for biometric authentication';
+COMMENT ON TABLE webauthn_challenges IS 'Stores WebAuthn challenges for registration and authentication flows';
+COMMENT ON TABLE refresh_tokens IS 'Stores active refresh token sessions for security and session management';
+COMMENT ON TABLE institute_targets IS 'Performance targets with historical tracking - stores OPD, AI, and vaccine targets with effective date ranges';
+COMMENT ON TABLE notifications IS 'In-app and push notifications with action buttons and attachments - 90 day retention policy (critical notifications kept forever)';
+COMMENT ON TABLE push_subscriptions IS 'Web Push API subscription endpoints for browser push notifications when PWA is closed';
+COMMENT ON COLUMN staff.profile_picture_url IS 'URL or base64 data for user profile picture';
+COMMENT ON COLUMN staff.passkey_enabled IS 'Indicates if user has WebAuthn passkey authentication enabled';
+COMMENT ON COLUMN institute_targets.effective_until IS 'NULL means currently active, otherwise historical record';
+COMMENT ON COLUMN notifications.actions IS 'JSONB array of action buttons with permission checks - e.g., [{"label": "View Report", "type": "navigate", "path": "/reports/monthly/2024-06"}]';
+COMMENT ON COLUMN notifications.expires_at IS 'Auto-set to 90 days from creation unless category is report_approved/report_rejected (kept forever)';
+COMMENT ON FUNCTION get_active_target IS 'Returns active target for a given institute, target type, and date - supports historical target queries';
+COMMENT ON FUNCTION set_notification_expiry IS 'Auto-sets notification expiry to 90 days unless it is a critical audit notification';

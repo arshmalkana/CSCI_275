@@ -1,0 +1,62 @@
+@startuml Session Management
+title Multi-Device Session Management
+
+actor User
+participant "Desktop\nBrowser" as Desktop
+participant "Mobile\nBrowser" as Mobile
+participant Backend
+participant Database
+
+== User Logs In on Desktop ==
+Desktop -> Backend: POST /v1/auth/login\nUser-Agent: Chrome/120 (Windows)\nIP: 192.168.1.100
+Backend -> Database: INSERT INTO refresh_tokens\n(staff_id: 1,\ndevice_name: "Chrome on Windows",\nip_address: "192.168.1.100",\nexpires_at: NOW() + 7 days)
+Database --> Backend: token_id: 1
+Backend --> Desktop: Login successful\nSession ID: 1
+
+== User Logs In on Mobile ==
+Mobile -> Backend: POST /v1/auth/login\nUser-Agent: Safari/17 (iOS)\nIP: 192.168.1.101\nrememberMe: true
+Backend -> Database: INSERT INTO refresh_tokens\n(staff_id: 1,\ndevice_name: "Safari on iOS",\nip_address: "192.168.1.101",\nexpires_at: NOW() + 90 days)
+Database --> Backend: token_id: 2
+Backend --> Mobile: Login successful\nSession ID: 2
+
+note over Database
+Staff ID 1 has 2 active sessions:
+1. Desktop (7 days)
+2. Mobile (90 days)
+end note
+
+== View Active Sessions ==
+Desktop -> Backend: GET /v1/auth/sessions\nAuthorization: Bearer {token}
+Backend -> Database: SELECT token_id, device_name,\nip_address, created_at,\nlast_used_at, expires_at,\n(token_hash = current) as is_current\nFROM refresh_tokens\nWHERE staff_id = 1\nAND is_revoked = FALSE\nAND expires_at > NOW()
+Database --> Backend: sessions[]
+Backend --> Desktop: [\n  {id: 1, device: "Chrome on Windows",\n   ip: "192.168.1.100", is_current: true},\n  {id: 2, device: "Safari on iOS",\n   ip: "192.168.1.101", is_current: false}\n]
+
+== Revoke Mobile Session ==
+Desktop -> Backend: DELETE /v1/auth/sessions/2
+Backend -> Database: UPDATE refresh_tokens\nSET is_revoked = TRUE,\nrevoked_at = NOW(),\nrevoked_reason = 'Revoked by user'\nWHERE token_id = 2\nAND staff_id = 1
+Database --> Backend: 1 row updated
+Backend --> Desktop: 200 OK
+
+note over Mobile
+Next request from mobile:
+- Token is revoked
+- 401 Unauthorized
+- Redirect to login
+end note
+
+== Logout All Other Devices ==
+Desktop -> Backend: POST /v1/auth/logout-all\nCookie: refreshToken (session 1)
+Backend -> Database: UPDATE refresh_tokens\nSET is_revoked = TRUE,\nrevoked_at = NOW(),\nrevoked_reason = 'Logout all devices'\nWHERE staff_id = 1\nAND token_hash != current_token_hash\nAND is_revoked = FALSE
+Database --> Backend: N rows updated
+Backend --> Desktop: "Logged out from N devices"\n(Current session still active)
+
+== Automatic Cleanup ==
+note over Database
+Daily at 2 AM via pg_cron:
+DELETE FROM refresh_tokens
+WHERE expires_at < NOW()
+OR (is_revoked = TRUE
+AND revoked_at < NOW() - INTERVAL '30 days')
+end note
+
+@enduml

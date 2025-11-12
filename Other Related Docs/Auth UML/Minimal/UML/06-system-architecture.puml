@@ -1,0 +1,145 @@
+@startuml System Architecture
+title Authentication System Architecture
+
+!define RECTANGLE class
+
+package "Frontend (React PWA)" {
+  [LoginScreen\n(2-step flow)]
+  [ManagePasskeysScreen]
+  [ActiveSessionsScreen]
+  [ProfileScreen]
+
+  package "Services" {
+    [authService]
+    [webauthnService]
+    [apiClient]
+  }
+
+  package "Storage" {
+    component "Memory" as Memory {
+      [accessToken\n(15 min)]
+    }
+    component "localStorage" as LocalStorage {
+      [user data\n(non-sensitive)]
+    }
+  }
+}
+
+package "Backend (Fastify)" {
+  package "Routes" {
+    [/v1/auth/*]
+    [/v1/auth/webauthn/*]
+    [/v1/protected/*]
+  }
+
+  package "Middleware" {
+    [authenticate\n(JWT verify)]
+    [CORS]
+  }
+
+  package "Controllers" {
+    [authController]
+    [webauthnController]
+  }
+
+  package "Services" {
+    [authService] as BAuthSvc
+    [webauthnService] as BWebAuthnSvc
+    [refreshTokenService]
+  }
+
+  package "Utils" {
+    [jwt.js]
+    [@simplewebauthn/server]
+  }
+}
+
+package "Database (PostgreSQL)" {
+  database "Tables" {
+    [staff\n(user accounts)]
+    [webauthn_credentials\n(passkeys)]
+    [refresh_tokens\n(sessions)]
+  }
+
+  database "Jobs" {
+    [pg_cron\nDaily cleanup]
+  }
+}
+
+package "Device" {
+  [Browser WebAuthn API]
+  [Authenticator\n(Face ID, Touch ID, etc)]
+}
+
+' Connections
+LoginScreen --> authService
+LoginScreen --> webauthnService
+ManagePasskeysScreen --> webauthnService
+ActiveSessionsScreen --> authService
+
+authService --> apiClient
+webauthnService --> apiClient
+
+apiClient --> Memory : read/write
+authService --> LocalStorage : read/write
+
+apiClient --> [/v1/auth/*] : HTTP
+apiClient --> [/v1/auth/webauthn/*] : HTTP
+apiClient --> [/v1/protected/*] : HTTP
+
+[/v1/protected/*] --> [authenticate\n(JWT verify)]
+[/v1/auth/*] --> authController
+[/v1/auth/webauthn/*] --> webauthnController
+
+authController --> BAuthSvc
+authController --> refreshTokenService
+webauthnController --> BWebAuthnSvc
+
+BAuthSvc --> [jwt.js]
+BAuthSvc --> [staff\n(user accounts)]
+BWebAuthnSvc --> [@simplewebauthn/server]
+BWebAuthnSvc --> [webauthn_credentials\n(passkeys)]
+refreshTokenService --> [refresh_tokens\n(sessions)]
+
+[pg_cron\nDaily cleanup] --> [refresh_tokens\n(sessions)]
+
+webauthnService --> [Browser WebAuthn API]
+[Browser WebAuthn API] --> [Authenticator\n(Face ID, Touch ID, etc)]
+
+note right of Memory
+Access Token:
+- Stored in memory only
+- Never in localStorage
+- Cleared on refresh
+- Rolling update on each request
+end note
+
+note right of [refresh_tokens\n(sessions)]
+Refresh Token:
+- Stored as SHA-256 hash
+- HttpOnly cookie
+- Token rotation (single-use)
+- Device & IP tracking
+- Auto cleanup (expired/revoked)
+end note
+
+note right of [authenticate\n(JWT verify)]
+Middleware:
+1. Extract Bearer token
+2. Verify JWT signature
+3. Check expiration
+4. Generate new token
+5. Send via X-New-Token header
+end note
+
+note right of [@simplewebauthn/server]
+WebAuthn (FIDO2):
+- RP_ID: localhost
+- RP_ORIGIN: http://localhost:3001
+- Challenge generation
+- Response verification
+- Counter validation
+- Replay attack prevention
+end note
+
+@enduml

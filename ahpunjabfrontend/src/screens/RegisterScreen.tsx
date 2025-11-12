@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { FloatingLabelField } from '../components/FloatingLabelField'
 import { SearchableSelect, SearchableMultiSelect } from '../components/SearchableSelect'
 import { PrimaryButton, SecondaryButton } from '../components/Button'
@@ -7,10 +9,14 @@ import { ProgressIndicator } from '../components/ProgressIndicator'
 import { RadioGroup, Checkbox } from '../components/FormControls'
 import { ChevronRight, UserPlus, Trash2, Plus } from 'lucide-react'
 import { MapPicker } from '../components/MapPicker'
+import { LoadingOverlay } from '../components/LoadingOverlay'
+import { RegistrationSuccessDialog, ErrorDialog } from '../components/DialogBox'
 
 export default function RegisterScreen() {
+  const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState(1)
   const totalSteps = 4
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Empty Form state
   const [formData, setFormData] = useState({
@@ -54,12 +60,110 @@ export default function RegisterScreen() {
   const [employees, setEmployees] = useState<Array<{type: string, name: string, mobile: string, email: string}>>([])
   const [selectedVillageForPopulation, setSelectedVillageForPopulation] = useState<string>('')
 
+  // Dialog states
+  const [successDialog, setSuccessDialog] = useState({
+    isOpen: false,
+    orgId: '',
+    registrationId: 0,
+    instituteName: '',
+    status: '',
+    failedServiceVillages: [] as string[]
+  })
+  const [errorDialog, setErrorDialog] = useState({
+    isOpen: false,
+    message: ''
+  })
+
+  // Fetch districts with React Query (cached for 24 hours - rarely changes)
+  const { data: districtsData } = useQuery({
+    queryKey: ['geo', 'districts'],
+    queryFn: async () => {
+      const response = await fetch('/v1/geo/districts')
+      const data = await response.json()
+      return data.success ? data.data.districts : []
+    },
+    staleTime: 24 * 60 * 60 * 1000, // 24 hours
+    gcTime: 48 * 60 * 60 * 1000, // Keep in cache for 48 hours
+  })
+
+  // Fetch tehsils based on selected district (cached for 1 hour)
+  const { data: tehsilsData, isLoading: isTehsilsLoading } = useQuery({
+    queryKey: ['geo', 'tehsils', formData.district],
+    queryFn: async () => {
+      const response = await fetch(`/v1/geo/${encodeURIComponent(formData.district)}/tehsils`)
+      const data = await response.json()
+      return data.success ? data.data.tehsils : []
+    },
+    enabled: !!formData.district, // Only fetch when district is selected
+    staleTime: 60 * 60 * 1000, // 1 hour
+  })
+
+  // Fetch villages based on selected district and tehsil (cached for 1 hour)
+  const { data: villagesData, isLoading: isVillagesLoading } = useQuery({
+    queryKey: ['geo', 'villages', formData.district, formData.tehsil],
+    queryFn: async () => {
+      const response = await fetch(
+        `/v1/geo/${encodeURIComponent(formData.district)}/${encodeURIComponent(formData.tehsil)}/villages`
+      )
+      const data = await response.json()
+      return data.success ? data.data.villages : []
+    },
+    enabled: !!formData.district && !!formData.tehsil,
+    staleTime: 60 * 60 * 1000,
+  })
+
+  // Fetch parent institutes based on location and type (cached for 30 minutes)
+  const { data: parentInstitutesData, isLoading: isParentInstitutesLoading } = useQuery({
+    queryKey: ['geo', 'parentInstitutes', formData.district, formData.tehsil, formData.instituteType],
+    queryFn: async () => {
+      const response = await fetch(
+        `/v1/geo/parent-institutes?district=${encodeURIComponent(formData.district)}&tehsil=${encodeURIComponent(formData.tehsil)}&instituteType=${encodeURIComponent(formData.instituteType)}`
+      )
+      const data = await response.json()
+      return data.success ? data.data.institutes : []
+    },
+    enabled: !!formData.district && !!formData.tehsil && !!formData.instituteType,
+    staleTime: 30 * 60 * 1000, // 30 minutes
+  })
+
+  // Fetch valid designations (cached for 24 hours - rarely changes)
+  const { data: designationsData } = useQuery({
+    queryKey: ['geo', 'designations'],
+    queryFn: async () => {
+      const response = await fetch('/v1/geo/designations')
+      const data = await response.json()
+      return data.success ? data.data.designations : []
+    },
+    staleTime: 24 * 60 * 60 * 1000, // 24 hours
+    gcTime: 48 * 60 * 60 * 1000, // Keep in cache for 48 hours
+  })
+
+  // Combine loading states
+  const isLoadingGeo = isTehsilsLoading || isVillagesLoading || isParentInstitutesLoading
+
+  // Build geoData from queries
+  const geoData = {
+    districts: districtsData || [],
+    tehsils: tehsilsData || [],
+    villages: villagesData || [],
+    parentInstitutes: parentInstitutesData || []
+  }
+
   // Get all villages (establishment + service villages)
   const allVillages = formData.village
     ? [formData.village, ...formData.serviceVillages]
     : formData.serviceVillages
 
   const handleInputChange = (field: string, value: string | boolean | string[]) => {
+    // Reset dependent fields when parent changes
+    if (field === 'district') {
+      setFormData(prev => ({ ...prev, district: value as string, tehsil: '', village: '', serviceVillages: [] }))
+      return
+    }
+    if (field === 'tehsil') {
+      setFormData(prev => ({ ...prev, tehsil: value as string, village: '', serviceVillages: [] }))
+      return
+    }
     setFormData(prev => ({ ...prev, [field]: value }))
 
     // Initialize population data for new villages
@@ -243,15 +347,75 @@ export default function RegisterScreen() {
     }
   }
 
-  const handleRegister = () => {
-    if (validateStep(currentStep)) {
-      console.log('Register data:', { ...formData, employees })
+  const handleRegister = async () => {
+    if (!validateStep(currentStep)) {
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+
+      // Prepare registration data
+      const registrationData = {
+        district: formData.district,
+        tehsil: formData.tehsil,
+        village: formData.village,
+        serviceVillages: formData.serviceVillages,
+        instituteType: formData.instituteType,
+        isClusterAvailable: formData.isClusterAvailable,
+        isLabAvailable: formData.isLabAvailable,
+        isTehsilHQ: formData.isTehsilHQ,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        incharge: {
+          type: formData.inchargeType,
+          name: formData.inchargeName,
+          mobile: formData.inchargeMobile,
+          email: formData.inchargeEmail
+        },
+        employees: employees,
+        villagePopulations: villagePopulations
+      }
+
+      const response = await fetch('/v1/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(registrationData)
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        // Show success dialog with registration details
+        setSuccessDialog({
+          isOpen: true,
+          orgId: data.data.orgId,
+          registrationId: data.data.registrationId,
+          instituteName: data.data.instituteName,
+          status: data.data.status,
+          failedServiceVillages: data.data.failedServiceVillages || []
+        })
+      } else {
+        setErrorDialog({
+          isOpen: true,
+          message: data.message || 'Unknown error occurred'
+        })
+      }
+    } catch (error) {
+      console.error('Registration error:', error)
+      setErrorDialog({
+        isOpen: true,
+        message: 'Failed to submit registration. Please check your internet connection and try again.'
+      })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const handleBack = () => {
-    console.log('Navigate back')
-    window.location.reload(); // This will take you back to the screen selection
+    navigate(-1)
   }
 
   const stepTitles = [
@@ -337,6 +501,13 @@ export default function RegisterScreen() {
         totalSteps={totalSteps}
       />
 
+      {/* Loading Overlay */}
+      <LoadingOverlay
+        isLoading={isLoadingGeo || isSubmitting}
+        message={isSubmitting ? "Submitting..." : "Loading..."}
+        subMessage={isSubmitting ? "Creating your registration" : "Fetching data"}
+      />
+
       {/* Scrollable Form Content */}
       <div
         className="flex-1 overflow-y-auto px-6 py-4 bg-white"
@@ -353,20 +524,19 @@ export default function RegisterScreen() {
               <p className="text-gray-600 font-['Poppins'] text-sm">Tell us about your veterinary institute</p>
             </div>
 
-            {renderSelect('district', 'Select Your District', ['Amritsar', 'Ludhiana', 'Jalandhar', 'Patiala', 'Bathinda', 'Ferozepur', 'Gurdaspur', 'Hoshiarpur'])}
+            {renderSelect('district', 'Select Your District', geoData.districts.map((d: { districtName: string }) => d.districtName))}
 
-            {renderSelect('tehsil', 'Select Your Tehsil', ['Ajnala', 'Amritsar I', 'Amritsar II', 'Tarn Taran', 'Patti', 'Khadoor Sahib', 'Baba Bakala', 'Jandiala Guru'])}
+            {renderSelect('tehsil', 'Select Your Tehsil', geoData.tehsils.map((t: { tehsilName: string }) => t.tehsilName))}
 
-            {renderSelect('village', 'Village of Establishment', ['Ajnala', 'Attari', 'Beas', 'Bhikhiwind', 'Budha Theh', 'Chogawan', 'Dalla', 'Fatehabad', 'Ghalib Kalan', 'Harike'], true)}
+            {renderSelect('village', 'Village of Establishment', geoData.villages.map((v: { villageName: string }) => v.villageName), true)}
 
-            {renderMultiSelect('serviceVillages', 'Other Villages of Service (Optional)', ['Jandiala Guru', 'Kathunangal', 'Lopoke', 'Majitha', 'Naushera Pannuan', 'Ramdass', 'Rayya', 'Sultanwind'])}
+            {renderMultiSelect('serviceVillages', 'Other Villages of Service (Optional)', geoData.villages.filter((v: { villageName: string }) => v.villageName !== formData.village).map((v: { villageName: string }) => v.villageName))}
 
             {/* Location Selection - Accordion Style */}
             <MapPicker
               title="Institute Location"
               latitude={formData.latitude}
               longitude={formData.longitude}
-              title="Institute Location"
               onLocationSelect={(lat, lng) => {
                 handleInputChange('latitude', lat.toString())
                 handleInputChange('longitude', lng.toString())
@@ -405,7 +575,7 @@ export default function RegisterScreen() {
               />
             </div>
 
-            {renderSelect('parentInstitute', 'Your Reporting/Parent Institute', ['District Veterinary Hospital Amritsar', 'Regional Veterinary Hospital Tarn Taran', 'Veterinary College Ludhiana', 'Animal Husbandry Department Punjab'])}
+            {renderSelect('parentInstitute', 'Your Reporting/Parent Institute', geoData.parentInstitutes.map((p: { instituteName: string }) => p.instituteName), true)}
           </div>
         )}
 
@@ -416,7 +586,7 @@ export default function RegisterScreen() {
               <p className="text-gray-600 font-['Poppins'] text-sm">Information about the institute incharge</p>
             </div>
 
-            {renderSelect('inchargeType', 'Select Incharge Type', ['Veterinary Officer', 'Assistant Veterinary Officer', 'Livestock Inspector', 'Senior Veterinary Officer', 'Chief Veterinary Officer'])}
+            {renderSelect('inchargeType', 'Select Incharge Type', designationsData || [])}
 
             {renderInput('inchargeName', 'Incharge Name', 'text', true)}
 
@@ -484,7 +654,7 @@ export default function RegisterScreen() {
                   <h3 className="text-base font-semibold text-gray-900 font-['Poppins']">Add Team Member</h3>
                 </div>
 
-                {renderSelect('employeeType', 'Select Employee Type', ['Veterinary Officer', 'Assistant Veterinary Officer', 'Livestock Inspector', 'Animal Attendant', 'Lab Technician', 'Field Assistant', 'Data Entry Operator'])}
+                {renderSelect('employeeType', 'Select Employee Type', designationsData || [])}
 
                 {renderInput('employeeName', 'Employee Name', 'text')}
 
@@ -769,6 +939,35 @@ export default function RegisterScreen() {
           )}
         </div>
       </div>
+
+      {/* Success Dialog */}
+      <RegistrationSuccessDialog
+        isOpen={successDialog.isOpen}
+        orgId={successDialog.orgId}
+        registrationId={successDialog.registrationId}
+        instituteName={successDialog.instituteName}
+        status={successDialog.status}
+        failedServiceVillages={successDialog.failedServiceVillages}
+        onClose={() => {
+          setSuccessDialog({
+            isOpen: false,
+            orgId: '',
+            registrationId: 0,
+            instituteName: '',
+            status: '',
+            failedServiceVillages: []
+          })
+          navigate('/login')
+        }}
+      />
+
+      {/* Error Dialog */}
+      <ErrorDialog
+        isOpen={errorDialog.isOpen}
+        title="Registration Failed"
+        message={errorDialog.message}
+        onClose={() => setErrorDialog({ isOpen: false, message: '' })}
+      />
 
     </div>
   )

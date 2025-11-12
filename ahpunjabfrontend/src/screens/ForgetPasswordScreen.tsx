@@ -1,12 +1,15 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { FloatingLabelField } from '../components/FloatingLabelField'
 import { PrimaryButton, SecondaryButton } from '../components/Button'
-import { ScreenHeader } from '../components/ScreenHeader'
+// import { ScreenHeader } from '../components/ScreenHeader'
 import { IconWrapper } from '../components/IconWrapper'
 import { validateEmail } from '../utils/validation'
 import { CheckCircle2, Lock, Mail, AlertCircle } from 'lucide-react'
+import { BackHeader } from '../components/Headers'
 
 export default function ForgetPasswordScreen() {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     email: ''
   })
@@ -40,9 +43,7 @@ export default function ForgetPasswordScreen() {
   }
 
   const handleBack = () => {
-    // Navigate back to login but how!
-    console.log('Navigate back to login')
-    window.location.reload(); // This will take you back to the screen selection
+    navigate(-1)
   }
 
   const handleResendEmail = () => {
@@ -67,7 +68,7 @@ export default function ForgetPasswordScreen() {
       >
 
         {/* Header */}
-        <ScreenHeader title="Password Reset" onBack={handleBackToLogin} className="mb-8" />
+        <BackHeader title="Password Reset" onBack={handleBackToLogin} />
 
         {/* Success Content */}
         <div className="flex-1 flex flex-col justify-center items-center text-center space-y-6">
@@ -111,7 +112,7 @@ export default function ForgetPasswordScreen() {
     <div className="ForgetPasswordScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col px-2 py-4 overflow-hidden">
 
       {/* Header */}
-      <ScreenHeader title="Forgot Password" onBack={handleBack} className="mb-8" />
+      <BackHeader title="Forgot Password" onBack={handleBack} />
       
       {/* Illustration */}
       <div className="text-center mb-8">

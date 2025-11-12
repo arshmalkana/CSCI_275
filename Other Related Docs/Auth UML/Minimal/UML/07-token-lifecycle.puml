@@ -1,0 +1,90 @@
+@startuml Token Lifecycle
+title Token Lifecycle & Security Flow
+
+[*] --> Unauthenticated
+
+state Unauthenticated {
+  [*] --> LoginPage : User visits /login
+  LoginPage --> LoginAttempt : Enter credentials\n(password or passkey)
+}
+
+LoginAttempt --> Authenticated : Success\n• Generate tokens\n• Store refresh (DB + cookie)\n• Store access (memory)\n• Store user (localStorage)
+LoginAttempt --> Unauthenticated : Failed\n• Show error\n• Clear data
+
+state Authenticated {
+  [*] --> TokenActive
+
+  state TokenActive {
+    [*] --> ValidToken
+    ValidToken --> MakingRequest : User action\n(API call)
+    MakingRequest --> ValidToken : Success\n• Receive new access token\n• Update token in memory\n• Update refresh cookie
+
+    note right of MakingRequest
+      Rolling JWT:
+      Every request returns
+      a NEW access token
+      via X-New-Token header
+    end note
+  }
+
+  TokenActive --> TokenExpired : Access token expired\n(> 15 minutes)
+
+  state TokenExpired {
+    [*] --> RefreshAttempt
+    RefreshAttempt --> TokenActive : Refresh success\n• Old refresh token revoked\n• New tokens generated\n• Retry original request
+    RefreshAttempt --> [*] : Refresh failed\n• Token expired (> 7/90 days)\n• Token already used\n• Token revoked
+  }
+
+  TokenExpired --> Unauthenticated : Redirect to login\n• Clear memory\n• Clear localStorage
+
+  TokenActive --> LoggingOut : User clicks logout
+
+  state LoggingOut {
+    [*] --> RevokeToken
+    RevokeToken --> [*] : • Mark token as revoked (DB)\n• Clear cookie\n• Clear memory & storage
+  }
+
+  LoggingOut --> Unauthenticated
+}
+
+Authenticated --> Unauthenticated : Manual revocation\n(from another device)
+Authenticated --> Unauthenticated : Token expired\n(max 7/90 days)
+Authenticated --> Unauthenticated : Security event\n(suspicious activity)
+
+note right of Authenticated
+Access Token (15 min):
+• JWT signed with secret
+• Payload: {id, username, role}
+• Stored in memory only
+• Rolling refresh on each request
+
+Refresh Token (7d/90d):
+• JWT with longer expiry
+• Stored in HttpOnly cookie
+• Hash stored in database
+• Single-use (rotated on refresh)
+• Device & IP tracking
+
+User Data:
+• Stored in localStorage
+• Non-sensitive only
+• For UI personalization
+• Cleared on logout
+end note
+
+note left of TokenExpired
+Token Rotation Security:
+1. User sends old refresh token
+2. Backend verifies in database
+3. Backend marks old token as revoked
+4. Backend generates new tokens
+5. Backend stores new token hash
+6. User receives new tokens
+
+If old token used again:
+→ Possible theft detected
+→ Revoke all user tokens
+→ Force re-login
+end note
+
+@enduml
