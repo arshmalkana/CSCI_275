@@ -47,8 +47,8 @@ INSERT INTO semen_types (semen_code, semen_name, species, semen_category, is_act
 VALUES
   ('MURRAH', 'Murrah Buffalo', 'Buffalo', 'Local', TRUE),
   ('NILI_RAVI', 'Nili Ravi Buffalo', 'Buffalo', 'Local', TRUE),
-  ('SURTI', 'Surti Buffalo', 'Buffalo', 'Local', TRUE),
-  ('JAFFARABADI', 'Jaffarabadi Buffalo', 'Buffalo', 'Local', TRUE)
+  ('MURRAH_SEXED', 'Murrah Buffalo (Sexed)', 'Buffalo', 'Sexed', TRUE),
+  ('NILI_RAVI_SEXED', 'Nili Ravi Buffalo (Sexed)', 'Buffalo', 'Sexed', TRUE)
 ON CONFLICT (semen_code) DO NOTHING;
 
 -- Verify insertion

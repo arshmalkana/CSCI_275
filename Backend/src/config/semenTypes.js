@@ -32,8 +32,8 @@ export const SEMEN_TYPE_MAPPING = {
   // Buffaloes
   'murrah': 'MURRAH',
   'niliRavi': 'NILI_RAVI',
-  'surti': 'SURTI',
-  'jaffarabadi': 'JAFFARABADI',
+  'murrahSexed': 'MURRAH_SEXED',
+  'niliRaviSexed': 'NILI_RAVI_SEXED',
 }
 
 /**

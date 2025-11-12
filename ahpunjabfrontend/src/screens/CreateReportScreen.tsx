@@ -158,8 +158,8 @@ const CreateReportScreen = () => {
     buffaloes: {
       murrah: createEmptyBreed(),
       niliRavi: createEmptyBreed(),
-      surti: createEmptyBreed(),
-      jaffarabadi: createEmptyBreed(),
+      murrahSexed: createEmptyBreed(),
+      niliRaviSexed: createEmptyBreed(),
     },
   });
 
@@ -416,6 +416,7 @@ const CreateReportScreen = () => {
   };
 
   // Validation function - checks for data quality issues
+  // @ts-expect-error - Function kept for future use when validation is re-enabled
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const validateReportData = (): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
@@ -1024,8 +1025,8 @@ const CreateReportScreen = () => {
       buffaloes: {
         murrah: createEmptyBreed(),
         niliRavi: createEmptyBreed(),
-        surti: createEmptyBreed(),
-        jaffarabadi: createEmptyBreed(),
+        murrahSexed: createEmptyBreed(),
+        niliRaviSexed: createEmptyBreed(),
       },
     });
   };

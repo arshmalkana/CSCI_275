@@ -42,7 +42,7 @@ export const OPDSection = ({ data, setData }: OPDSectionProps) => {
       />
 
       {/* Patient Cases Card */}
-      <FormCard title="Patient Cases" colorScheme="blue">
+      <FormCard title="OPD Cases" colorScheme="blue">
         <div className="divide-y divide-gray-100">
           <CompactOPDRow
             label="Equines"

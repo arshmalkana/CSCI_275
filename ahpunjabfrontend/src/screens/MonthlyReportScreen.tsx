@@ -185,12 +185,15 @@ export default function MonthlyReportScreen() {
   }
 
   // Fetch reports from API
-  const { data: reports = [], isLoading: isLoadingReports } = useQuery({
+  const { data: reports = [], isLoading: isLoadingReports } = useQuery<Report[]>({
     queryKey: ['monthlyReports', selectedYear, statusFilter],
-    queryFn: () => api.listMonthlyReports({
-      fiscalYear: selectedYear,
-      status: statusFilter
-    }),
+    queryFn: async () => {
+      const data = await api.listMonthlyReports({
+        fiscalYear: selectedYear,
+        status: statusFilter
+      })
+      return data as Report[]
+    },
     enabled: !!selectedYear // Only fetch when fiscal year is selected
   })
 

@@ -118,8 +118,8 @@ export interface AIReportsData {
   buffaloes: {
     murrah: BreedAIData;
     niliRavi: BreedAIData;
-    surti: BreedAIData;
-    jaffarabadi: BreedAIData;
+    murrahSexed: BreedAIData;
+    niliRaviSexed: BreedAIData;
   };
 }
 

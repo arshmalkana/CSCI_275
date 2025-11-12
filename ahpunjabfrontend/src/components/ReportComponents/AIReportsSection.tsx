@@ -140,8 +140,8 @@ export const AIReportsSection = ({ data, setData }: AIReportsSectionProps) => {
       breeds: [
         { id: 'murrah', name: 'Murrah' },
         { id: 'niliRavi', name: 'Nili Ravi' },
-        { id: 'surti', name: 'Surti' },
-        { id: 'jaffarabadi', name: 'Jaffarabadi' },
+        { id: 'murrahSexed', name: 'Murrah Sexed' },
+        { id: 'niliRaviSexed', name: 'Nili Ravi Sexed' },
       ],
     },
   ];
@@ -243,10 +243,10 @@ export const AIReportsSection = ({ data, setData }: AIReportsSectionProps) => {
                             </p>
                           </div>
 
-                          {/* Current Month */}
+                          {/* Artificial Insemination */}
                           <div className="space-y-3">
                             <h5 className="text-xs font-bold text-gray-700 font-['Poppins'] uppercase tracking-wide">
-                              Current Month
+                              Artificial Insemination
                             </h5>
                             <div className="grid grid-cols-2 gap-3">
                               <FloatingLabelField
@@ -287,10 +287,10 @@ export const AIReportsSection = ({ data, setData }: AIReportsSectionProps) => {
 
                           <div className="border-t border-gray-200" />
 
-                          {/* 3 Months Ago */}
+                          {/* Follow Up (3 Months Ago) */}
                           <div className="space-y-3">
                             <h5 className="text-xs font-bold text-gray-700 font-['Poppins'] uppercase tracking-wide">
-                              Covered 3 Months Ago
+                              Follow Up (Covered 3 Months Ago)
                             </h5>
                             <div className="grid grid-cols-2 gap-3">
                               <FloatingLabelField
@@ -331,10 +331,10 @@ export const AIReportsSection = ({ data, setData }: AIReportsSectionProps) => {
 
                           <div className="border-t border-gray-200" />
 
-                          {/* 6 Months Ago */}
+                          {/* Calf Born (6 Months Ago) */}
                           <div className="space-y-3">
                             <h5 className="text-xs font-bold text-gray-700 font-['Poppins'] uppercase tracking-wide">
-                              Positive 6 Months Ago
+                              Calf Born (Positive 6 Months Ago)
                             </h5>
                             <div className="grid grid-cols-2 gap-3">
                               <FloatingLabelField
