@@ -235,13 +235,13 @@ export const AIReportsSection = ({ data, setData }: AIReportsSectionProps) => {
                       {isBreedExpanded && (
                         <div className="p-3 space-y-4 bg-white">
                           {/* Context Data - TODO: Replace with real data from backend */}
-                          <div className="bg-blue-50 border-l-4 border-blue-400 px-3 py-2">
+                          {/*<div className="bg-blue-50 border-l-4 border-blue-400 px-3 py-2">
                             <p className="text-xs text-gray-700 font-['Poppins'] leading-relaxed">
                               <span className="font-semibold text-blue-700">Previous Month:</span>
                               <br />
-                              AI: {tempContextData.lastMonth.ai} • Covered: {tempContextData.lastMonth.covered} • Beneficiaries: {tempContextData.lastMonth.beneficiaries}
+                              AI: tempContextData.lastMonth.ai • Covered: tempContextData.lastMonth.covered • Beneficiaries: tempContextData.lastMonth.beneficiaries
                             </p>
-                          </div>
+                          </div>*/}
 
                           {/* Artificial Insemination */}
                           <div className="space-y-3">
