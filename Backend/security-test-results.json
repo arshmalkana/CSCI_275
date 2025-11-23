@@ -1,0 +1,47 @@
+[
+  {
+    "testId": "SEC-001",
+    "description": "SQL Injection Prevention - Login",
+    "expectedResults": "HTTP 401, login fails safely without SQL injection",
+    "actualResults": "HTTP 401, success=false, message=Invalid username or password",
+    "status": "PASS",
+    "notes": "SQL injection attack prevented",
+    "executedAt": "2025-11-23T22:19:32.002Z"
+  },
+  {
+    "testId": "SEC-002",
+    "description": "XSS Prevention - Report Data",
+    "expectedResults": "XSS payload rejected or sanitized",
+    "actualResults": "HTTP 400, validation error",
+    "status": "PASS",
+    "notes": "XSS payload rejected by validation",
+    "executedAt": "2025-11-23T22:19:32.016Z"
+  },
+  {
+    "testId": "SEC-003",
+    "description": "Authorization Check - Access Control",
+    "expectedResults": "HTTP 403 or 404, cannot access unauthorized resources",
+    "actualResults": "HTTP 400",
+    "status": "FAIL",
+    "notes": "SECURITY ISSUE: May be able to access unauthorized data",
+    "executedAt": "2025-11-23T22:19:32.027Z"
+  },
+  {
+    "testId": "SEC-004",
+    "description": "Authentication Required - Protected Endpoints",
+    "expectedResults": "HTTP 401, authentication required",
+    "actualResults": "HTTP 401",
+    "status": "PASS",
+    "notes": "Protected endpoints require authentication",
+    "executedAt": "2025-11-23T22:19:32.030Z"
+  },
+  {
+    "testId": "SEC-005",
+    "description": "Invalid JWT Token Rejection",
+    "expectedResults": "HTTP 401, invalid token rejected",
+    "actualResults": "HTTP 401",
+    "status": "PASS",
+    "notes": "Invalid tokens properly rejected",
+    "executedAt": "2025-11-23T22:19:32.032Z"
+  }
+]

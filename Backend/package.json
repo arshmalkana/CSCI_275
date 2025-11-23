@@ -9,7 +9,10 @@
   "scripts": {
     "predev": "npx kill-port 8080 || true",
     "dev": "nodemon",
-    "start": "fastify start -c fastify.config.json src/server.js"
+    "start": "fastify start -c fastify.config.json src/server.js",
+    "test": "node --test test/**/*.test.js",
+    "test:watch": "node --test --watch test/**/*.test.js",
+    "test:coverage": "c8 node --test test/**/*.test.js"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

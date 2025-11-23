@@ -1,0 +1,29 @@
+[
+  {
+    "testId": "PT-002",
+    "description": "API Response Time - Login Endpoint",
+    "expectedResults": "Average response time < 500ms",
+    "actualResults": "Avg: 25.74ms, Min: 8.07ms, Max: 72.60ms",
+    "status": "PASS",
+    "notes": "Good performance - well under 500ms requirement",
+    "executedAt": "2025-11-23T22:18:43.061Z"
+  },
+  {
+    "testId": "PT-003",
+    "description": "Concurrent Users - Login Endpoint",
+    "expectedResults": "Handle 10 concurrent requests in < 1000ms, all successful",
+    "actualResults": "Total time: 79.13ms, Avg/request: 7.91ms, Success: 1/10",
+    "status": "FAIL",
+    "notes": "Performance or reliability issue with concurrent load",
+    "executedAt": "2025-11-23T22:18:43.141Z"
+  },
+  {
+    "testId": "PT-004",
+    "description": "Database Query Performance - Report Retrieval",
+    "expectedResults": "Average response time < 300ms",
+    "actualResults": "Avg: 2.23ms",
+    "status": "PASS",
+    "notes": "Good database performance",
+    "executedAt": "2025-11-23T22:18:43.729Z"
+  }
+]

@@ -1,0 +1,121 @@
+[
+  {
+    "testId": "UT-AUTH-001",
+    "description": "Login with Valid Credentials",
+    "steps": [
+      "Find user by userId",
+      "Verify password",
+      "Generate JWT tokens"
+    ],
+    "expectedResults": "User object with staff_id, password verified=true, both tokens generated",
+    "actualResults": "User: {\"staff_id\":9,\"user_id\":\"testuser\"}, Password valid: true, Tokens: Generated",
+    "status": "PASS",
+    "notes": "",
+    "executedAt": "2025-11-23T22:09:20.445Z"
+  },
+  {
+    "testId": "UT-AUTH-002",
+    "description": "Login with Invalid Password",
+    "steps": [
+      "Find user",
+      "Verify wrong password"
+    ],
+    "expectedResults": "Password verification returns false",
+    "actualResults": "Password valid: false",
+    "status": "PASS",
+    "notes": "",
+    "executedAt": "2025-11-23T22:09:20.448Z"
+  },
+  {
+    "testId": "UT-AUTH-003",
+    "description": "Find Non-Existent User",
+    "steps": [
+      "Find user that does not exist"
+    ],
+    "expectedResults": "Function returns null (not undefined, not error)",
+    "actualResults": "Result: null",
+    "status": "PASS",
+    "notes": "",
+    "executedAt": "2025-11-23T22:09:20.450Z"
+  },
+  {
+    "testId": "UT-AUTH-004",
+    "description": "Case-Insensitive Username Lookup",
+    "steps": [
+      "Find with lowercase",
+      "Find with uppercase",
+      "Find with mixed case"
+    ],
+    "expectedResults": "All three lookups return same user",
+    "actualResults": "Lowercase: 9, Uppercase: 9, Mixed: 9",
+    "status": "PASS",
+    "notes": "",
+    "executedAt": "2025-11-23T22:09:20.455Z"
+  },
+  {
+    "testId": "UT-AUTH-005",
+    "description": "SQL Injection Prevention",
+    "steps": [
+      "Attempt SQL injection",
+      "Verify database integrity"
+    ],
+    "expectedResults": "Malicious input handled safely, database intact",
+    "actualResults": "SQL Injection worked: false, Table exists: true",
+    "status": "PASS",
+    "notes": "",
+    "executedAt": "2025-11-23T22:09:20.458Z"
+  },
+  {
+    "testId": "UT-REPORTS-001",
+    "description": "Create Draft Report with Valid Data",
+    "steps": [
+      "Call saveMonthlyReport with valid data",
+      "Verify report created",
+      "Check return value"
+    ],
+    "expectedResults": "Report created successfully, returns report object with reportId",
+    "actualResults": "Report created: Yes, Report ID: 22",
+    "status": "PASS",
+    "notes": "",
+    "executedAt": "2025-11-23T22:09:20.479Z"
+  },
+  {
+    "testId": "UT-REPORTS-002",
+    "description": "Reject Negative Values in OPD",
+    "steps": [
+      "Submit report with negative value",
+      "Verify validation error"
+    ],
+    "expectedResults": "Validation error thrown for negative value",
+    "actualResults": "Error thrown: true, Message: Validation failed: OPD bovine - new: Cannot have negative values",
+    "status": "PASS",
+    "notes": "",
+    "executedAt": "2025-11-23T22:09:20.480Z"
+  },
+  {
+    "testId": "UT-REPORTS-003",
+    "description": "Reject Unusually High Values",
+    "steps": [
+      "Submit report with unusually high value",
+      "Check for warning/error"
+    ],
+    "expectedResults": "Warning or error for unusually high value",
+    "actualResults": "Warning/Error: true, Message: Validation failed: OPD bovine - new: Value 150000 seems unusually high",
+    "status": "PASS",
+    "notes": "",
+    "executedAt": "2025-11-23T22:09:20.481Z"
+  },
+  {
+    "testId": "UT-REPORTS-004",
+    "description": "AI Reports - Covered Cannot Exceed AI Done",
+    "steps": [
+      "Submit AI report with covered > ai",
+      "Verify validation error"
+    ],
+    "expectedResults": "Validation error: covered cannot exceed AI done",
+    "actualResults": "Error thrown: true, Message: Validation failed: AI Reports HF: Animals covered (15) cannot exceed AI done (10)",
+    "status": "PASS",
+    "notes": "",
+    "executedAt": "2025-11-23T22:09:20.482Z"
+  }
+]

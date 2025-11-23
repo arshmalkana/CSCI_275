@@ -1,0 +1,71 @@
+[
+  {
+    "testId": "IT-API-001",
+    "description": "POST /v1/auth/login - Valid Credentials",
+    "steps": [
+      "Send POST to /v1/auth/login",
+      "Check status code",
+      "Verify token in response",
+      "Verify user data"
+    ],
+    "expectedResults": "HTTP 200, success=true, token present, user object returned",
+    "actualResults": "HTTP 200, success=true, token=present, user=present",
+    "status": "PASS",
+    "notes": "",
+    "executedAt": "2025-11-23T22:17:33.434Z"
+  },
+  {
+    "testId": "IT-API-002",
+    "description": "POST /v1/auth/login - Invalid Credentials",
+    "steps": [
+      "Send POST with wrong password",
+      "Check status code",
+      "Verify error message"
+    ],
+    "expectedResults": "HTTP 401, success=false, appropriate error message",
+    "actualResults": "HTTP 401, success=false, message=Invalid username or password",
+    "status": "PASS",
+    "notes": "",
+    "executedAt": "2025-11-23T22:17:33.441Z"
+  },
+  {
+    "testId": "IT-API-003",
+    "description": "POST /v1/auth/login - Rate Limiting",
+    "steps": [
+      "Make 6 rapid failed login attempts",
+      "Check if 6th attempt is blocked"
+    ],
+    "expectedResults": "HTTP 429 on 6th attempt, rate limit error message",
+    "actualResults": "HTTP 401, error=Invalid username or password",
+    "status": "FAIL",
+    "notes": "Warning: Rate limiting may not be working",
+    "executedAt": "2025-11-23T22:17:34.136Z"
+  },
+  {
+    "testId": "IT-API-004",
+    "description": "POST /v1/reports/monthly - Create Draft",
+    "steps": [
+      "Login to get token",
+      "POST report with Authorization header",
+      "Check response"
+    ],
+    "expectedResults": "HTTP 200/201, report created with reportId",
+    "actualResults": "HTTP 201, reportId=26, success=true",
+    "status": "PASS",
+    "notes": "",
+    "executedAt": "2025-11-23T22:17:34.174Z"
+  },
+  {
+    "testId": "IT-API-005",
+    "description": "Protected Route - No Token",
+    "steps": [
+      "GET /v1/auth/sessions without token",
+      "Check status code"
+    ],
+    "expectedResults": "HTTP 401, authentication required error",
+    "actualResults": "HTTP 401",
+    "status": "PASS",
+    "notes": "",
+    "executedAt": "2025-11-23T22:17:34.175Z"
+  }
+]

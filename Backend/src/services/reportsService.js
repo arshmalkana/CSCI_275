@@ -138,17 +138,14 @@ function validateReportData(data) {
  */
 export async function saveMonthlyReport(data) {
   try {
-    // Validate data before processing (only for submitted reports, not drafts)
-    // TEMPORARILY DISABLED FOR TESTING - TO RE-ENABLE: Uncomment the lines below
-    // if (data.status === 'Submitted') {
-    //   const validationErrors = validateReportData(data)
-    //   if (validationErrors.length > 0) {
-    //     const error = new Error(`Validation failed: ${validationErrors.slice(0, 3).join('; ')}${validationErrors.length > 3 ? ` and ${validationErrors.length - 3} more errors` : ''}`)
-    //     error.validationErrors = validationErrors
-    //     error.statusCode = 400
-    //     throw error
-    //   }
-    // }
+    // Validate data before processing (including drafts to catch errors early)
+    const validationErrors = validateReportData(data)
+    if (validationErrors.length > 0) {
+      const error = new Error(`Validation failed: ${validationErrors.slice(0, 3).join('; ')}${validationErrors.length > 3 ? ` and ${validationErrors.length - 3} more errors` : ''}`)
+      error.validationErrors = validationErrors
+      error.statusCode = 400
+      throw error
+    }
 
     // Start transaction
     await query('BEGIN')
@@ -193,8 +190,8 @@ export async function saveMonthlyReport(data) {
       // Update main report
       await query(`
         UPDATE monthly_reports
-        SET submission_status = $1,
-            submitted_at = CASE WHEN $1 = 'Submitted' THEN CURRENT_TIMESTAMP ELSE submitted_at END,
+        SET submission_status = $1::report_status,
+            submitted_at = CASE WHEN $1::report_status = 'Submitted' THEN CURRENT_TIMESTAMP ELSE submitted_at END,
             updated_at = CURRENT_TIMESTAMP
         WHERE report_id = $2
       `, [status, reportId])
@@ -216,7 +213,7 @@ export async function saveMonthlyReport(data) {
           prepared_by,
           submission_status,
           submitted_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $6 = 'Submitted' THEN CURRENT_TIMESTAMP ELSE NULL END)
+        ) VALUES ($1, $2, $3, $4, $5, $6::report_status, CASE WHEN $6::report_status = 'Submitted' THEN CURRENT_TIMESTAMP ELSE NULL END)
         RETURNING report_id
       `, [instituteId, reportingMonth, startDate, endDate, staffId, status])
 
