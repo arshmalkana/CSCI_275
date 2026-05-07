@@ -2,7 +2,7 @@ import * as notificationsController from '../controllers/notificationsController
 import { authenticate } from '../middleware/authenticate.js'
 
 export default async function notificationsRoutes(fastify, options) {
-  // Get user's notifications (requires authentication)
+  // Get user's notifications (requires authentication
   fastify.get('/', {
     preHandler: authenticate,
     config: {
