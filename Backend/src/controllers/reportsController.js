@@ -1,4 +1,5 @@
 import * as reportsService from '../services/reportsService.js'
+import { generateReportPDF } from '../services/pdfService.js'
 
 /**
  * POST /reports/monthly
@@ -149,6 +150,43 @@ export async function getReport(request, reply) {
     return reply.code(500).send({
       success: false,
       message: 'Failed to retrieve report'
+    })
+  }
+}
+
+/**
+ * GET /reports/monthly/:month/pdf
+ * Download the monthly report as a PDF matching the official report template
+ */
+export async function downloadReportPDF(request, reply) {
+  try {
+    const { month } = request.params
+    const instituteId = request.user?.instituteId || 1
+
+    const reportData = await reportsService.getReportForPDF(instituteId, month)
+
+    if (!reportData) {
+      return reply.code(404).send({
+        success: false,
+        message: 'Report not found for this month'
+      })
+    }
+
+    const pdfBuffer = await generateReportPDF(reportData)
+
+    const filename = `Monthly_Report_${reportData.instituteName.replace(/\s+/g, '_')}_${month}.pdf`
+
+    return reply
+      .code(200)
+      .header('Content-Type', 'application/pdf')
+      .header('Content-Disposition', `attachment; filename="${filename}"`)
+      .header('Content-Length', pdfBuffer.length)
+      .send(pdfBuffer)
+  } catch (error) {
+    request.log.error('PDF generation error:', error)
+    return reply.code(500).send({
+      success: false,
+      message: 'Failed to generate PDF'
     })
   }
 }

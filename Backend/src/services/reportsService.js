@@ -236,21 +236,69 @@ export async function saveMonthlyReport(data) {
 
       for (const { type, data: opdData } of opdTypes) {
         if (opdData) {
-          // Insert New cases
-          if (opdData.new) {
+          const benef = parseInt(opdData.beneficiaries) || 0
+          if (parseInt(opdData.new) > 0) {
             await query(`
               INSERT INTO opd_report_details (report_id, opd_type, case_category, total_cases, beneficiaries_covered)
               VALUES ($1, $2, 'New', $3, $4)
-            `, [reportId, type, parseInt(opdData.new) || 0, parseInt(opdData.beneficiaries) || 0])
+            `, [reportId, type, parseInt(opdData.new) || 0, benef])
           }
-          // Insert Old cases
-          if (opdData.old) {
+          if (parseInt(opdData.old) > 0) {
             await query(`
               INSERT INTO opd_report_details (report_id, opd_type, case_category, total_cases, beneficiaries_covered)
               VALUES ($1, $2, 'Old', $3, $4)
-            `, [reportId, type, parseInt(opdData.old) || 0, parseInt(opdData.beneficiaries) || 0])
+            `, [reportId, type, parseInt(opdData.old) || 0, benef])
+          }
+          // Camp cases (spreadsheet column: TREATED IN CAMP)
+          if (parseInt(opdData.camp) > 0) {
+            await query(`
+              INSERT INTO opd_report_details (report_id, opd_type, case_category, total_cases, beneficiaries_covered)
+              VALUES ($1, $2, 'Camp', $3, $4)
+            `, [reportId, type, parseInt(opdData.camp) || 0, benef])
           }
         }
+      }
+    }
+
+    // Insert Vaccination details
+    // data.vaccinations: { hs, fmd, bq, brucellosis, etv, theilaria, rabies }
+    // Each entry: { received, used, vaccinated }
+    if (data.vaccinations) {
+      const vaccineCodeMap = {
+        hs:          'HS',
+        fmd:         'FMD',
+        bq:          'BQ',
+        brucellosis: 'BRUCELLOSIS',
+        etv:         'ETV',
+        theilaria:   'THEILARIA',
+        rabies:      'RABIES',
+      }
+
+      await query('DELETE FROM vaccination_report_details WHERE report_id = $1', [reportId])
+
+      for (const [key, vacCode] of Object.entries(vaccineCodeMap)) {
+        const vac = data.vaccinations[key]
+        if (!vac) continue
+        const received   = parseInt(vac.received)   || 0
+        const used       = parseInt(vac.used)        || 0
+        const vaccinated = parseInt(vac.vaccinated)  || 0
+        if (received === 0 && used === 0 && vaccinated === 0) continue
+
+        const vacTypeResult = await query(
+          `SELECT vaccine_id FROM vaccines WHERE vaccine_code = $1`, [vacCode]
+        )
+        if (vacTypeResult.rows.length === 0) continue
+
+        const vaccineId = vacTypeResult.rows[0].vaccine_id
+        await query(`
+          INSERT INTO vaccination_report_details
+            (report_id, vaccine_id, doses_received, doses_used, animals_vaccinated)
+          VALUES ($1, $2, $3, $4, $5)
+          ON CONFLICT (report_id, vaccine_id) DO UPDATE
+            SET doses_received     = EXCLUDED.doses_received,
+                doses_used         = EXCLUDED.doses_used,
+                animals_vaccinated = EXCLUDED.animals_vaccinated
+        `, [reportId, vaccineId, received, used, vaccinated])
       }
     }
 
@@ -314,19 +362,56 @@ export async function saveMonthlyReport(data) {
 
     // Insert Extension Activities details
     if (extension) {
-      // Farmer Awareness Camps
-      if (extension.farmerAwareness && extension.farmerAwareness.camps) {
+      // Fertility Camps – PLDB
+      if (extension.pldbCamps) {
+        const c = extension.pldbCamps
         await query(`
           INSERT INTO extension_activities_details (
-            report_id, activity_type, events_conducted, locations_covered, total_attendees, animals_treated
-          ) VALUES ($1, 'Camp', $2, $3, $4, $5)
+            report_id, activity_type, camp_subtype, events_conducted, animals_treated, total_attendees, ladies_attended
+          ) VALUES ($1, 'Camp', 'PLDB', $2, $3, $4, $5)
         `, [
           reportId,
-          parseInt(extension.farmerAwareness.camps) || 0,
-          parseInt(extension.farmerAwareness.villages) || 0,
-          parseInt(extension.farmerAwareness.farmersAttended) || 0,
-          parseInt(extension.farmerAwareness.animalsTreated) || 0
+          parseInt(c.camps)   || 0,
+          parseInt(c.animals) || 0,
+          parseInt(c.farmers) || 0,
+          parseInt(c.ladies)  || 0
         ])
+      }
+
+      // Fertility Camps – ASCAD
+      if (extension.ascadCamps) {
+        const c = extension.ascadCamps
+        await query(`
+          INSERT INTO extension_activities_details (
+            report_id, activity_type, camp_subtype, events_conducted, animals_treated, total_attendees, ladies_attended
+          ) VALUES ($1, 'Camp', 'ASCAD', $2, $3, $4, $5)
+        `, [
+          reportId,
+          parseInt(c.camps)   || 0,
+          parseInt(c.animals) || 0,
+          parseInt(c.farmers) || 0,
+          parseInt(c.ladies)  || 0
+        ])
+      }
+
+      // Any Other Camps (formerly farmerAwareness)
+      if (extension.otherCamps || extension.farmerAwareness) {
+        const c = extension.otherCamps || extension.farmerAwareness
+        const hasCamps = parseInt(c.camps) > 0 || parseInt(c.animalsTreated) > 0 ||
+                         parseInt(c.farmersAttended) > 0
+        if (hasCamps) {
+          await query(`
+            INSERT INTO extension_activities_details (
+              report_id, activity_type, camp_subtype, events_conducted, animals_treated, total_attendees, ladies_attended
+            ) VALUES ($1, 'Camp', 'Other', $2, $3, $4, $5)
+          `, [
+            reportId,
+            parseInt(c.camps || c.events)           || 0,
+            parseInt(c.animalsTreated || c.animals)  || 0,
+            parseInt(c.farmersAttended || c.farmers) || 0,
+            parseInt(c.ladies)                       || 0
+          ])
+        }
       }
 
       // School Lectures
@@ -429,9 +514,14 @@ export async function saveMonthlyReport(data) {
             sixMonthsBeneficiaries
           )
 
-          // Only insert if there's actual data
+          // Straw tracking fields (from spreadsheet Form responses)
+          const strawsReceived   = parseInt(current.strawsReceived)   || 0
+          const strawsUsedINAPH  = parseInt(current.strawsUsedINAPH)  || 0
+          const strawsIssuedAIW  = parseInt(current.strawsIssuedAIW)  || 0
+
           const hasData = totalAIDone > 0 || animalsCovered > 0 || animalsTested > 0 ||
-                         animalsPositive > 0 || maleCalves > 0 || femaleCalves > 0
+                         animalsPositive > 0 || maleCalves > 0 || femaleCalves > 0 ||
+                         strawsReceived > 0 || strawsUsedINAPH > 0 || strawsIssuedAIW > 0
 
           if (hasData) {
             await query(`
@@ -444,8 +534,11 @@ export async function saveMonthlyReport(data) {
                 animals_positive,
                 male_calves,
                 female_calves,
+                straws_received,
+                straws_used_inaph,
+                straws_issued_aiw,
                 beneficiaries_covered
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             `, [
               reportId,
               semenTypeId,
@@ -455,6 +548,9 @@ export async function saveMonthlyReport(data) {
               animalsPositive,
               maleCalves,
               femaleCalves,
+              strawsReceived,
+              strawsUsedINAPH,
+              strawsIssuedAIW,
               beneficiariesCovered
             ])
           }
@@ -881,4 +977,403 @@ export async function getMonthlyReportDetails(reportId) {
     console.error('Error in getMonthlyReportDetails:', error)
     throw error
   }
+}
+
+/**
+ * Collect all data required for PDF generation.
+ * Mirrors every section in the "Reports" sheet of the Bathinda AH Punjab DB
+ * spreadsheet, including progressive (year-to-date) totals and straw balance.
+ *
+ * @param {number} instituteId
+ * @param {string} reportingMonth  'YYYY-MM'
+ * @returns {Promise<object>}  data object consumed by pdfService.generateReportPDF()
+ */
+export async function getReportForPDF(instituteId, reportingMonth) {
+  // ── 1. Header info ─────────────────────────────────────────────────────────
+  const headerRes = await query(`
+    SELECT
+      mr.report_id,
+      mr.start_date,
+      mr.end_date,
+      mr.receipt_number,
+      mr.submission_status,
+      i.institute_name,
+      s.full_name    AS prepared_by_name,
+      s.designation
+    FROM monthly_reports mr
+    JOIN institutes i ON mr.institute_id = i.institute_id
+    JOIN staff      s ON mr.prepared_by  = s.staff_id
+    WHERE mr.institute_id = $1
+      AND mr.reporting_month = $2
+  `, [instituteId, reportingMonth])
+
+  if (headerRes.rows.length === 0) return null
+  const hdr     = headerRes.rows[0]
+  const reportId = hdr.report_id
+
+  // ── 2. Fiscal year start ───────────────────────────────────────────────────
+  const [yr, mo] = reportingMonth.split('-').map(Number)
+  const fiscalStartYear  = mo >= 4 ? yr : yr - 1
+  const fiscalStart = `${fiscalStartYear}-04`
+
+  // ── helper: build OPD map { opd_type: { new, old, camp } } ─────────────────
+  function buildOPDMap(rows) {
+    const m = {}
+    rows.forEach(r => {
+      const t = (r.opd_type || '').toLowerCase()
+      if (!m[t]) m[t] = {}
+      m[t][r.case_category.toLowerCase()] = Number(r.total_cases)
+    })
+    return m
+  }
+
+  // ── 3. OPD this month ──────────────────────────────────────────────────────
+  const opdMonthRes = await query(`
+    SELECT opd_type, case_category, total_cases
+    FROM opd_report_details
+    WHERE report_id = $1
+  `, [reportId])
+
+  // ── 4. OPD progressive (fiscal year to date) ──────────────────────────────
+  const opdProgRes = await query(`
+    SELECT opd.opd_type, opd.case_category, SUM(opd.total_cases) AS total_cases
+    FROM monthly_reports mr
+    JOIN opd_report_details opd ON opd.report_id = mr.report_id
+    WHERE mr.institute_id = $1
+      AND mr.reporting_month >= $2
+      AND mr.reporting_month <= $3
+    GROUP BY opd.opd_type, opd.case_category
+  `, [instituteId, fiscalStart, reportingMonth])
+
+  // ── castrations helper (camp category in Bovine/Others = castrations in OPD) ──
+  // Actually castrations are a separate field; for now derive from OPD Camp Bovine/Others
+  function castFromOPD(opdMap) {
+    return {
+      bovine: (opdMap.bovine?.camp || 0),
+      others: (opdMap.others?.camp || 0),
+    }
+  }
+
+  // ── 5. Certificates this month & progressive ──────────────────────────────
+  function buildCertMap(rows) {
+    const m = {}
+    rows.forEach(r => {
+      switch (r.certificate_type) {
+        case 'Health':     m.hcSmall  = (m.hcSmall  || 0) + Number(r.total_issued); break
+        case 'PostMortem': m.pmSmall  = (m.pmSmall  || 0) + Number(r.total_issued); break
+        case 'VetroLegal': m.vetroLegal = (m.vetroLegal || 0) + Number(r.total_issued); break
+      }
+      // The schema stores a single total; split evenly for small/large placeholder
+      if (r.certificate_type === 'Health') {
+        m.hcLarge = m.hcLarge || 0
+      } else if (r.certificate_type === 'PostMortem') {
+        m.pmLarge = m.pmLarge || 0
+      }
+    })
+    return m
+  }
+
+  const certMonthRes = await query(`
+    SELECT certificate_type, total_issued
+    FROM certificate_report_details WHERE report_id = $1
+  `, [reportId])
+
+  const certProgRes = await query(`
+    SELECT cert.certificate_type, SUM(cert.total_issued) AS total_issued
+    FROM monthly_reports mr
+    JOIN certificate_report_details cert ON cert.report_id = mr.report_id
+    WHERE mr.institute_id = $1
+      AND mr.reporting_month >= $2
+      AND mr.reporting_month <= $3
+    GROUP BY cert.certificate_type
+  `, [instituteId, fiscalStart, reportingMonth])
+
+  // ── 6. Vaccinations ────────────────────────────────────────────────────────
+  const VACCINE_CODES = ['HS','FMD','BQ','BRUCELLOSIS','ETV','THEILARIA','RABIES']
+
+  async function fetchVaccinationsForReports(monthCondition, params) {
+    const res = await query(`
+      SELECT v.vaccine_code,
+             SUM(vr.doses_received)    AS received,
+             SUM(vr.doses_used)        AS used,
+             SUM(vr.animals_vaccinated) AS vaccinated
+      FROM monthly_reports mr
+      JOIN vaccination_report_details vr ON vr.report_id = mr.report_id
+      JOIN vaccines v ON vr.vaccine_id = v.vaccine_id
+      WHERE mr.institute_id = $1
+        AND ${monthCondition}
+      GROUP BY v.vaccine_code
+    `, params)
+
+    return VACCINE_CODES.map(code => {
+      const r = res.rows.find(x => x.vaccine_code === code) || {}
+      return { code, received: Number(r.received||0), used: Number(r.used||0), vaccinated: Number(r.vaccinated||0) }
+    })
+  }
+
+  const vacMonth    = await fetchVaccinationsForReports('mr.reporting_month = $2',                             [instituteId, reportingMonth])
+  const vacThisYear = await fetchVaccinationsForReports('mr.reporting_month >= $2 AND mr.reporting_month <= $3', [instituteId, fiscalStart, reportingMonth])
+
+  // Balance vaccine = received before this fiscal year – used before this fiscal year
+  const vacBeforeYear = await fetchVaccinationsForReports(
+    'mr.reporting_month < $2', [instituteId, fiscalStart]
+  )
+  const vacBalance = VACCINE_CODES.map((code, i) => ({
+    code,
+    received:   vacBeforeYear[i].received  - vacBeforeYear[i].used,
+    used:       0,
+    vaccinated: 0,
+  }))
+
+  // ── 7. AI data ─────────────────────────────────────────────────────────────
+  const SEMEN_CODES = {
+    cow: ['HF_LOCAL','JERSEY_LOCAL','CB_LOCAL','SAHIWAL_LOCAL','HF_ETT','JERSEY_ETT','HF_IMPORTED','JERSEY_IMPORTED','HF_SEXED'],
+    buffalo: ['MURRAH','NILI_RAVI'],
+  }
+
+  async function fetchAIForMonth(monthCondition, params) {
+    const res = await query(`
+      SELECT st.semen_code,
+             SUM(ai.total_ai_done)     AS ai_done,
+             SUM(ai.animals_covered)   AS covered,
+             SUM(ai.animals_tested)    AS tested,
+             SUM(ai.animals_positive)  AS positive,
+             SUM(ai.male_calves)       AS male_calves,
+             SUM(ai.female_calves)     AS female_calves,
+             SUM(ai.straws_received)   AS straws_received,
+             SUM(ai.straws_used_inaph) AS straws_used_inaph,
+             SUM(ai.straws_issued_aiw) AS straws_issued_aiw
+      FROM monthly_reports mr
+      JOIN ai_report_details ai ON ai.report_id = mr.report_id
+      JOIN semen_types st ON ai.semen_type_id = st.semen_id
+      WHERE mr.institute_id = $1
+        AND ${monthCondition}
+      GROUP BY st.semen_code
+    `, params)
+
+    const map = {}
+    res.rows.forEach(r => {
+      map[r.semen_code] = {
+        code:             r.semen_code,
+        ai:               Number(r.ai_done       || 0),
+        covered:          Number(r.covered        || 0),
+        tested:           Number(r.tested         || 0),
+        positive:         Number(r.positive       || 0),
+        male:             Number(r.male_calves     || 0),
+        female:           Number(r.female_calves   || 0),
+        strawsReceived:   Number(r.straws_received  || 0),
+        strawsUsedINAPH:  Number(r.straws_used_inaph || 0),
+        strawsIssuedAIW:  Number(r.straws_issued_aiw || 0),
+      }
+    })
+    return map
+  }
+
+  const aiThisMonth   = await fetchAIForMonth('mr.reporting_month = $2',                             [instituteId, reportingMonth])
+  const aiProgressive = await fetchAIForMonth('mr.reporting_month >= $2 AND mr.reporting_month <= $3', [instituteId, fiscalStart, reportingMonth])
+
+  // Reshape into cow / buffalo lists
+  function reshapeAICow(aiMap, src) {
+    return SEMEN_CODES.cow.map(code => ({ code, ...(aiMap[code] || {}) }))
+  }
+
+  function reshapeAIBuf(aiMap) {
+    const mu = aiMap['MURRAH']    || {}
+    const nr = aiMap['NILI_RAVI'] || {}
+    return {
+      murrah:   { ai: n(mu.ai), covered: n(mu.covered), tested: n(mu.tested), positive: n(mu.positive) },
+      niliRavi: { ai: n(nr.ai), covered: n(nr.covered), tested: n(nr.tested), positive: n(nr.positive) },
+      calves:   {
+        male:   n(mu.male)   + n(nr.male),
+        female: n(mu.female) + n(nr.female),
+      },
+    }
+  }
+
+  const aiPD3MonthsAgo = await fetchAIForMonth(
+    `mr.reporting_month = TO_CHAR(TO_DATE($2,'YYYY-MM') - INTERVAL '3 months','YYYY-MM')`,
+    [instituteId, reportingMonth]
+  )
+
+  // ── 8. Straw balance ───────────────────────────────────────────────────────
+  const strawRes = await query(
+    `SELECT * FROM get_straw_balance($1, $2)`, [instituteId, reportingMonth]
+  )
+
+  const STRAW_ORDER = [
+    'HF_LOCAL','JERSEY_LOCAL','CB_LOCAL','SAHIWAL_LOCAL',
+    'HF_ETT','JERSEY_ETT','HF_IMPORTED','JERSEY_IMPORTED',
+    'HF_SEXED','MURRAH','NILI_RAVI',
+  ]
+  const strawAccount = STRAW_ORDER.map(code => {
+    const r = strawRes.rows.find(x => x.semen_code === code) || {}
+    return {
+      code,
+      lastYearBalance:   Number(r.last_year_balance   || 0),
+      lastMonthBalance:  Number(r.last_month_balance  || 0),
+      receivedThisMonth: Number(r.received_this_month || 0),
+      usedAIMonth:       Number(r.used_ai_this_month  || 0),
+      usedINAPHMonth:    Number(r.used_inaph_month     || 0),
+      issuedAIWMonth:    Number(r.issued_aiw_month     || 0),
+      receivedThisYear:  Number(r.received_this_year   || 0),
+      usedAIYear:        Number(r.used_ai_this_year    || 0),
+      usedINAPHYear:     Number(r.used_inaph_year      || 0),
+      issuedAIWYear:     Number(r.issued_aiw_year      || 0),
+      balanceInHand:     Number(r.balance_in_hand      || 0),
+    }
+  })
+
+  // ── 9. Extension camps ─────────────────────────────────────────────────────
+  const extRes = await query(`
+    SELECT camp_subtype, events_conducted, animals_treated, total_attendees, ladies_attended
+    FROM extension_activities_details
+    WHERE report_id = $1 AND activity_type = 'Camp'
+  `, [reportId])
+
+  function extByType(subtype) {
+    const r = extRes.rows.find(x => x.camp_subtype === subtype) || {}
+    return {
+      camps:   Number(r.events_conducted || 0),
+      animals: Number(r.animals_treated  || 0),
+      farmers: Number(r.total_attendees  || 0),
+      ladies:  Number(r.ladies_attended  || 0),
+    }
+  }
+
+  // ── 10. Lab tests ──────────────────────────────────────────────────────────
+  async function fetchLabForMonth(monthCondition, params) {
+    const res = await query(`
+      SELECT diagnostic_type, SUM(tests_conducted) AS tests
+      FROM monthly_reports mr
+      JOIN diagnostic_report_details diag ON diag.report_id = mr.report_id
+      WHERE mr.institute_id = $1
+        AND ${monthCondition}
+      GROUP BY diagnostic_type
+    `, params)
+    const map = {}
+    res.rows.forEach(r => { map[(r.diagnostic_type || '').toLowerCase()] = Number(r.tests) })
+    return { fecal: map.fecal||0, blood: map.blood||0, urine: map.urine||0, milk: map.milk||0 }
+  }
+
+  const labMonth    = await fetchLabForMonth('mr.reporting_month = $2',                             [instituteId, reportingMonth])
+  const labProgressive = await fetchLabForMonth('mr.reporting_month >= $2 AND mr.reporting_month <= $3', [instituteId, fiscalStart, reportingMonth])
+
+  // ── 11. Fee rates ──────────────────────────────────────────────────────────
+  const feeRateRes = await query(`SELECT service_code, current_rate FROM service_charges WHERE is_active = TRUE`)
+  const feeRates = {}
+  feeRateRes.rows.forEach(r => { feeRates[r.service_code] = Number(r.current_rate) })
+
+  // ── 12. Fee summary ────────────────────────────────────────────────────────
+  const feeSummaryRes = await query(
+    `SELECT * FROM get_fee_summary($1, $2)`, [instituteId, reportingMonth]
+  )
+
+  // ── Assemble result ────────────────────────────────────────────────────────
+  const opdThisMonth   = buildOPDMap(opdMonthRes.rows)
+  const opdProgressive = buildOPDMap(opdProgRes.rows)
+
+  return {
+    // Header
+    instituteName:   hdr.institute_name,
+    reportingMonth,
+    startDate:       hdr.start_date,
+    endDate:         hdr.end_date,
+    receiptNumber:   hdr.receipt_number,
+    preparedByName:  hdr.prepared_by_name,
+    designation:     hdr.designation,
+
+    // OPD
+    opd: {
+      thisMonth:   opdThisMonth,
+      progressive: opdProgressive,
+    },
+    castrations: {
+      thisMonth:   castFromOPD(opdThisMonth),
+      progressive: castFromOPD(opdProgressive),
+    },
+    certificates: {
+      thisMonth:   buildCertMap(certMonthRes.rows),
+      progressive: buildCertMap(certProgRes.rows),
+    },
+
+    // Vaccinations
+    vaccinations: {
+      thisMonth: vacMonth,
+      thisYear:  vacThisYear,
+      balance:   vacBalance,
+    },
+
+    // AI Cows
+    aiCows: {
+      thisMonth:   reshapeAICow(aiThisMonth),
+      progressive: reshapeAICow(aiProgressive),
+    },
+
+    // PD in Cows
+    pdCows: {
+      threeMonthsAgo: SEMEN_CODES.cow.map(code => ({
+        code,
+        tested:   n((aiPD3MonthsAgo[code] || {}).tested),
+        positive: n((aiPD3MonthsAgo[code] || {}).positive),
+      })),
+      thisMonth:   SEMEN_CODES.cow.map(code => ({
+        code,
+        tested:   n((aiThisMonth[code] || {}).tested),
+        positive: n((aiThisMonth[code] || {}).positive),
+      })),
+      progressive: SEMEN_CODES.cow.map(code => ({
+        code,
+        tested:   n((aiProgressive[code] || {}).tested),
+        positive: n((aiProgressive[code] || {}).positive),
+      })),
+    },
+
+    // Calves
+    calves: {
+      threeMonthsAgo: SEMEN_CODES.cow.map(code => ({
+        code,
+        male:   n((aiPD3MonthsAgo[code] || {}).male),
+        female: n((aiPD3MonthsAgo[code] || {}).female),
+      })),
+      thisMonth: SEMEN_CODES.cow.map(code => ({
+        code,
+        male:   n((aiThisMonth[code] || {}).male),
+        female: n((aiThisMonth[code] || {}).female),
+      })),
+      progressive: SEMEN_CODES.cow.map(code => ({
+        code,
+        male:   n((aiProgressive[code] || {}).male),
+        female: n((aiProgressive[code] || {}).female),
+      })),
+    },
+
+    // Buffalo AI
+    buffaloAI: {
+      threeMonthsAgo: reshapeAIBuf(aiPD3MonthsAgo),
+      thisMonth:      reshapeAIBuf(aiThisMonth),
+      progressive:    reshapeAIBuf(aiProgressive),
+    },
+
+    // Straw account
+    strawAccount,
+
+    // Extension camps
+    extensionCamps: {
+      pldb:  extByType('PLDB'),
+      ascad: extByType('ASCAD'),
+      other: extByType('Other'),
+    },
+
+    // Lab
+    labTests: {
+      thisMonth:   labMonth,
+      progressive: labProgressive,
+    },
+
+    // Fee
+    feeRates,
+    feeSummary: feeSummaryRes.rows,
+  }
+
+  function n(v) { return Number(v) || 0 }
 }

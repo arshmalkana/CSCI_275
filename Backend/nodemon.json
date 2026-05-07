@@ -1,7 +1,7 @@
 {
   "watch": ["src", "schemas"],
   "ext": "js,json",
-  "exec": "fastify start -c fastify.config.json src/server.js",
+  "exec": "node start.js",
   "signal": "SIGTERM",
   "delay": "200"
 }

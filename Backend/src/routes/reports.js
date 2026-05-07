@@ -447,6 +447,29 @@ export default async function reportsRoutes(fastify) {
     }
   }, reportsController.getReport)
 
+  // GET /reports/monthly/:month/pdf - Download monthly report as PDF
+  fastify.get('/monthly/:month/pdf', {
+    preHandler: authenticate,
+    schema: {
+      description: 'Download monthly report as PDF (matches official report template)',
+      tags: ['Reports'],
+      params: {
+        type: 'object',
+        required: ['month'],
+        properties: {
+          month: { type: 'string', pattern: '^\\d{4}-\\d{2}$', description: 'YYYY-MM format' }
+        }
+      },
+      response: {
+        200: { description: 'PDF file', type: 'string', format: 'binary' },
+        404: {
+          type: 'object',
+          properties: { success: { type: 'boolean' }, message: { type: 'string' } }
+        }
+      }
+    }
+  }, reportsController.downloadReportPDF)
+
   // NOTE: The /details/:reportId endpoint has been REMOVED for security reasons.
   // Use GET /monthly/:month instead, which uses natural keys and is more secure.
   // Numeric IDs are sequential and can be enumerated, exposing other institutes' data.

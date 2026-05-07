@@ -160,6 +160,14 @@ export const api = {
   getMonthlyReport: (month: string) =>
     apiGet(`/reports/monthly/${month}`),
 
+  // Download monthly report PDF (returns a Blob for saving to disk)
+  downloadReportPDF: async (month: string): Promise<Blob> => {
+    const url = `${apiClient.getBaseUrl()}/reports/monthly/${month}/pdf`
+    const response = await apiClient.fetch(url, { method: 'GET' })
+    if (!response.ok) throw new Error(`PDF download failed: ${response.statusText}`)
+    return response.blob()
+  },
+
   // NOTE: getReportDetails removed for security - use getMonthlyReport instead
   // Numeric IDs are sequential and expose internal database structure
 

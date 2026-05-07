@@ -9,8 +9,6 @@ services:
       POSTGRES_PASSWORD: ahpunjab_dev_2024
       POSTGRES_DB: ahpunjab_db
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
-    ports:
-      - "5432:5432"
     volumes:
       # ====================================================================
       # AUTOMATIC MIGRATIONS (run on every docker-compose up)
@@ -25,6 +23,8 @@ services:
       - ./init/03-test-seed.sql:/docker-entrypoint-initdb.d/03-test-seed.sql
       - ./init/04-seed-monthly-reports.sql:/docker-entrypoint-initdb.d/04-seed-monthly-reports.sql
       - ./init/05-seed-notifications.sql:/docker-entrypoint-initdb.d/05-seed-notifications.sql
+      # Migration: adds ladies_attended, camp_subtype, views, straw/fee functions
+      - ./migrations/002-report-alignment.sql:/docker-entrypoint-initdb.d/06-migration-002.sql
 
       # ====================================================================
       # DATA PERSISTENCE CONTROL
@@ -41,6 +41,26 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # Node.js Backend API
+  backend:
+    build:
+      context: ../Backend
+    container_name: ahpunjab-backend
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ahpunjab_db
+      DB_USER: ahpunjab
+      DB_PASSWORD: ahpunjab_dev_2024
+      NODE_ENV: development
+      LOG_LEVEL: info
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   # pgAdmin (Optional - Web UI for database management)
   pgadmin:

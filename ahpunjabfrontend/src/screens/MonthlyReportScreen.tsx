@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   FileText,
   Plus,
-  Mail,
+  Download,
   ChevronRight
 } from 'lucide-react'
 
@@ -119,7 +119,7 @@ function ReportRow({ report, onOpen, onDownload }: {
                 onDownload(report)
               }}
             >
-              <Mail size={16} className="text-gray-600" />
+              <Download size={16} className="text-gray-600" />
             </button>
           )}
           <ChevronRight size={18} className="text-gray-400 group-hover:text-yellow-600 transition-colors" />
@@ -223,19 +223,20 @@ export default function MonthlyReportScreen() {
       navigate('/reports/create')
     }
   }
-  const handleDownloadReport = (report: Report) => {
-    // Temporary solution: Download PDF from public directory
-    // Format: /reports/YYYY-MM-report.pdf
-    const pdfUrl = `/reports/${report.month}-report.pdf`;
-
-    // Create a temporary link and trigger download
-    const link = document.createElement('a');
-    link.href = pdfUrl;
-    link.download = `Monthly_Report_${report.month}.pdf`;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownloadReport = async (report: Report) => {
+    try {
+      const blob = await api.downloadReportPDF(report.month)
+      const url  = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href     = url
+      link.download = `Monthly_Report_${report.month}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    } catch {
+      setInfoDialog({ isOpen: true, message: 'Could not download the report. Please try again.' })
+    }
   }
 
   return (
