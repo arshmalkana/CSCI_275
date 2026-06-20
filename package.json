@@ -1,0 +1,16 @@
+{
+  "name": "ahpunjab",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm run db && concurrently --names \"backend,frontend\" --prefix-colors \"cyan,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd Backend && npm run dev",
+    "dev:frontend": "cd ahpunjabfrontend && npm run dev",
+    "db": "docker compose -f Database/docker-compose.yml up -d postgres pgadmin",
+    "db:down": "docker compose -f Database/docker-compose.yml down",
+    "install:all": "cd Backend && npm install && cd ../ahpunjabfrontend && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
