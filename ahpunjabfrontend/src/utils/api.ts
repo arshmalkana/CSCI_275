@@ -171,6 +171,96 @@ export const api = {
   // NOTE: getReportDetails removed for security - use getMonthlyReport instead
   // Numeric IDs are sequential and expose internal database structure
 
+  // Admin: approve / reject a report from a sub-institute
+  approveReport: (month: string, instituteId: number) =>
+    apiRequest(`/reports/monthly/${month}/approve`, {
+      method: 'PATCH',
+      body: JSON.stringify({ instituteId }),
+    }),
+
+  rejectReport: (month: string, instituteId: number, reason: string) =>
+    apiRequest(`/reports/monthly/${month}/reject`, {
+      method: 'PATCH',
+      body: JSON.stringify({ instituteId, reason }),
+    }),
+
+  // Admin: list pending reports across visible scope
+  getApprovalQueue: (params?: { status?: string }) => {
+    const q = new URLSearchParams()
+    if (params?.status) q.append('status', params.status)
+    return apiGet(`/admin/reports/queue${q.toString() ? `?${q}` : ''}`)
+  },
+
+  // Admin: registration queue
+  getPendingRegistrations: () => apiGet('/admin/registrations'),
+  approveRegistration: (registrationId: number, data: { userId: string; password: string; role: string; instituteId: number }) =>
+    apiRequest(`/admin/registrations/${registrationId}/approve`, { method: 'POST', body: JSON.stringify(data) }),
+  rejectRegistration: (registrationId: number, reason: string) =>
+    apiRequest(`/admin/registrations/${registrationId}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }),
+
+  // Admin: user management
+  listUsers: () => apiGet('/admin/users'),
+  getUser: (staffId: number) => apiGet(`/admin/users/${staffId}`),
+  updateUser: (staffId: number, data: unknown) =>
+    apiRequest(`/admin/users/${staffId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deactivateUser: (staffId: number) =>
+    apiRequest(`/admin/users/${staffId}/deactivate`, { method: 'POST', body: JSON.stringify({}) }),
+  reactivateUser: (staffId: number) =>
+    apiRequest(`/admin/users/${staffId}/reactivate`, { method: 'POST', body: JSON.stringify({}) }),
+
+  // Consolidated rollup (admin)
+  getRollupSummary: (params?: { month?: string; drill?: string }) => {
+    const q = new URLSearchParams()
+    if (params?.month) q.append('month', params.month)
+    if (params?.drill) q.append('drill', params.drill)
+    return apiGet(`/rollup/summary${q.toString() ? `?${q}` : ''}`)
+  },
+  getSubmissionStatus: (month: string) => apiGet(`/admin/reports/submission-status?month=${month}`),
+
+  // Reporting periods
+  listPeriods: () => apiGet('/periods'),
+  createPeriod: (data: unknown) => apiPost('/periods', data),
+  reopenPeriod: (month: string) =>
+    apiRequest(`/periods/${month}/reopen`, { method: 'POST', body: JSON.stringify({}) }),
+  lockPeriod: (month: string) =>
+    apiRequest(`/periods/${month}/lock`, { method: 'POST', body: JSON.stringify({}) }),
+
+  // Forgot password / reset password / change password
+  forgotPassword: (email: string) => apiPost('/auth/forgot-password', { email }),
+  resetPassword: (token: string, newPassword: string) =>
+    apiPost('/auth/reset-password', { token, newPassword }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    apiRequest('/auth/change-password', {
+      method: 'PATCH',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
+
+  // Institute CRUD (HQ_Admin+)
+  listInstitutes: () => apiGet('/admin/institutes'),
+  createInstitute: (data: {
+    instituteName: string
+    instituteType: string
+    orgId?: string
+    reportingAuthorityId?: number
+    districtId?: number
+    tehsilId?: number
+    villageId?: number
+  }) => apiPost('/admin/institutes', data),
+  updateInstitute: (instituteId: number, data: {
+    instituteName?: string
+    instituteType?: string
+    orgId?: string
+    reportingAuthorityId?: number
+  }) => apiRequest(`/admin/institutes/${instituteId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deactivateInstitute: (instituteId: number) =>
+    apiRequest(`/admin/institutes/${instituteId}/deactivate`, { method: 'POST', body: JSON.stringify({}) }),
+  reactivateInstitute: (instituteId: number) =>
+    apiRequest(`/admin/institutes/${instituteId}/reactivate`, { method: 'POST', body: JSON.stringify({}) }),
+
+  // Send reminder (replaces the handleSendReminder stub)
+  sendReminder: (instituteId: number, month: string) =>
+    apiPost('/admin/remind', { instituteId, month }),
+
   // Notifications
   getNotifications: (params?: { limit?: number; offset?: number; unreadOnly?: boolean }) => {
     const queryParams = new URLSearchParams()

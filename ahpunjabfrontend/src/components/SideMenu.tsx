@@ -1,44 +1,62 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { User, X } from 'lucide-react'
+import authService from '../services/authService'
 
 interface SideMenuProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+const ADMIN_ROLES = ['Tehsil_Admin', 'District_Admin', 'HQ_Admin', 'Super_Admin']
+const HQ_ROLES = ['HQ_Admin', 'Super_Admin']
+
+interface MenuItem {
+  name: string
+  icon: string
+  path: string
+  roles?: string[]
+}
+
+const ALL_MENU_ITEMS: MenuItem[] = [
+  { name: 'Home',                   icon: '🏠',  path: '/home' },
+  { name: 'Monthly Reporting',      icon: '📊',  path: '/reports/monthly' },
+  { name: 'Vaccine Distribution',   icon: '🚚',  path: '/vaccine-distribution' },
+  // Admin-only items
+  { name: 'Approval Queue',         icon: '✅',  path: '/admin/approval-queue',  roles: ADMIN_ROLES },
+  { name: 'Consolidated Dashboard', icon: '📈',  path: '/admin/rollup',           roles: ADMIN_ROLES },
+  { name: 'Admin Panel',            icon: '⚙️',  path: '/admin/panel',            roles: HQ_ROLES },
+  { name: 'Period Config',          icon: '📅',  path: '/admin/periods',          roles: HQ_ROLES },
+  { name: 'Institutes',             icon: '🏛️',  path: '/admin/institutes',        roles: HQ_ROLES },
+]
+
 export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
   const navigate = useNavigate()
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false)
 
-  const menuItems = [
-    { name: "Home", icon: "🏠", path: "/home" },
-    { name: "Monthly Reporting", icon: "📊", path: "/reports/monthly" },
-    { name: "Attendance Report", icon: "👥", path: "/reports/attendance" },
-    { name: "Vaccination Reports", icon: "💉", path: "/reports/vaccination" },
-    { name: "Vaccine Distribution", icon: "🚚", path: "/vaccine-distribution" },
-    { name: "Semen Distribution", icon: "🐄", path: "/semen-distribution" },
-    { name: "Summary Report", icon: "📈", path: "/reports/summary" },
-    // { name: "Manage Transfer", icon: "🔄", path: "/reports/manage-transfer" },
-    { name: "Contact other Institutes", icon: "📞", path: "/contact-institutes" },
-  ];
+  const user = authService.getUser()
+  const userRole = user?.role || ''
+
+  const menuItems = ALL_MENU_ITEMS.filter(item =>
+    !item.roles || item.roles.includes(userRole)
+  )
 
   useEffect(() => {
     if (isOpen) {
-      setIsAnimating(true);
+      setIsAnimating(true)
     } else {
-      const timer = setTimeout(() => setIsAnimating(false), 500);
-      return () => clearTimeout(timer);
+      const timer = setTimeout(() => setIsAnimating(false), 500)
+      return () => clearTimeout(timer)
     }
-  }, [isOpen]);
+  }, [isOpen])
 
-  const handleMenuItemClick = (item: string) => {
-    onClose(); // Close menu after selection
-    navigate(menuItems.find(i => i.name === item)?.path || '/home');
-  };
+  const handleMenuItemClick = (path: string) => {
+    onClose()
+    navigate(path)
+  }
 
   const handleLogout = () => {
-    localStorage.clear()
+    authService.logout()
     navigate('/login')
     onClose()
   }
@@ -48,7 +66,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
     onClose()
   }
 
-  if (!isAnimating && !isOpen) return null;
+  if (!isAnimating && !isOpen) return null
 
   return (
     <>
@@ -58,9 +76,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
           isOpen ? 'opacity-100' : 'opacity-0'
         }`}
         onClick={onClose}
-        style={{
-          backgroundColor: 'rgba(0, 0, 0, 0.5)'
-        }}
+        style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
       />
 
       {/* Side Menu */}
@@ -73,16 +89,19 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
           transitionTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
         }}
       >
-
-        {/* Header with Close Button */}
+        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <div className="flex items-center space-x-3 cursor-pointer" onClick={handleProfileClick}>
             <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center hover:bg-yellow-600 transition-colors">
               <User size={24} className="text-white" />
             </div>
             <div>
-              <div className="text-black text-lg font-semibold font-['Poppins']">AH Punjab</div>
-              <div className="text-gray-500 text-sm font-normal font-['Poppins']">Veterinary Institute</div>
+              <div className="text-black text-lg font-semibold font-['Poppins']">
+                {user?.name || 'AH Punjab'}
+              </div>
+              <div className="text-gray-500 text-sm font-normal font-['Poppins']">
+                {user?.role || 'Veterinary Institute'}
+              </div>
             </div>
           </div>
           <button
@@ -94,12 +113,12 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
         </div>
 
         {/* Menu Items */}
-        <div className="flex-1 py-4">
+        <div className="flex-1 py-4 overflow-y-auto">
           <div className="px-4 space-y-1">
             {menuItems.map((item, index) => (
               <button
                 key={index}
-                onClick={() => handleMenuItemClick(item.name)}
+                onClick={() => handleMenuItemClick(item.path)}
                 className="w-full flex items-center space-x-3 px-4 py-3 text-left rounded-lg hover:bg-gray-50 hover:text-yellow-600 transition-all duration-200 group"
               >
                 <span className="text-xl group-hover:scale-110 transition-transform duration-200">
@@ -122,8 +141,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
             🚪 Logout
           </button>
         </div>
-
       </div>
     </>
-  );
+  )
 }

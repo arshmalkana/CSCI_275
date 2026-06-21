@@ -1,6 +1,7 @@
 import { query } from '../database/db.js'
 import { getSemenCode } from '../config/semenTypes.js'
 import * as notificationsService from './notificationsService.js'
+import log from '../utils/logger.js'
 
 /**
  * Validate report data for logical consistency and data quality
@@ -472,7 +473,7 @@ export async function saveMonthlyReport(data) {
           // Get the semen code for this breed
           const semenCode = getSemenCode(breedId)
           if (!semenCode) {
-            console.warn(`Unknown breed ID: ${breedId}, skipping...`)
+            log.warn(`Unknown breed ID: ${breedId}, skipping...`)
             continue
           }
 
@@ -482,7 +483,7 @@ export async function saveMonthlyReport(data) {
           `, [semenCode])
 
           if (semenTypeResult.rows.length === 0) {
-            console.warn(`Semen type not found for code: ${semenCode}, skipping...`)
+            log.warn(`Semen type not found for code: ${semenCode}, skipping...`)
             continue
           }
 
@@ -570,7 +571,7 @@ export async function saveMonthlyReport(data) {
         )
       } catch (notifError) {
         // Log but don't fail the transaction if notification fails
-        console.error('Failed to create notification:', notifError)
+        log.error('Failed to create notification:', notifError)
       }
     }
 
@@ -585,7 +586,7 @@ export async function saveMonthlyReport(data) {
   } catch (error) {
     // Rollback on error
     await query('ROLLBACK')
-    console.error('Error in saveMonthlyReport:', error)
+    log.error('Error in saveMonthlyReport:', error)
     throw error
   }
 }
@@ -745,7 +746,7 @@ export async function getMonthlyReport(instituteId, reportingMonth) {
       aiReports: aiReports
     }
   } catch (error) {
-    console.error('Error in getMonthlyReport:', error)
+    log.error('Error in getMonthlyReport:', error)
     throw error
   }
 }
@@ -790,7 +791,7 @@ export async function getAvailableFiscalYears(instituteId) {
 
     return Array.from(fiscalYears).sort().reverse()
   } catch (error) {
-    console.error('Error in getAvailableFiscalYears:', error)
+    log.error('Error in getAvailableFiscalYears:', error)
     throw error
   }
 }
@@ -867,7 +868,7 @@ export async function listMonthlyReports(instituteId, filters = {}) {
       updatedAt: row.updated_at
     }))
   } catch (error) {
-    console.error('Error in listMonthlyReports:', error)
+    log.error('Error in listMonthlyReports:', error)
     throw error
   }
 }
@@ -974,7 +975,7 @@ export async function getMonthlyReportDetails(reportId) {
       extensions: extensionResult.rows
     }
   } catch (error) {
-    console.error('Error in getMonthlyReportDetails:', error)
+    log.error('Error in getMonthlyReportDetails:', error)
     throw error
   }
 }

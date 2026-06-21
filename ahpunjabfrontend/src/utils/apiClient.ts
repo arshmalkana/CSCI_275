@@ -1,9 +1,9 @@
 // API Client with automatic token refresh
 // Handles rolling JWT tokens and automatic retry on 401
 
-const API_BASE_URL = import.meta.env.PROD
-  ? 'https://api-ahpunjab.itsarsh.dev/v1'
-  : '/v1'
+const API_BASE_URL: string =
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.PROD ? 'https://api-ahpunjab.itsarsh.dev/v1' : '/v1')
 
 interface RequestOptions extends RequestInit {
   skipAuth?: boolean
@@ -17,6 +17,8 @@ interface RequestOptions extends RequestInit {
  * - Token expiry handling
  */
 class ApiClient {
+  private _refreshPromise: Promise<boolean> | null = null
+
   /**
    * Make an authenticated API request
    */
@@ -84,28 +86,36 @@ class ApiClient {
   }
 
   /**
-   * Refresh the access token using the refresh token cookie
+   * Refresh the access token using the refresh token cookie.
+   * Single-flight: concurrent callers share the same in-progress promise.
    */
-  async refreshToken(): Promise<boolean> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include'
-      })
+  refreshToken(): Promise<boolean> {
+    if (this._refreshPromise) return this._refreshPromise
 
-      if (response.ok) {
-        const data = await response.json()
-        if (data.token) {
-          localStorage.setItem('authToken', data.token)
-          localStorage.setItem('tokenExpiry', String(Date.now() + 15 * 60 * 1000))
-          return true
+    this._refreshPromise = (async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          credentials: 'include'
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.token) {
+            localStorage.setItem('authToken', data.token)
+            localStorage.setItem('tokenExpiry', String(Date.now() + 15 * 60 * 1000))
+            return true
+          }
         }
+        return false
+      } catch {
+        return false
+      } finally {
+        this._refreshPromise = null
       }
-      return false
-    } catch (error) {
-      console.error('Token refresh error:', error)
-      return false
-    }
+    })()
+
+    return this._refreshPromise
   }
 
   /**

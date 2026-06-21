@@ -32,6 +32,7 @@ import {
   type SectionStatus,
 } from '../components/ReportComponents';
 import api from '../utils/api';
+import { queueReport, clearSynced } from '../utils/offlineQueue';
 
 const CreateReportScreen = () => {
   const navigate = useNavigate();
@@ -547,6 +548,19 @@ const CreateReportScreen = () => {
         aiReports: aiReportsData
       };
 
+      if (!navigator.onLine) {
+        // Queue for background sync when connectivity returns
+        await queueReport(reportingMonth, reportData);
+        setSuccessDialog({
+          isOpen: true,
+          message: 'You are offline. Your report has been saved and will be submitted automatically when you reconnect.'
+        });
+        setHasUnsavedChanges(false);
+        localStorage.removeItem(`monthly-report-draft-${reportingMonth}`);
+        setTimeout(() => navigate('/home'), 2500);
+        return;
+      }
+
       // Submit using api client
       await api.submitMonthlyReport(reportData);
 
@@ -562,15 +576,25 @@ const CreateReportScreen = () => {
         navigate('/home');
       }, 2000);
     } catch (error) {
-      console.error('Submit error:', error);
       setErrorDialog({
         isOpen: true,
-        message: 'Network error. Please check your connection and try again.'
+        message: 'Failed to submit report. Please check your connection and try again.'
       });
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // Listen for REPORT_SYNCED from service worker to clear pending badge
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type === 'REPORT_SYNCED') {
+        clearSynced().catch(() => {})
+      }
+    }
+    navigator.serviceWorker?.addEventListener('message', handler)
+    return () => navigator.serviceWorker?.removeEventListener('message', handler)
+  }, []);
 
   // TODO: Copy from last month - will integrate with backend API
   const handleCopyFromLastMonth = async () => {

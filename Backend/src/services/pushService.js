@@ -1,3 +1,4 @@
+import log from '../utils/logger.js'
 import { query } from '../database/db.js'
 import webpush from 'web-push'
 
@@ -9,7 +10,7 @@ const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:admin@ahpunjab.gov.in'
 if (vapidPublicKey && vapidPrivateKey) {
   webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey)
 } else {
-  console.warn('VAPID keys not configured. Push notifications will not work.')
+  log.warn('VAPID keys not configured. Push notifications will not work.')
 }
 
 /**
@@ -45,7 +46,7 @@ export async function savePushSubscription(staffId, subscription) {
       return { subscriptionId: result.rows[0].subscription_id, updated: false }
     }
   } catch (error) {
-    console.error('Error saving push subscription:', error)
+    log.error('Error saving push subscription:', error)
     throw error
   }
 }
@@ -63,7 +64,7 @@ export async function removePushSubscription(staffId, endpoint) {
 
     return result.rowCount > 0
   } catch (error) {
-    console.error('Error removing push subscription:', error)
+    log.error('Error removing push subscription:', error)
     throw error
   }
 }
@@ -87,7 +88,7 @@ export async function getUserSubscriptions(staffId) {
       }
     }))
   } catch (error) {
-    console.error('Error getting user subscriptions:', error)
+    log.error('Error getting user subscriptions:', error)
     throw error
   }
 }
@@ -97,31 +98,31 @@ export async function getUserSubscriptions(staffId) {
  */
 export async function sendPushNotification(staffId, payload) {
   try {
-    console.log(`[PushService] Attempting to send push notification to staff ${staffId}`)
-    console.log(`[PushService] Payload:`, payload)
+    log.info(`[PushService] Attempting to send push notification to staff ${staffId}`)
+    log.info(`[PushService] Payload:`, payload)
 
     const subscriptions = await getUserSubscriptions(staffId)
-    console.log(`[PushService] Found ${subscriptions.length} active subscription(s)`)
+    log.info(`[PushService] Found ${subscriptions.length} active subscription(s)`)
 
     if (subscriptions.length === 0) {
-      console.log(`[PushService] No active subscriptions found for staff ${staffId}`)
+      log.info(`[PushService] No active subscriptions found for staff ${staffId}`)
       return { sent: 0, failed: 0, total: 0 }
     }
 
     const payloadString = JSON.stringify(payload)
-    console.log(`[PushService] Sending to ${subscriptions.length} endpoint(s)...`)
+    log.info(`[PushService] Sending to ${subscriptions.length} endpoint(s)...`)
 
     const results = await Promise.allSettled(
       subscriptions.map((subscription, index) =>
         webpush.sendNotification(subscription, payloadString)
           .then(() => {
-            console.log(`[PushService] ✓ Successfully sent to endpoint ${index + 1}`)
+            log.info(`[PushService] ✓ Successfully sent to endpoint ${index + 1}`)
           })
           .catch(error => {
-            console.error(`[PushService] ✗ Failed to send to endpoint ${index + 1}:`, error.message)
+            log.error(`[PushService] ✗ Failed to send to endpoint ${index + 1}:`, error.message)
             // If subscription is invalid (410 Gone), mark as inactive
             if (error.statusCode === 410) {
-              console.log(`[PushService] Subscription expired for staff ${staffId}, marking as inactive`)
+              log.info(`[PushService] Subscription expired for staff ${staffId}, marking as inactive`)
               query(`
                 UPDATE push_subscriptions
                 SET is_active = FALSE
@@ -136,19 +137,19 @@ export async function sendPushNotification(staffId, payload) {
     const sent = results.filter(r => r.status === 'fulfilled').length
     const failed = results.filter(r => r.status === 'rejected').length
 
-    console.log(`[PushService] Push notification sent to ${sent}/${subscriptions.length} devices for staff ${staffId}`)
+    log.info(`[PushService] Push notification sent to ${sent}/${subscriptions.length} devices for staff ${staffId}`)
     if (failed > 0) {
-      console.log(`[PushService] Failed deliveries: ${failed}`)
+      log.info(`[PushService] Failed deliveries: ${failed}`)
       results.forEach((result, index) => {
         if (result.status === 'rejected') {
-          console.error(`[PushService] Endpoint ${index + 1} error:`, result.reason)
+          log.error(`[PushService] Endpoint ${index + 1} error:`, result.reason)
         }
       })
     }
 
     return { sent, failed, total: subscriptions.length }
   } catch (error) {
-    console.error('[PushService] Error sending push notification:', error)
+    log.error('[PushService] Error sending push notification:', error)
     throw error
   }
 }

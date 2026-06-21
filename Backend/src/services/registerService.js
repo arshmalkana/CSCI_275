@@ -1,3 +1,4 @@
+import log from '../utils/logger.js'
 import { query } from '../database/db.js'
 
 /**
@@ -253,7 +254,7 @@ export async function createRegistration(data) {
   } catch (error) {
     // Rollback on error
     await query('ROLLBACK')
-    console.error('Error in createRegistration:', error)
+    log.error('Error in createRegistration:', error)
     throw error
   }
 }

@@ -1,6 +1,8 @@
 // src/services/authService.js
 import { query } from '../database/db.js'
 import jwtUtils from '../utils/jwt.js'
+import argon2 from 'argon2'
+import log from '../utils/logger.js'
 
 const authService = {
   /**
@@ -37,7 +39,7 @@ const authService = {
       const result = await query(sql, [userId])
       return result.rows.length > 0 ? result.rows[0] : null
     } catch (error) {
-      console.error('Error finding staff by user_id:', error)
+      log.error({ err: error }, 'Error finding staff by user_id')
       throw error
     }
   },
@@ -76,21 +78,34 @@ const authService = {
       const result = await query(sql, [staffId])
       return result.rows.length > 0 ? result.rows[0] : null
     } catch (error) {
-      console.error('Error finding staff by staff_id:', error)
+      log.error({ err: error }, 'Error finding staff by staff_id')
       throw error
     }
   },
 
   /**
-   * Verify password (currently plain text, will be hashed with Argon2id later)
-   * @param {string} plainPassword - Password entered by user
-   * @param {string} storedHash - Password hash from database
-   * @returns {boolean} True if passwords match
+   * Verify password using Argon2id.
+   * Falls back to plain-text comparison for legacy test accounts that were seeded
+   * before hashing was implemented.  On a successful plain-text match, the hash
+   * is upgraded in-place so the account migrates transparently on next login.
    */
-  verifyPassword(plainPassword, storedHash) {
-    // TODO: Replace with Argon2id verification
-    // For now, using plain text comparison
-    return plainPassword === storedHash
+  async verifyPassword(plainPassword, storedHash, staffId = null) {
+    if (storedHash && storedHash.startsWith('$argon2')) {
+      return argon2.verify(storedHash, plainPassword)
+    }
+    // Legacy plain-text path
+    const match = plainPassword === storedHash
+    if (match && staffId) {
+      // Upgrade to Argon2id silently
+      const newHash = await authService.hashPassword(plainPassword)
+      await query('UPDATE staff SET password_hash = $1 WHERE staff_id = $2', [newHash, staffId])
+        .catch(() => {}) // non-fatal
+    }
+    return match
+  },
+
+  async hashPassword(plain) {
+    return argon2.hash(plain, { type: argon2.argon2id })
   },
 
   /**
@@ -103,8 +118,8 @@ const authService = {
       staffId: staff.staff_id,
       userId: staff.user_id,
       role: staff.user_role,
-      designation: staff.designation
-      // instituteId: staff.current_institute_id
+      designation: staff.designation,
+      instituteId: staff.current_institute_id
     }
 
     const accessToken = jwtUtils.generateAccessToken(payload)

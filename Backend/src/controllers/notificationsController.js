@@ -1,12 +1,10 @@
 import * as notificationsService from '../services/notificationsService.js'
 
-/**
- * GET /notifications
- * Get user's notifications with pagination
- */
 export async function getNotifications(request, reply) {
   try {
-    const staffId = request.user?.staffId || 1 // Testing mode
+    const staffId = request.user?.staffId
+    if (!staffId) return reply.code(401).send({ success: false, message: 'Unauthorized' })
+
     const { limit = 50, offset = 0, unreadOnly = false } = request.query
 
     const notifications = await notificationsService.getUserNotifications(staffId, {
@@ -22,121 +20,72 @@ export async function getNotifications(request, reply) {
     })
   } catch (error) {
     request.log.error('Get notifications error:', error)
-    return reply.code(500).send({
-      success: false,
-      message: 'Failed to retrieve notifications'
-    })
+    return reply.code(500).send({ success: false, message: 'Failed to retrieve notifications' })
   }
 }
 
-/**
- * GET /notifications/unread-count
- * Get count of unread notifications
- */
 export async function getUnreadCount(request, reply) {
   try {
-    const staffId = request.user?.staffId || 1 // Testing mode
+    const staffId = request.user?.staffId
+    if (!staffId) return reply.code(401).send({ success: false, message: 'Unauthorized' })
 
     const count = await notificationsService.getUnreadCount(staffId)
 
-    return reply.send({
-      success: true,
-      data: { count }
-    })
+    return reply.send({ success: true, data: { count } })
   } catch (error) {
     request.log.error('Get unread count error:', error)
-    return reply.code(500).send({
-      success: false,
-      message: 'Failed to retrieve unread count'
-    })
+    return reply.code(500).send({ success: false, message: 'Failed to retrieve unread count' })
   }
 }
 
-/**
- * GET /notifications/:id
- * Get notification by ID
- */
 export async function getNotification(request, reply) {
   try {
-    const staffId = request.user?.staffId || 1 // Testing mode
-    const { id } = request.params
+    const staffId = request.user?.staffId
+    if (!staffId) return reply.code(401).send({ success: false, message: 'Unauthorized' })
 
-    const notificationId = parseInt(id)
+    const notificationId = parseInt(request.params.id)
     if (isNaN(notificationId)) {
-      return reply.code(400).send({
-        success: false,
-        message: 'Invalid notification ID'
-      })
+      return reply.code(400).send({ success: false, message: 'Invalid notification ID' })
     }
 
     const notification = await notificationsService.getNotificationById(notificationId, staffId)
 
     if (!notification) {
-      return reply.code(404).send({
-        success: false,
-        message: 'Notification not found'
-      })
+      return reply.code(404).send({ success: false, message: 'Notification not found' })
     }
 
-    return reply.send({
-      success: true,
-      data: notification
-    })
+    return reply.send({ success: true, data: notification })
   } catch (error) {
     request.log.error('Get notification error:', error)
-    return reply.code(500).send({
-      success: false,
-      message: 'Failed to retrieve notification'
-    })
+    return reply.code(500).send({ success: false, message: 'Failed to retrieve notification' })
   }
 }
 
-/**
- * PATCH /notifications/:id/read
- * Mark notification as read
- */
 export async function markAsRead(request, reply) {
   try {
-    const staffId = request.user?.staffId || 1 // Testing mode
-    const { id } = request.params
+    const staffId = request.user?.staffId
+    if (!staffId) return reply.code(401).send({ success: false, message: 'Unauthorized' })
 
-    const notificationId = parseInt(id)
+    const notificationId = parseInt(request.params.id)
     if (isNaN(notificationId)) {
-      return reply.code(400).send({
-        success: false,
-        message: 'Invalid notification ID'
-      })
+      return reply.code(400).send({ success: false, message: 'Invalid notification ID' })
     }
 
     const success = await notificationsService.markAsRead(notificationId, staffId)
 
-    if (!success) {
-      return reply.code(404).send({
-        success: false,
-        message: 'Notification not found'
-      })
-    }
+    if (!success) return reply.code(404).send({ success: false, message: 'Notification not found' })
 
-    return reply.send({
-      success: true,
-      message: 'Notification marked as read'
-    })
+    return reply.send({ success: true, message: 'Notification marked as read' })
   } catch (error) {
     request.log.error('Mark as read error:', error)
-    return reply.code(500).send({
-      success: false,
-      message: 'Failed to mark notification as read'
-    })
+    return reply.code(500).send({ success: false, message: 'Failed to mark notification as read' })
   }
 }
 
-/**
- * PATCH /notifications/read-all
- * Mark all notifications as read
- */
 export async function markAllAsRead(request, reply) {
   try {
-    const staffId = request.user?.staffId || 1 // Testing mode
+    const staffId = request.user?.staffId
+    if (!staffId) return reply.code(401).send({ success: false, message: 'Unauthorized' })
 
     const count = await notificationsService.markAllAsRead(staffId)
 
@@ -147,48 +96,27 @@ export async function markAllAsRead(request, reply) {
     })
   } catch (error) {
     request.log.error('Mark all as read error:', error)
-    return reply.code(500).send({
-      success: false,
-      message: 'Failed to mark notifications as read'
-    })
+    return reply.code(500).send({ success: false, message: 'Failed to mark notifications as read' })
   }
 }
 
-/**
- * DELETE /notifications/:id
- * Delete (soft delete) a notification
- */
 export async function deleteNotification(request, reply) {
   try {
-    const staffId = request.user?.staffId || 1 // Testing mode
-    const { id } = request.params
+    const staffId = request.user?.staffId
+    if (!staffId) return reply.code(401).send({ success: false, message: 'Unauthorized' })
 
-    const notificationId = parseInt(id)
+    const notificationId = parseInt(request.params.id)
     if (isNaN(notificationId)) {
-      return reply.code(400).send({
-        success: false,
-        message: 'Invalid notification ID'
-      })
+      return reply.code(400).send({ success: false, message: 'Invalid notification ID' })
     }
 
     const success = await notificationsService.deleteNotification(notificationId, staffId)
 
-    if (!success) {
-      return reply.code(404).send({
-        success: false,
-        message: 'Notification not found'
-      })
-    }
+    if (!success) return reply.code(404).send({ success: false, message: 'Notification not found' })
 
-    return reply.send({
-      success: true,
-      message: 'Notification deleted'
-    })
+    return reply.send({ success: true, message: 'Notification deleted' })
   } catch (error) {
     request.log.error('Delete notification error:', error)
-    return reply.code(500).send({
-      success: false,
-      message: 'Failed to delete notification'
-    })
+    return reply.code(500).send({ success: false, message: 'Failed to delete notification' })
   }
 }

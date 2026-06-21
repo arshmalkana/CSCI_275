@@ -15,8 +15,11 @@ services:
       - ./Database/init/03-test-seed.sql:/docker-entrypoint-initdb.d/03-test-seed.sql
       - ./Database/init/04-seed-monthly-reports.sql:/docker-entrypoint-initdb.d/04-seed-monthly-reports.sql
       - ./Database/init/05-seed-notifications.sql:/docker-entrypoint-initdb.d/05-seed-notifications.sql
-      - ./Database/migrations/002-report-alignment.sql:/docker-entrypoint-initdb.d/06-migration-002.sql
-      - ./Database/init/07-seed-talwandi-sabo.sql:/docker-entrypoint-initdb.d/07-seed-talwandi-sabo.sql
+      - ./Database/migrations/001-update-buffalo-breeds.sql:/docker-entrypoint-initdb.d/06-migration-001.sql
+      - ./Database/migrations/002-report-alignment.sql:/docker-entrypoint-initdb.d/07-migration-002.sql
+      - ./Database/migrations/003-reporting-periods.sql:/docker-entrypoint-initdb.d/08-migration-003.sql
+      - ./Database/migrations/004-password-reset-tokens.sql:/docker-entrypoint-initdb.d/09-migration-004.sql
+      - ./Database/init/07-seed-talwandi-sabo.sql:/docker-entrypoint-initdb.d/09-seed-talwandi-sabo.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ahpunjab -d ahpunjab_db"]
       interval: 10s
@@ -28,6 +31,8 @@ services:
       context: ./Backend
     container_name: ahpunjab-backend
     restart: unless-stopped
+    env_file:
+      - ./Backend/.env
     environment:
       DB_HOST: postgres
       DB_PORT: 5432

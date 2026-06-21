@@ -18,8 +18,8 @@ const authController = {
         })
       }
 
-      // Verify password
-      const isPasswordValid = authService.verifyPassword(password, staff.password_hash)
+      // Verify password (async — Argon2id with plain-text fallback for legacy accounts)
+      const isPasswordValid = await authService.verifyPassword(password, staff.password_hash, staff.staff_id)
 
       if (!isPasswordValid) {
         return reply.code(401).send({
@@ -76,7 +76,7 @@ const authController = {
         expiresIn: '15m'
       })
     } catch (error) {
-      console.error('Login error:', error)
+      request.log.error('Login error:', error)
       return reply.code(500).send({
         success: false,
         message: 'An error occurred during login'
@@ -105,7 +105,7 @@ const authController = {
         message: 'Logged out successfully'
       })
     } catch (error) {
-      console.error('Logout error:', error)
+      request.log.error('Logout error:', error)
       // Still clear cookie even if DB operation fails
       reply.clearCookie('refreshToken', {
         httpOnly: true,
@@ -184,7 +184,7 @@ const authController = {
         expiresIn: '15m'
       })
     } catch (error) {
-      console.error('Refresh token error:', error)
+      request.log.error('Refresh token error:', error)
       return reply.code(401).send({
         success: false,
         message: 'Invalid or expired refresh token'
@@ -208,7 +208,7 @@ const authController = {
         sessions
       })
     } catch (error) {
-      console.error('Get sessions error:', error)
+      request.log.error('Get sessions error:', error)
       return reply.code(500).send({
         success: false,
         message: 'Failed to retrieve sessions'
@@ -242,7 +242,7 @@ const authController = {
         message: 'Session revoked successfully'
       })
     } catch (error) {
-      console.error('Revoke session error:', error)
+      request.log.error('Revoke session error:', error)
       return reply.code(500).send({
         success: false,
         message: 'Failed to revoke session'
@@ -277,7 +277,7 @@ const authController = {
         message: 'All other sessions revoked successfully'
       })
     } catch (error) {
-      console.error('Revoke all sessions error:', error)
+      request.log.error('Revoke all sessions error:', error)
       return reply.code(500).send({
         success: false,
         message: 'Failed to revoke sessions'

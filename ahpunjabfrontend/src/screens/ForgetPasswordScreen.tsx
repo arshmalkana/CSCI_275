@@ -2,53 +2,52 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FloatingLabelField } from '../components/FloatingLabelField'
 import { PrimaryButton, SecondaryButton } from '../components/Button'
-// import { ScreenHeader } from '../components/ScreenHeader'
 import { IconWrapper } from '../components/IconWrapper'
 import { validateEmail } from '../utils/validation'
 import { CheckCircle2, Lock, Mail, AlertCircle } from 'lucide-react'
 import { BackHeader } from '../components/Headers'
+import api from '../utils/api'
 
 export default function ForgetPasswordScreen() {
   const navigate = useNavigate()
-  const [formData, setFormData] = useState({
-    email: ''
-  })
+  const [formData, setFormData] = useState({ email: '' })
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<{[key: string]: string}>({})
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }))
-    }
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }))
   }
 
-  const handleResetPassword = () => {
+  const handleResetPassword = async () => {
     const newErrors: {[key: string]: string} = {}
-
-    if (!formData.email) {
-      newErrors.email = 'Email address is required'
-    } else if (!validateEmail(formData.email)) {
-      newErrors.email = 'Please enter a valid email address'
-    }
+    if (!formData.email) newErrors.email = 'Email address is required'
+    else if (!validateEmail(formData.email)) newErrors.email = 'Please enter a valid email address'
 
     setErrors(newErrors)
+    if (Object.keys(newErrors).length > 0) return
 
-    if (Object.keys(newErrors).length === 0) {
-      // Add reset password logic here laterrrrrrrrr
-      console.log('Reset password for:', formData.email)
+    setIsLoading(true)
+    try {
+      await api.forgotPassword(formData.email)
       setIsSubmitted(true)
+    } catch {
+      setErrors({ email: 'Failed to send reset email. Please try again.' })
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const handleBack = () => {
-    navigate(-1)
-  }
+  const handleBack = () => navigate(-1)
 
-  const handleResendEmail = () => {
-    // Resend reset email
-    console.log('Resend reset email for:', formData.email)
+  const handleResendEmail = async () => {
+    setIsLoading(true)
+    try {
+      await api.forgotPassword(formData.email)
+    } catch { /* ignore */ } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleBackToLogin = () => {

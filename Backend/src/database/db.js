@@ -1,6 +1,14 @@
 // src/database/db.js
 import pg from 'pg'
+import log from '../utils/logger.js'
+
 const { Pool } = pg
+
+const IS_PROD = process.env.NODE_ENV === 'production'
+
+if (IS_PROD && !process.env.DB_PASSWORD) {
+  throw new Error('FATAL: DB_PASSWORD env var is required in production')
+}
 
 // Database configuration
 const pool = new Pool({
@@ -9,18 +17,17 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'ahpunjab_db',
   user: process.env.DB_USER || 'ahpunjab',
   password: process.env.DB_PASSWORD || 'ahpunjab_dev_2024',
-  max: 20, // Maximum number of connections in pool
+  max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
 })
 
-// Test database connection
 pool.on('connect', () => {
-  console.log('Connected to PostgreSQL database')
+  log.info('Connected to PostgreSQL database')
 })
 
 pool.on('error', (err) => {
-  console.error('Unexpected error on idle database client', err)
+  log.error({ err }, 'Unexpected error on idle database client')
   process.exit(-1)
 })
 
@@ -30,10 +37,10 @@ export const query = async (text, params) => {
   try {
     const res = await pool.query(text, params)
     const duration = Date.now() - start
-    console.log('Executed query', { text, duration, rows: res.rowCount })
+    log.debug({ text, duration, rows: res.rowCount }, 'Executed query')
     return res
   } catch (error) {
-    console.error('Database query error:', error)
+    log.error({ err: error, text }, 'Database query error')
     throw error
   }
 }

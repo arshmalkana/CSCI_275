@@ -1,6 +1,15 @@
 import * as reportsController from '../controllers/reportsController.js'
 import { authenticate } from '../middleware/authenticate.js'
 
+const ADMIN_ROLES = ['Tehsil_Admin', 'District_Admin', 'HQ_Admin', 'Super_Admin']
+
+function requireAdminRole(request, reply, done) {
+  if (!ADMIN_ROLES.includes(request.user?.role)) {
+    return reply.code(403).send({ success: false, message: 'Admin role required' })
+  }
+  done()
+}
+
 /**
  * JSON Schema definitions for reusable structures
  */
@@ -470,7 +479,44 @@ export default async function reportsRoutes(fastify) {
     }
   }, reportsController.downloadReportPDF)
 
-  // NOTE: The /details/:reportId endpoint has been REMOVED for security reasons.
-  // Use GET /monthly/:month instead, which uses natural keys and is more secure.
-  // Numeric IDs are sequential and can be enumerated, exposing other institutes' data.
+  // PATCH /reports/monthly/:month/approve
+  fastify.patch('/monthly/:month/approve', {
+    preHandler: [authenticate, requireAdminRole],
+    schema: {
+      description: 'Approve a submitted monthly report (Tehsil_Admin and above)',
+      tags: ['Reports'],
+      params: {
+        type: 'object',
+        required: ['month'],
+        properties: { month: { type: 'string', pattern: '^\\d{4}-\\d{2}$' } }
+      },
+      body: {
+        type: 'object',
+        required: ['instituteId'],
+        properties: { instituteId: { type: 'integer', description: 'Institute that submitted the report' } }
+      }
+    }
+  }, reportsController.approveReport)
+
+  // PATCH /reports/monthly/:month/reject
+  fastify.patch('/monthly/:month/reject', {
+    preHandler: [authenticate, requireAdminRole],
+    schema: {
+      description: 'Reject / return a submitted monthly report for revision (Tehsil_Admin and above)',
+      tags: ['Reports'],
+      params: {
+        type: 'object',
+        required: ['month'],
+        properties: { month: { type: 'string', pattern: '^\\d{4}-\\d{2}$' } }
+      },
+      body: {
+        type: 'object',
+        required: ['instituteId', 'reason'],
+        properties: {
+          instituteId: { type: 'integer' },
+          reason: { type: 'string', minLength: 5, maxLength: 1000, description: 'Reason for rejection / revision request' }
+        }
+      }
+    }
+  }, reportsController.rejectReport)
 }

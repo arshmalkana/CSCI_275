@@ -374,9 +374,7 @@ export default function LoginScreen() {
             Punjab Animal Husbandry Department
           </p>
           <p className="text-xs text-gray-400 font-['Poppins'] mt-1">
-            
-            {/* Government of Punjab, India */}
-            CSCI 275 - Team 404
+            Government of Punjab, India
           </p>
         </div>
 

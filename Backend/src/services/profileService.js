@@ -1,3 +1,4 @@
+import log from '../utils/logger.js'
 // src/services/profileService.js
 import { query } from '../database/db.js'
 import { NotFoundError } from '../utils/errors.js'
@@ -87,7 +88,7 @@ export async function getProfileByUserId(userId) {
       }))
     }
   } catch (error) {
-    console.error('Error in getProfileByUserId:', error)
+    log.error('Error in getProfileByUserId:', error)
     throw error
   }
 }
@@ -134,7 +135,7 @@ export async function updateProfile(userId, updates) {
     // Return updated profile
     return await getProfileByUserId(userId)
   } catch (error) {
-    console.error('Error in updateProfile:', error)
+    log.error('Error in updateProfile:', error)
     throw error
   }
 }
@@ -170,7 +171,7 @@ export async function updateInstituteLocation(instituteId, latitude, longitude) 
       longitude: result.rows[0].longitude
     }
   } catch (error) {
-    console.error('Error in updateInstituteLocation:', error)
+    log.error('Error in updateInstituteLocation:', error)
     throw error
   }
 }
@@ -200,7 +201,7 @@ export async function updateProfilePicture(userId, pictureUrl) {
 
     return result.rows[0].profile_picture_url
   } catch (error) {
-    console.error('Error in updateProfilePicture:', error)
+    log.error('Error in updateProfilePicture:', error)
     throw error
   }
 }

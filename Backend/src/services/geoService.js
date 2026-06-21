@@ -1,3 +1,4 @@
+import log from '../utils/logger.js'
 import { query } from '../database/db.js'
 
 /**
@@ -21,7 +22,7 @@ export async function getAllDistricts() {
       stateName: row.state_name
     }))
   } catch (error) {
-    console.error('Error in getAllDistricts:', error)
+    log.error('Error in getAllDistricts:', error)
     throw error
   }
 }
@@ -59,7 +60,7 @@ export async function getTehsilsByDistrict(districtName) {
       }))
     }
   } catch (error) {
-    console.error('Error in getTehsilsByDistrict:', error)
+    log.error('Error in getTehsilsByDistrict:', error)
     throw error
   }
 }
@@ -141,7 +142,7 @@ export async function getVillagesByTehsil(districtName, tehsilName) {
       }))
     }
   } catch (error) {
-    console.error('Error in getVillagesByTehsil:', error)
+    log.error('Error in getVillagesByTehsil:', error)
     throw error
   }
 }
@@ -178,7 +179,7 @@ export async function searchVillages(searchQuery, limit = 20) {
       fullPath: `${row.state_name} > ${row.district_name} > ${row.tehsil_name} > ${row.village_name}`
     }))
   } catch (error) {
-    console.error('Error in searchVillages:', error)
+    log.error('Error in searchVillages:', error)
     throw error
   }
 }
@@ -230,7 +231,7 @@ export async function getGeographyHierarchy() {
       districts: Object.values(hierarchy)
     }
   } catch (error) {
-    console.error('Error in getGeographyHierarchy:', error)
+    log.error('Error in getGeographyHierarchy:', error)
     throw error
   }
 }
@@ -365,7 +366,7 @@ export async function getEligibleParentInstitutes(districtName, tehsilName, inst
       districtName: row.district_name
     }))
   } catch (error) {
-    console.error('Error in getEligibleParentInstitutes:', error)
+    log.error('Error in getEligibleParentInstitutes:', error)
     throw error
   }
 }

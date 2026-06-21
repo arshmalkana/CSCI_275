@@ -1,7 +1,9 @@
-// API base URL (use proxy in development)
-const API_BASE_URL = import.meta.env.PROD
-  ? 'https://api-ahpunjab.itsarsh.dev/v1'
-  : '/v1'
+import apiClient from '../utils/apiClient'
+
+// API base URL — set VITE_API_BASE_URL in .env.production to override
+const API_BASE_URL: string =
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.PROD ? 'https://api-ahpunjab.itsarsh.dev/v1' : '/v1')
 
 export interface LoginCredentials {
   username: string
@@ -110,28 +112,7 @@ class AuthService {
   }
 
   async refreshAccessToken(): Promise<boolean> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include', // Send refresh token cookie
-      })
-
-      if (!response.ok) {
-        return false
-      }
-
-      const data = await response.json()
-
-      if (data.token) {
-        localStorage.setItem('authToken', data.token)
-        localStorage.setItem('tokenExpiry', String(Date.now() + 15 * 60 * 1000))
-        return true
-      }
-      return false
-    } catch (error) {
-      console.error('Token refresh error:', error)
-      return false
-    }
+    return apiClient.refreshToken()
   }
 
   getToken(): string | null {

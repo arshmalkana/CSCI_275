@@ -1,3 +1,4 @@
+import log from '../utils/logger.js'
 // src/services/homeService.js
 import { query } from '../database/db.js'
 
@@ -292,7 +293,33 @@ export async function getHomeDataByUserId(userId) {
       }))
     }
 
-    // 10. Construct response object matching HomeScreen structure
+    // 10. Compute real reporting status from reporting_periods + monthly_reports
+    const reportStatusResult = await query(`
+      SELECT
+        rp.deadline,
+        mr.submitted_at,
+        mr.submission_status
+      FROM reporting_periods rp
+      LEFT JOIN monthly_reports mr
+        ON mr.institute_id = $1
+        AND mr.reporting_month = rp.reporting_month
+      WHERE rp.reporting_month = $2
+      LIMIT 1
+    `, [instituteId, currentMonth])
+
+    let reportingStatus = 'Pending'
+    if (reportStatusResult.rows.length > 0) {
+      const { deadline, submitted_at, submission_status } = reportStatusResult.rows[0]
+      if (submission_status === 'Submitted' || submission_status === 'Approved') {
+        reportingStatus = (submitted_at && deadline && new Date(submitted_at) <= new Date(deadline))
+          ? 'On Time'
+          : 'Late'
+      } else if (deadline && new Date() > new Date(deadline)) {
+        reportingStatus = 'Missing'
+      }
+    }
+
+    // 11. Construct response object matching HomeScreen structure
     const homeData = {
       name: mainStaff.institute_name,
       welcomeMessage: `Welcome ${mainStaff.full_name}`,
@@ -336,7 +363,7 @@ export async function getHomeDataByUserId(userId) {
           poultryBroilers: v.poultry_broilers || 0
         }
       })),
-      reportingStatus: 'On Time', // TODO: Calculate based on submission dates
+      reportingStatus,
       attachedInstitutes
     }
 
@@ -361,7 +388,7 @@ export async function getHomeDataByUserId(userId) {
     return homeData
 
   } catch (error) {
-    console.error('Error in getHomeDataByUserId:', error)
+    log.error('Error in getHomeDataByUserId:', error)
     throw error
   }
 }

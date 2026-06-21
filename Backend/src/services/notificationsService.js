@@ -1,5 +1,6 @@
 import { query } from '../database/db.js'
 import * as pushService from './pushService.js'
+import log from '../utils/logger.js'
 
 /**
  * Create a new notification
@@ -42,7 +43,7 @@ export async function createNotification({
       message,
       actions
     ).catch(error => {
-      console.error('Failed to send push notification:', error)
+      log.error({ err: error }, 'Failed to send push notification')
     })
   }
 
@@ -147,14 +148,15 @@ export async function deleteNotification(notificationId, staffId) {
  * Create notification for report submission
  */
 export async function createReportSubmittedNotification(reportId, reportingMonth, staffId, instituteId) {
-  // Get supervisor of the institute
+  // Find the admin responsible for this institute's parent (reporting_authority)
   const supervisorResult = await query(`
     SELECT s.staff_id, s.full_name
-    FROM staff s
-    JOIN staff_postings sp ON s.staff_id = sp.staff_id
-    WHERE sp.institute_id = $1
-      AND sp.is_current = TRUE
-      AND s.user_role IN ('supervisor', 'admin')
+    FROM institutes i
+    JOIN institutes parent ON parent.institute_id = i.reporting_authority_id
+    JOIN staff s ON s.current_institute_id = parent.institute_id
+    WHERE i.institute_id = $1
+      AND s.is_active = TRUE
+      AND s.user_role IN ('Tehsil_Admin', 'District_Admin', 'HQ_Admin', 'Super_Admin')
     LIMIT 1
   `, [instituteId])
 
@@ -338,4 +340,45 @@ export async function cleanupExpiredNotifications() {
   `)
 
   return result.rowCount
+}
+
+/**
+ * Send deadline reminder notifications to staff who have not yet submitted
+ * for any reporting period whose deadline is within the next 3 days.
+ * Called once on server boot and every 24 h thereafter.
+ */
+export async function sendDeadlineReminders() {
+  const upcomingResult = await query(`
+    SELECT reporting_month, deadline
+    FROM reporting_periods
+    WHERE is_locked = FALSE
+      AND deadline BETWEEN CURRENT_TIMESTAMP AND CURRENT_TIMESTAMP + INTERVAL '3 days'
+  `)
+
+  for (const period of upcomingResult.rows) {
+    const msRemaining = new Date(period.deadline) - Date.now()
+    const daysRemaining = Math.max(1, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)))
+
+    // Staff with roles that submit reports but have not submitted for this month
+    const staffResult = await query(`
+      SELECT s.staff_id
+      FROM staff s
+      WHERE s.is_active = TRUE
+        AND s.user_role IN ('INAPH', 'AIW')
+        AND NOT EXISTS (
+          SELECT 1
+          FROM monthly_reports mr
+          WHERE mr.institute_id = s.current_institute_id
+            AND mr.reporting_month = $1
+            AND mr.submission_status IN ('Submitted', 'Approved')
+        )
+    `, [period.reporting_month])
+
+    for (const row of staffResult.rows) {
+      await createDeadlineReminderNotification(row.staff_id, period.reporting_month, daysRemaining)
+        .catch(err => log.error({ err, staffId: row.staff_id }, 'Failed to send deadline reminder'))
+    }
+  }
+
+  return upcomingResult.rows.length
 }

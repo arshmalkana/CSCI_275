@@ -1,13 +1,14 @@
 /* eslint-disable no-undef */
 /// <reference lib="webworker" />
 
-// Service Worker for AH Punjab PWA with Push Notifications
+// Service Worker for AH Punjab PWA with Push Notifications + Offline Sync
 
 import { precacheAndRoute } from 'workbox-precaching'
 import { registerRoute } from 'workbox-routing'
 import { NetworkFirst, CacheFirst } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
+import { BackgroundSyncPlugin } from 'workbox-background-sync'
 
 // Precache all assets
 precacheAndRoute(self.__WB_MANIFEST)
@@ -45,14 +46,17 @@ registerRoute(
   })
 )
 
-// API caching
+// API caching — matches /v1/home, /v1/reports, /v1/profile, /v1/notifications, /v1/geo
+// Excludes /v1/auth (tokens must always be fresh) and /v1/push (subscription management)
 registerRoute(
-  /\/v1\/api\/.*/i,
+  ({ url }) => url.pathname.startsWith('/v1/') &&
+    !url.pathname.startsWith('/v1/auth') &&
+    !url.pathname.startsWith('/v1/push'),
   new NetworkFirst({
     cacheName: 'api-cache',
     plugins: [
       new ExpirationPlugin({
-        maxEntries: 50,
+        maxEntries: 100,
         maxAgeSeconds: 60 * 5 // 5 minutes
       }),
       new CacheableResponsePlugin({
@@ -60,6 +64,37 @@ registerRoute(
       })
     ]
   })
+)
+
+// ── Offline report submission queue ──────────────────────────────────────────
+// When the device is offline, POST requests to /v1/reports/monthly are queued
+// in IndexedDB and replayed automatically when connectivity returns.
+const reportSyncPlugin = new BackgroundSyncPlugin('report-submission-queue', {
+  maxRetentionTime: 24 * 60, // 24 hours in minutes
+  onSync: async ({ queue }) => {
+    let entry
+    while ((entry = await queue.shiftRequest())) {
+      try {
+        await fetch(entry.request)
+        // Notify the open tab that a queued report has synced
+        const clients = await self.clients.matchAll({ type: 'window' })
+        clients.forEach(c => c.postMessage({ type: 'REPORT_SYNCED' }))
+      } catch {
+        await queue.unshiftRequest(entry)
+        throw new Error('Sync failed — will retry')
+      }
+    }
+  }
+})
+
+registerRoute(
+  ({ url, request }) =>
+    url.pathname === '/v1/reports/monthly' && request.method === 'POST',
+  new NetworkFirst({
+    cacheName: 'report-submissions',
+    plugins: [reportSyncPlugin],
+  }),
+  'POST'
 )
 
 // Push notification event handler

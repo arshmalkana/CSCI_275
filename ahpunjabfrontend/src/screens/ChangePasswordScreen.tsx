@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FloatingLabelField } from '../components/FloatingLabelField'
 import { PrimaryButton } from '../components/Button'
-// import { ScreenHeader } from '../components/ScreenHeader'
 import { Lock, User, CheckCircle, AlertTriangle } from 'lucide-react'
 import { BackHeader } from '../components/Headers'
+import api from '../utils/api'
 
 export default function ChangePasswordScreen() {
   const navigate = useNavigate()
@@ -14,56 +14,46 @@ export default function ChangePasswordScreen() {
     confirmPassword: ''
   })
   const [errors, setErrors] = useState<{[key: string]: string}>({})
+  const [isLoading, setIsLoading] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }))
-    }
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }))
   }
 
   const validatePasswords = () => {
     const newErrors: {[key: string]: string} = {}
-
-    if (!formData.oldPassword) {
-      newErrors.oldPassword = 'Current password is required'
-    }
-
-    if (!formData.newPassword) {
-      newErrors.newPassword = 'New password is required'
-    } else if (formData.newPassword.length < 8) {
-      newErrors.newPassword = 'Password must be at least 8 characters'
-    }
-
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your new password'
-    } else if (formData.newPassword !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match'
-    }
-
+    if (!formData.oldPassword) newErrors.oldPassword = 'Current password is required'
+    if (!formData.newPassword) newErrors.newPassword = 'New password is required'
+    else if (formData.newPassword.length < 8) newErrors.newPassword = 'Password must be at least 8 characters'
+    if (!formData.confirmPassword) newErrors.confirmPassword = 'Please confirm your new password'
+    else if (formData.newPassword !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match'
     if (formData.oldPassword === formData.newPassword && formData.oldPassword && formData.newPassword) {
       newErrors.newPassword = 'New password must be different from current password'
     }
-
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  const handleChangePassword = () => {
-    if (validatePasswords()) {
-      // I will add change password logic here, later on
-      console.log('Change password:', formData)
+  const handleChangePassword = async () => {
+    if (!validatePasswords()) return
+    setIsLoading(true)
+    setSuccessMessage('')
+    try {
+      await api.changePassword(formData.oldPassword, formData.newPassword)
+      setSuccessMessage('Password updated successfully.')
+      setFormData({ oldPassword: '', newPassword: '', confirmPassword: '' })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to update password'
+      setErrors({ oldPassword: message })
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const handleBack = () => {
-    navigate(-1)
-  }
-
-  const handleForgetPassword = () => {
-    navigate('/forgot-password')
-  }
+  const handleBack = () => navigate(-1)
+  const handleForgetPassword = () => navigate('/forgot-password')
 
   return (
     <div className="ChangePasswordScreen w-full max-w-md mx-auto bg-white h-screen flex flex-col px-6 py-8 overflow-hidden"
@@ -75,7 +65,14 @@ export default function ChangePasswordScreen() {
       {/* Header */}
       <BackHeader title="Change Password" onBack={handleBack}/>
 
-      {/* Security Notice for dumb enough users*/}
+      {/* Success banner */}
+      {successMessage && (
+        <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-4 rounded-r-lg">
+          <p className="text-sm text-green-800 font-['Poppins']">{successMessage}</p>
+        </div>
+      )}
+
+      {/* Security Notice */}
       <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-8 rounded-r-lg">
         <div className="flex items-start">
           <AlertTriangle className="w-5 h-5 text-blue-400 mt-0.5 mr-3" />
@@ -144,8 +141,8 @@ export default function ChangePasswordScreen() {
 
       {/* Update Password Button */}
       <div className="mt-8">
-        <PrimaryButton onClick={handleChangePassword}>
-          Update Password
+        <PrimaryButton onClick={handleChangePassword} disabled={isLoading}>
+          {isLoading ? 'Updating…' : 'Update Password'}
         </PrimaryButton>
       </div>
 

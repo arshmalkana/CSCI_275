@@ -8,13 +8,9 @@ import { generateReportPDF } from '../services/pdfService.js'
 export async function submitReport(request, reply) {
   try {
     const reportData = request.body
+    const staffId = request.user.staffId
+    const instituteId = request.user.instituteId
 
-    // TESTING MODE: Use dummy values if authentication is disabled
-    // TODO: Remove this when authentication is re-enabled
-    const staffId = request.user?.staffId || 1 // Default to staff_id = 1 for testing
-    const instituteId = request.user?.instituteId || 1 // Default to institute_id = 1 for testing
-
-    // Submit or save report
     const result = await reportsService.saveMonthlyReport({
       ...reportData,
       staffId,
@@ -31,7 +27,6 @@ export async function submitReport(request, reply) {
   } catch (error) {
     request.log.error('Report submission error:', error)
 
-    // Handle validation errors
     if (error.statusCode === 400 || error.validationErrors) {
       return reply.code(400).send({
         success: false,
@@ -40,7 +35,6 @@ export async function submitReport(request, reply) {
       })
     }
 
-    // Handle duplicate report error
     if (error.message.includes('already exists') || error.message.includes('duplicate')) {
       return reply.code(400).send({
         success: false,
@@ -48,7 +42,6 @@ export async function submitReport(request, reply) {
       })
     }
 
-    // Handle approved report modification attempt
     if (error.message.includes('Cannot modify an approved report')) {
       return reply.code(403).send({
         success: false,
@@ -65,115 +58,67 @@ export async function submitReport(request, reply) {
 
 /**
  * GET /reports/fiscal-years
- * Get available fiscal years for the institute
  */
 export async function getFiscalYears(request, reply) {
   try {
-    // TESTING MODE: Use dummy value if authentication is disabled
-    // TODO: Remove this when authentication is re-enabled
-    const instituteId = request.user?.instituteId || 1
-
+    const instituteId = request.user.instituteId
     const fiscalYears = await reportsService.getAvailableFiscalYears(instituteId)
-
-    return reply.send({
-      success: true,
-      data: fiscalYears
-    })
+    return reply.send({ success: true, data: fiscalYears })
   } catch (error) {
     request.log.error('Get fiscal years error:', error)
-    return reply.code(500).send({
-      success: false,
-      message: 'Failed to retrieve fiscal years'
-    })
+    return reply.code(500).send({ success: false, message: 'Failed to retrieve fiscal years' })
   }
 }
 
 /**
  * GET /reports/monthly
- * List all monthly reports for the user's institute
  */
 export async function listReports(request, reply) {
   try {
-    // TESTING MODE: Use dummy value if authentication is disabled
-    // TODO: Remove this when authentication is re-enabled
-    const instituteId = request.user?.instituteId || 1
-
+    const instituteId = request.user.instituteId
     const { status, year, fiscalYear } = request.query
-
-    const reports = await reportsService.listMonthlyReports(instituteId, {
-      status,
-      year,
-      fiscalYear
-    })
-
-    return reply.send({
-      success: true,
-      data: reports,
-      count: reports.length
-    })
+    const reports = await reportsService.listMonthlyReports(instituteId, { status, year, fiscalYear })
+    return reply.send({ success: true, data: reports, count: reports.length })
   } catch (error) {
     request.log.error('List reports error:', error)
-    return reply.code(500).send({
-      success: false,
-      message: 'Failed to retrieve reports'
-    })
+    return reply.code(500).send({ success: false, message: 'Failed to retrieve reports' })
   }
 }
 
 /**
  * GET /reports/monthly/:month
- * Get monthly report for specific month
  */
 export async function getReport(request, reply) {
   try {
     const { month } = request.params
-
-    // TESTING MODE: Use dummy value if authentication is disabled
-    // TODO: Remove this when authentication is re-enabled
-    const instituteId = request.user?.instituteId || 1 // Default to institute_id = 1 for testing
-
+    const instituteId = request.user.instituteId
     const report = await reportsService.getMonthlyReport(instituteId, month)
 
     if (!report) {
-      return reply.code(404).send({
-        success: false,
-        message: 'Report not found for this month'
-      })
+      return reply.code(404).send({ success: false, message: 'Report not found for this month' })
     }
 
-    return reply.send({
-      success: true,
-      data: report
-    })
+    return reply.send({ success: true, data: report })
   } catch (error) {
     request.log.error('Get report error:', error)
-    return reply.code(500).send({
-      success: false,
-      message: 'Failed to retrieve report'
-    })
+    return reply.code(500).send({ success: false, message: 'Failed to retrieve report' })
   }
 }
 
 /**
  * GET /reports/monthly/:month/pdf
- * Download the monthly report as a PDF matching the official report template
  */
 export async function downloadReportPDF(request, reply) {
   try {
     const { month } = request.params
-    const instituteId = request.user?.instituteId || 1
-
+    const instituteId = request.user.instituteId
     const reportData = await reportsService.getReportForPDF(instituteId, month)
 
     if (!reportData) {
-      return reply.code(404).send({
-        success: false,
-        message: 'Report not found for this month'
-      })
+      return reply.code(404).send({ success: false, message: 'Report not found for this month' })
     }
 
     const pdfBuffer = await generateReportPDF(reportData)
-
     const filename = `Monthly_Report_${reportData.instituteName.replace(/\s+/g, '_')}_${month}.pdf`
 
     return reply
@@ -184,14 +129,46 @@ export async function downloadReportPDF(request, reply) {
       .send(pdfBuffer)
   } catch (error) {
     request.log.error('PDF generation error:', error)
-    return reply.code(500).send({
-      success: false,
-      message: 'Failed to generate PDF'
-    })
+    return reply.code(500).send({ success: false, message: 'Failed to generate PDF' })
   }
 }
 
-// NOTE: getReportDetails function has been REMOVED for security reasons.
-// The /details/:reportId endpoint exposed sequential numeric IDs which can be enumerated.
-// Use getReport (GET /monthly/:month) instead, which uses natural keys (month + instituteId).
-// This is more secure and prevents information leakage about other institutes' reports.
+/**
+ * PATCH /reports/monthly/:month/approve
+ * Tehsil_Admin+ only. Target report must be within caller's scope.
+ */
+export async function approveReport(request, reply) {
+  try {
+    const { month } = request.params
+    const { instituteId: targetInstituteId } = request.body
+    const approver = request.user
+
+    const result = await reportsService.approveReport(approver, targetInstituteId, month)
+
+    return reply.send({ success: true, message: 'Report approved successfully', data: result })
+  } catch (error) {
+    request.log.error('Approve report error:', error)
+    const code = error.statusCode || 500
+    return reply.code(code).send({ success: false, message: error.message })
+  }
+}
+
+/**
+ * PATCH /reports/monthly/:month/reject
+ * Tehsil_Admin+ only. Requires a reason. Target must be in scope.
+ */
+export async function rejectReport(request, reply) {
+  try {
+    const { month } = request.params
+    const { instituteId: targetInstituteId, reason } = request.body
+    const approver = request.user
+
+    const result = await reportsService.rejectReport(approver, targetInstituteId, month, reason)
+
+    return reply.send({ success: true, message: 'Report returned for revision', data: result })
+  } catch (error) {
+    request.log.error('Reject report error:', error)
+    const code = error.statusCode || 500
+    return reply.code(code).send({ success: false, message: error.message })
+  }
+}

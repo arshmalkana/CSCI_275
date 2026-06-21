@@ -7,6 +7,7 @@ import {
 } from '@simplewebauthn/server'
 import { query } from '../database/db.js'
 import { WebAuthnError, NotFoundError, ValidationError } from '../utils/errors.js'
+import log from '../utils/logger.js'
 
 // Relying Party (RP) configuration
 const RP_NAME = process.env.RP_NAME || 'AH Punjab Reporting'
@@ -33,7 +34,7 @@ const webauthnService = {
     try {
       const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000)
 
-      console.log('[WebAuthn] Storing challenge:', {
+      log.debug('[WebAuthn] Storing challenge:', {
         challengeKey,
         challengeType,
         staffId,
@@ -54,7 +55,7 @@ const webauthnService = {
         [challengeKey, challenge, staffId, challengeType, expiresAt, ipAddress, userAgent]
       )
 
-      console.log('[WebAuthn] Challenge stored successfully')
+      log.debug('[WebAuthn] Challenge stored successfully')
     } catch (error) {
       throw new WebAuthnError(`Failed to store challenge: ${error.message}`)
     }
@@ -67,7 +68,7 @@ const webauthnService = {
    */
   async getChallenge(challengeKey) {
     try {
-      console.log('[WebAuthn] Retrieving challenge:', { challengeKey })
+      log.debug('[WebAuthn] Retrieving challenge:', { challengeKey })
 
       const result = await query(
         `SELECT challenge, staff_id, expires_at
@@ -76,7 +77,7 @@ const webauthnService = {
         [challengeKey]
       )
 
-      console.log('[WebAuthn] Challenge query result:', {
+      log.debug('[WebAuthn] Challenge query result:', {
         challengeKey,
         rowsFound: result.rows.length,
         expiresAt: result.rows[0]?.expires_at
@@ -88,7 +89,7 @@ const webauthnService = {
           `SELECT expires_at FROM webauthn_challenges WHERE challenge_key = $1`,
           [challengeKey]
         )
-        console.log('[WebAuthn] Expired check:', {
+        log.debug('[WebAuthn] Expired check:', {
           challengeKey,
           exists: expiredCheck.rows.length > 0,
           expiresAt: expiredCheck.rows[0]?.expires_at,
@@ -115,7 +116,7 @@ const webauthnService = {
       )
     } catch (error) {
       // Don't throw on delete errors, just log
-      console.error('Failed to delete challenge:', error)
+      log.error('Failed to delete challenge:', error)
     }
   },
 
@@ -130,7 +131,7 @@ const webauthnService = {
       )
       return result.rowCount
     } catch (error) {
-      console.error('Failed to cleanup expired challenges:', error)
+      log.error('Failed to cleanup expired challenges:', error)
       return 0
     }
   },
@@ -201,12 +202,12 @@ const webauthnService = {
    * @returns {Object} Verification result
    */
   async verifyRegistration(staffId, response, deviceName = null, userAgent = '') {
-    console.log('[WebAuthn] Verifying registration for staffId:', staffId)
+    log.debug('[WebAuthn] Verifying registration for staffId:', staffId)
 
     // Get stored challenge from database
     const storedChallenge = await this.getChallenge(String(staffId))
 
-    console.log('[WebAuthn] Retrieved challenge:', {
+    log.debug('[WebAuthn] Retrieved challenge:', {
       staffId,
       found: !!storedChallenge,
       challengeLength: storedChallenge?.challenge?.length

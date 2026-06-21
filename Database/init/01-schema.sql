@@ -490,9 +490,11 @@ CREATE TABLE extension_activities_details (
     detail_id SERIAL PRIMARY KEY,
     report_id INTEGER NOT NULL REFERENCES monthly_reports(report_id) ON DELETE CASCADE,
     activity_type activity_type NOT NULL,
+    camp_subtype VARCHAR(20),      -- 'PLDB', 'ASCAD', 'Other' (added by migration 002)
     events_conducted INTEGER DEFAULT 0,
     locations_covered INTEGER DEFAULT 0,
     total_attendees INTEGER DEFAULT 0,
+    ladies_attended INTEGER DEFAULT 0,  -- added by migration 002
     animals_treated INTEGER DEFAULT 0,
     service_charge_id INTEGER REFERENCES service_charges(charge_id)
 );

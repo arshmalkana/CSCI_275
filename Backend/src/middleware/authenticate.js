@@ -35,7 +35,8 @@ export async function authenticate(request, reply) {
       staffId: payload.staffId,
       userId: payload.userId,
       role: payload.role,
-      designation: payload.designation
+      designation: payload.designation,
+      instituteId: payload.instituteId
     }
 
     // Generate new access token (rolling token approach)
@@ -43,14 +44,15 @@ export async function authenticate(request, reply) {
       staffId: payload.staffId,
       userId: payload.userId,
       role: payload.role,
-      designation: payload.designation
+      designation: payload.designation,
+      instituteId: payload.instituteId
     })
 
     // Add new token to response header
     reply.header('X-New-Token', newAccessToken)
 
   } catch (error) {
-    console.error('Authentication error:', error)
+    request.log.error('Authentication error:', error)
     return reply.code(401).send({
       success: false,
       message: 'Authentication failed'
