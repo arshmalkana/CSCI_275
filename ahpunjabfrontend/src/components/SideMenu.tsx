@@ -21,13 +21,15 @@ interface MenuItem {
 const ALL_MENU_ITEMS: MenuItem[] = [
   { name: 'Home',                   icon: '🏠',  path: '/home' },
   { name: 'Monthly Reporting',      icon: '📊',  path: '/reports/monthly' },
-  { name: 'Vaccine Distribution',   icon: '🚚',  path: '/vaccine-distribution' },
+  { name: 'Vaccine Distribution',   icon: '🚚',  path: '/vaccine-distribution',  roles: ADMIN_ROLES },
   // Admin-only items
   { name: 'Approval Queue',         icon: '✅',  path: '/admin/approval-queue',  roles: ADMIN_ROLES },
   { name: 'Consolidated Dashboard', icon: '📈',  path: '/admin/rollup',           roles: ADMIN_ROLES },
   { name: 'Admin Panel',            icon: '⚙️',  path: '/admin/panel',            roles: HQ_ROLES },
   { name: 'Period Config',          icon: '📅',  path: '/admin/periods',          roles: HQ_ROLES },
   { name: 'Institutes',             icon: '🏛️',  path: '/admin/institutes',        roles: HQ_ROLES },
+  { name: 'Master Data',           icon: '📋',  path: '/admin/master-data',       roles: HQ_ROLES },
+  { name: 'Targets',               icon: '🎯',  path: '/admin/targets',           roles: ADMIN_ROLES },
 ]
 
 export default function SideMenu({ isOpen, onClose }: SideMenuProps) {

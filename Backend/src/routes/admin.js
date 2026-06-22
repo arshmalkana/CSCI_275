@@ -110,6 +110,28 @@ export default async function adminRoutes(fastify) {
 
   // ── User management (Tehsil_Admin and above) ───────────────────────────────
 
+  fastify.post('/users', {
+    preHandler: [authenticate, requireSeniorAdmin],
+    schema: {
+      description: 'Create a staff user directly (bypasses registration queue)',
+      tags: ['Admin'],
+      body: {
+        type: 'object',
+        required: ['fullName', 'userId', 'password', 'role', 'instituteId'],
+        properties: {
+          fullName:    { type: 'string', minLength: 2 },
+          userId:      { type: 'string', minLength: 3 },
+          password:    { type: 'string', minLength: 8 },
+          role:        { type: 'string', enum: ['INAPH', 'AIW', 'Tehsil_Admin', 'District_Admin', 'HQ_Admin'] },
+          instituteId: { type: 'integer' },
+          designation: { type: 'string' },
+          mobile:      { type: 'string' },
+          email:       { type: 'string' }
+        }
+      }
+    }
+  }, adminController.createUser)
+
   fastify.get('/users', {
     preHandler: [authenticate, requireAdmin],
     schema: {

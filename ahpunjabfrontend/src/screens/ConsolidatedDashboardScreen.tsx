@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react'
+import { ArrowLeft, AlertCircle, ChevronDown, ChevronRight, Download } from 'lucide-react'
 import api from '../utils/api'
 
 interface InstituteStatus {
@@ -41,6 +41,28 @@ export default function ConsolidatedDashboardScreen() {
   const [showOPD, setShowOPD] = useState(false)
   const [showAI, setShowAI] = useState(false)
   const [showVac, setShowVac] = useState(false)
+  const [exporting, setExporting] = useState<'pdf' | 'csv' | null>(null)
+  const [exportError, setExportError] = useState('')
+
+  const handleExport = async (format: 'pdf' | 'csv') => {
+    setExporting(format)
+    setExportError('')
+    try {
+      const blob = await api.downloadExport({ month, format, drill: drill || undefined })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `rollup-${month}.${format}`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setExportError((err as Error).message || 'Export failed')
+    } finally {
+      setExporting(null)
+    }
+  }
 
   const { data, isLoading, error } = useQuery<RollupData>({
     queryKey: ['rollup', month, drill],
@@ -67,12 +89,32 @@ export default function ConsolidatedDashboardScreen() {
             </p>
           </div>
         </div>
-        <input
-          type="month"
-          value={month}
-          onChange={e => { setMonth(e.target.value); setDrill(null) }}
-          className="mt-3 w-full rounded-lg px-3 py-2 text-sm text-gray-800 bg-white/90 focus:outline-none"
-        />
+        <div className="flex gap-2 mt-3">
+          <input
+            type="month"
+            value={month}
+            onChange={e => { setMonth(e.target.value); setDrill(null) }}
+            className="flex-1 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white/90 focus:outline-none"
+          />
+          <button
+            onClick={() => handleExport('pdf')}
+            disabled={exporting !== null || !data}
+            title="Export PDF"
+            className="flex items-center gap-1 px-3 py-2 bg-white/90 text-gray-800 rounded-lg text-xs font-semibold disabled:opacity-50 hover:bg-white transition-colors"
+          >
+            <Download size={13} />
+            {exporting === 'pdf' ? '…' : 'PDF'}
+          </button>
+          <button
+            onClick={() => handleExport('csv')}
+            disabled={exporting !== null || !data}
+            title="Export CSV"
+            className="flex items-center gap-1 px-3 py-2 bg-white/90 text-gray-800 rounded-lg text-xs font-semibold disabled:opacity-50 hover:bg-white transition-colors"
+          >
+            <Download size={13} />
+            {exporting === 'csv' ? '…' : 'CSV'}
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ WebkitOverflowScrolling: 'touch' }}>
@@ -85,6 +127,12 @@ export default function ConsolidatedDashboardScreen() {
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex gap-3">
             <AlertCircle size={20} className="text-red-500 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-red-600">{(error as Error).message}</p>
+          </div>
+        )}
+        {exportError && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex gap-3">
+            <AlertCircle size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-red-600">{exportError}</p>
           </div>
         )}
 

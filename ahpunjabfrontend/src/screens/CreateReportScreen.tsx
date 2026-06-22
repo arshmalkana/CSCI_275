@@ -596,7 +596,6 @@ const CreateReportScreen = () => {
     return () => navigator.serviceWorker?.removeEventListener('message', handler)
   }, []);
 
-  // TODO: Copy from last month - will integrate with backend API
   const handleCopyFromLastMonth = async () => {
     try {
       // Calculate previous month
@@ -1381,8 +1380,6 @@ interface MonthSelectorDialogProps {
 const MonthSelectorDialog = ({ isOpen, selectedDate, onSelect, onClose }: MonthSelectorDialogProps) => {
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // TODO: Fetch available months from backend API
-  // For now, generate the last 12 months including current month
   const getAvailableMonths = () => {
     const months: Date[] = [];
     const now = new Date();

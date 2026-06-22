@@ -20,6 +20,8 @@ import ConsolidatedDashboardScreen from './screens/ConsolidatedDashboardScreen'
 import AdminPanelScreen from './screens/AdminPanelScreen'
 import PeriodConfigScreen from './screens/PeriodConfigScreen'
 import InstituteManagementScreen from './screens/InstituteManagementScreen'
+import MasterDataScreen from './screens/MasterDataScreen'
+import TargetsScreen from './screens/TargetsScreen'
 import authService from './services/authService'
 import { initializePushNotifications } from './utils/pushNotifications'
 
@@ -102,6 +104,14 @@ export default function App() {
           <Route
             path="/admin/institutes"
             element={<AdminRoute roles={HQ_ROLES}><InstituteManagementScreen /></AdminRoute>}
+          />
+          <Route
+            path="/admin/master-data"
+            element={<AdminRoute roles={HQ_ROLES}><MasterDataScreen /></AdminRoute>}
+          />
+          <Route
+            path="/admin/targets"
+            element={<AdminRoute><TargetsScreen /></AdminRoute>}
           />
 
           {/* Dev-only screen: guarded so it never ships to prod users */}

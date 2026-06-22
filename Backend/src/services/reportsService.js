@@ -209,6 +209,28 @@ export async function saveMonthlyReport(data) {
         `, [reportId, staffId, existingStatus, status])
       }
 
+      // Snapshot all detail rows before overwriting so the audit trail is complete
+      const [opdSnap, certSnap, diagSnap, extSnap, aiSnap, vacSnap] = await Promise.all([
+        query('SELECT * FROM opd_report_details WHERE report_id = $1', [reportId]),
+        query('SELECT * FROM certificate_report_details WHERE report_id = $1', [reportId]),
+        query('SELECT * FROM diagnostic_report_details WHERE report_id = $1', [reportId]),
+        query('SELECT * FROM extension_activities_details WHERE report_id = $1', [reportId]),
+        query('SELECT * FROM ai_report_details WHERE report_id = $1', [reportId]),
+        query('SELECT * FROM vaccination_report_details WHERE report_id = $1', [reportId])
+      ])
+      await query(`
+        INSERT INTO report_edits_audit
+          (report_id, edited_by, table_name, field_name, old_value, new_value, edit_reason)
+        VALUES ($1, $2, 'report_details', 'all', $3, NULL, 'Pre-edit snapshot before re-save')
+      `, [reportId, staffId, JSON.stringify({
+        opd:                opdSnap.rows,
+        certificates:       certSnap.rows,
+        diagnostics:        diagSnap.rows,
+        extensionActivities:extSnap.rows,
+        ai:                 aiSnap.rows,
+        vaccinations:       vacSnap.rows
+      })])
+
       // Delete existing details (they will be re-inserted)
       await query('DELETE FROM opd_report_details WHERE report_id = $1', [reportId])
       await query('DELETE FROM certificate_report_details WHERE report_id = $1', [reportId])

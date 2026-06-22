@@ -1,142 +1,175 @@
 # AH Punjab Reporting
 
-A Progressive Web App for Punjab's Animal Husbandry Department reporting system.
+Progressive Web App for Punjab's Animal Husbandry Department, replacing the old Google Sheets workflow with a secure, role-based reporting platform for veterinary staff across a village → tehsil → district → HQ hierarchy.
 
-## Overview
+## Stack
 
-AH Punjab Reporting replaces the old Google Sheets system with a secure, role-based reporting platform for veterinary staff across the village → tehsil → district → HQ hierarchy.
+| Layer | Technology |
+|---|---|
+| Frontend | React 19 + TypeScript, TailwindCSS v4, Vite 7, vite-plugin-pwa |
+| Backend | Fastify 5.6, Node.js (ES modules) |
+| Database | PostgreSQL 16 |
+| Auth | JWT (15 min) + rotating refresh tokens (HttpOnly cookies) + WebAuthn passkeys |
+| Passwords | Argon2id |
+| Deployment | Docker Compose (postgres + backend + frontend + pgAdmin) |
 
-**Architecture**: React 19 PWA + Fastify 5.6 + PostgreSQL (planned)
-
-## Project Structure
+## Project Layout
 
 ```
-├── ahpunjabfrontend/         # React 19 PWA with TypeScript & TailwindCSS v4
-├── Backend/                  # Fastify 5.6 Node.js server with plugin architecture
-├── Other Related Docs/       # Project documentation & UI designs
-├── CLAUDE.md                # Development guidelines for Claude Code
-└── README.md                # Project documentation
+├── ahpunjabfrontend/      React PWA
+│   ├── src/screens/       One file per screen
+│   ├── src/components/    Shared UI components
+│   ├── src/utils/         api.ts (all API calls), apiClient.ts (JWT + refresh), offlineQueue.ts
+│   └── src/services/      authService.ts
+├── Backend/
+│   ├── src/routes/        Fastify route plugins (one per domain)
+│   ├── src/controllers/   Request handlers (thin — delegate to services)
+│   ├── src/services/      Business logic
+│   ├── src/middleware/    authenticate.js, sanitize.js
+│   └── src/utils/         scope.js (institute access control), errors.js, logger.js
+├── Database/
+│   ├── init/              Schema + seed SQL (run in order by Docker)
+│   └── migrations/        Additive migrations (001–005)
+├── docker-compose.yml
+├── PROGRESS.md            Detailed implementation changelog
+└── CLAUDE.md              AI development guidelines
 ```
 
-## Quick Start
+## Quick Start (Docker)
 
-### Prerequisites
-- Node.js (v18+)
-- Currently: No database required (uses mock storage)
-- Planned: PostgreSQL and Redis
-
-### Development Setup
 ```bash
-# Terminal 1: Start backend (port 8080)
-cd Backend
-npm install
-npm run dev
+cp Backend/.env.example Backend/.env
+# Edit Backend/.env — fill in COOKIE_SECRET, JWT_SECRET, CORS_ORIGINS, etc.
 
-# Terminal 2: Start frontend (port 3000, proxies /v1 to backend)
-cd ahpunjabfrontend
-npm install
-npm run dev
-
-# Access:
+docker compose up --build
 # Frontend: http://localhost:3000
-# API Docs: http://localhost:8080/docs
+# Backend API docs: http://localhost:8080/docs
+# pgAdmin: http://localhost:5050
 ```
 
-## Features
+## Quick Start (Development)
 
-### Current Implementation
-- **Progressive Web App**: Auto-updating service workers, mobile-optimized with iOS safe areas
-- **Modern Frontend**: React 19 with TypeScript, TailwindCSS v4, Vite build system
-- **API-First Backend**: Fastify with plugin architecture, JSON Schema validation
-- **Auto-Documentation**: Swagger UI with live API documentation
-- **Development-Ready**: Hot reload, ESLint, TypeScript strict mode
+**Prerequisites**: Node.js 20+, PostgreSQL 16 running locally
 
-### Planned Features
-- **WebAuthn Authentication**: Biometric login + JWT tokens
-- **Role-based Access Control**: Multi-level hierarchy permissions
-- **Monthly Reporting Workflow**: Draft → Submit → Approve flow
-- **Real-time Analytics**: Dashboard with reporting insights
-- **Geographic Hierarchy**: Districts, tehsils, villages management
-- **Database Integration**: PostgreSQL with proper schema and migrations
+```bash
+# 1. Database: run init scripts in order
+psql -U ahpunjab -d ahpunjab_db -f Database/init/01-schema.sql
+psql -U ahpunjab -d ahpunjab_db -f Database/init/02-geo-seed.sql
+# ... (see docker-compose.yml volumes for full order)
 
-## API Documentation
+# 2. Backend (port 8080)
+cd Backend
+cp .env.example .env   # fill in required values
+npm install
+npm run dev
 
-When the backend is running, visit `http://localhost:8080/docs` for interactive Swagger API documentation.
+# 3. Frontend (port 3000)
+cd ahpunjabfrontend
+cp .env.example .env
+npm install
+npm run dev
+```
 
-Base API URL: `/v1`
+Swagger UI: `http://localhost:8080/docs`
 
-**Current Endpoints:**
-- `/users` - Basic user CRUD operations (currently implemented)
+## Role Hierarchy & Permissions
 
-**Planned Endpoints:**
-- `/auth/*` - Authentication and user management
-- `/geo/*` - Geographic hierarchy data
-- `/institutes/*` - Staff directory and population data
-- `/vaccines/*`, `/semen/*` - Inventory tracking
-- `/reports/*` - Monthly reporting system
-- `/analytics/*` - Dashboard and analytics
+```
+INAPH / AIW        — field staff: create / submit own monthly reports
+Tehsil_Admin       — approve/reject in tehsil subtree, view rollup
+District_Admin     — approve/reject in district subtree, view rollup
+HQ_Admin           — approve/reject statewide, user management, master data, institute CRUD
+Super_Admin        — full access
+```
 
-## Technology Stack
+Institute tree FK: `institutes.reporting_authority_id` → parent `institute_id`  
+Scope enforcement: `Backend/src/utils/scope.js::getVisibleInstituteIds(user)` — recursive CTE, used as the single access-control chokepoint for every admin query.
 
-**Frontend:**
-- **React 19.1.1** with TypeScript (strict mode)
-- **Vite 7.1.7** build system with ES2022 target
-- **TailwindCSS 4.1.13** with PostCSS
-- **PWA**: `vite-plugin-pwa` with Workbox service workers
-- **Code Quality**: ESLint 9.36.0 with flat config
+## Implemented Features
 
-**Backend:**
-- **Fastify 5.6.0** web framework with ES modules
-- **Plugin Architecture**: Sequential plugin registration
-- **Validation**: JSON Schema with AJV
-- **Documentation**: Auto-generated Swagger UI
-- **Testing**: Node.js built-in test runner with watch mode
-- **Database**: Mock storage (PostgreSQL planned)
+### Authentication
+- JWT (5 min access) + rotating refresh tokens in HttpOnly cookies; single-flight refresh race prevention
+- WebAuthn passkey registration and authentication
+- Argon2id password hashing; plain-text fallback detection + auto-upgrade on first login
+- Forgot-password → email reset link → `/reset-password?token=...` flow
+- PATCH `/auth/change-password` with current-password verification
+
+### Monthly Reporting Workflow
+- Field staff: Draft → Submit (with offline queue via IndexedDB + Background Sync SW)
+- Admin: Approve / Reject with comment (subtree-scoped)
+- Full audit trail in `report_edits_audit`: initial creation, status changes, and a JSON snapshot of all detail rows before every re-save
+- Reporting periods with configurable deadlines; automated daily deadline reminder notifications
+
+### Consolidated Dashboard (Admin)
+- Aggregated OPD / AI / Vaccination totals across the admin's visible institutes
+- Drill-down to a single institute
+- Export as **PDF** (`pdfkit`) or **CSV** — downloaded via authenticated fetch + Blob URL
+
+### Master Data Management (HQ_Admin+)
+- **Service charges**: CRUD + rate history — when a rate is updated, the old rate is recorded in `fee_changes_history`; `get_fee_summary()` DB function is historical-rate-aware (uses the rate that was in effect during the reporting month)
+- **Semen types**: CRUD (code, name, species, category); drives AI report breed columns
+- **Vaccines**: CRUD; fixes vaccine code alignment that was silently dropping vaccination data
+- **Institute targets**: subtree-scoped per-institute annual targets (OPD / AI_Cattle / AI_Buffalo); replaces previously hardcoded fallback values
+
+### Administration
+- Registration approval queue (admin reviews pending registrations)
+- User lifecycle: deactivate / reactivate / edit role
+- Institute CRUD: create, rename, change type, deactivate (HQ_Admin+)
+- Period config: lock / reopen reporting months; manual reminders to non-submitting institutes
+- Notifications: in-app + Web Push; deadline reminders sent automatically on boot and every 24 h
+
+### PWA
+- Auto-updating service worker (Workbox)
+- Offline detection; report submissions queued when offline and synced on reconnect
+- iOS safe-area-inset handling throughout
+- Web Push notification subscription
+
+## API Base URL
+
+`/v1` — all endpoints live under this prefix.
+
+Key route groups: `/v1/auth`, `/v1/reports`, `/v1/admin`, `/v1/admin/master-data`, `/v1/rollup`, `/v1/periods`, `/v1/notifications`, `/v1/push`
+
+## Environment Variables
+
+See `Backend/.env.example` for the full list. Required in production:
+
+```
+NODE_ENV=production
+COOKIE_SECRET=<32+ random bytes>
+JWT_SECRET=<32+ random bytes>
+CORS_ORIGINS=https://your-domain.com
+FRONTEND_ORIGIN=https://your-domain.com
+DB_HOST / DB_PORT / DB_NAME / DB_USER / DB_PASSWORD
+SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / SMTP_FROM
+VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT
+```
+
+## Database Migrations
+
+Migrations are additive SQL files applied in order by Docker's `docker-entrypoint-initdb.d/` mechanism:
+
+| File | Purpose |
+|---|---|
+| `init/01-schema.sql` | Full schema (all tables, indexes, functions) |
+| `init/02-*.sql` | Geographic + semen-type seed data |
+| `init/03-test-seed.sql` | Dev seed data |
+| `migrations/001` | Buffalo breed names |
+| `migrations/002` | Report schema alignment, `get_fee_summary` |
+| `migrations/003` | `reporting_periods` table |
+| `migrations/004` | `password_reset_tokens` table |
+| `migrations/005` | Fix vaccine codes; historical-rate-aware `get_fee_summary`; fee_changes_history index |
 
 ## Development Commands
 
-### Frontend (ahpunjabfrontend/)
 ```bash
-npm run dev          # Vite dev server with --host (network accessible)
-npm run build        # TypeScript compile + Vite build with PWA manifest
-npm run preview      # Preview production build with --host
-npm run lint         # ESLint with TypeScript, React Hooks rules
+# Frontend
+npm run dev      # Vite dev server (port 3000, proxies /v1 to :8080)
+npm run build    # TypeScript + Vite production build
+npm run lint     # ESLint (strict TypeScript + React Hooks rules)
+
+# Backend
+npm run dev      # nodemon with fastify config
+npm start        # production
+npm test         # Node.js built-in test runner
 ```
-
-### Backend (Backend/)
-```bash
-npm run dev          # Fastify with watch mode and fastify.config.json
-npm start            # Production Fastify server
-npm test             # Node.js test runner with --watch mode
-```
-
-## Current Implementation Status
-
-### ✅ Completed
-- Basic React PWA with TypeScript and mobile optimization
-- Fastify backend with plugin architecture
-- JSON Schema validation and Swagger documentation
-- Basic user CRUD operations
-- Development tooling (ESLint, hot reload, testing framework)
-- PWA features (service workers, installability, offline detection)
-
-### 🚧 In Development / Planned
-- PostgreSQL database integration
-- WebAuthn + JWT authentication system
-- Geographic hierarchy models
-- Monthly reporting workflow
-- Role-based access control
-- Real analytics dashboard
-
-## Security (Planned)
-
-- Argon2id password hashing
-- WebAuthn biometric authentication
-- Short-lived JWT access tokens
-- Rotating refresh tokens in HttpOnly cookies
-- Row Level Security (RLS) in PostgreSQL
-- CSP, CORS, and input sanitization
-
-## License
-
-[Add your license here]

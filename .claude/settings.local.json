@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(docker exec -i ahpunjab-postgres psql -U ahpunjab -d ahpunjab_db -c \"\nWITH institute_info AS (\n  SELECT institute_type FROM institutes WHERE institute_id = 1\n),\ninstitute_specific AS (\n  SELECT\n    target_type,\n    vaccine_id,\n    annual_target,\n    monthly_target,\n    ''specific'' as source\n  FROM institute_targets\n  WHERE institute_id = 1\n    AND effective_from <= CURRENT_DATE\n    AND (effective_until IS NULL OR effective_until >= CURRENT_DATE)\n),\ntype_defaults AS (\n  SELECT\n    dt.target_type,\n    dt.vaccine_id,\n    dt.annual_target,\n    dt.monthly_target,\n    ''default'' as source\n  FROM institute_type_default_targets dt\n  JOIN institute_info ii ON dt.institute_type = ii.institute_type\n  WHERE dt.effective_from <= CURRENT_DATE\n    AND (dt.effective_until IS NULL OR dt.effective_until >= CURRENT_DATE)\n)\nSELECT DISTINCT ON (target_type, vaccine_id)\n  target_type,\n  vaccine_id,\n  annual_target,\n  monthly_target,\n  source\nFROM (\n  SELECT * FROM institute_specific\n  UNION ALL\n  SELECT * FROM type_defaults\n) combined\nORDER BY target_type, vaccine_id, source DESC;\n\")",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "PowerShell($xlPath = \"C:\\\\Users\\\\arshp\\\\OneDrive\\\\Code\\\\CSCI_275\\\\Talwandi Sabo Ah Punjab DB.xlsx\"; if \\(Test-Path $xlPath\\) { \"File size: $\\(\\(Get-Item $xlPath\\).Length\\) bytes\" } else { \"NOT FOUND\" })"
     ],
     "deny": [],
     "ask": []

@@ -114,8 +114,6 @@ export default function LoginScreen() {
       )
 
       if (response.success && response.user) {
-        console.log('Login successful:', response.user)
-
         // Save username for future logins
         localStorage.setItem('rememberedUsername', formData.username)
 
@@ -152,8 +150,6 @@ export default function LoginScreen() {
       const response = await webauthnService.loginWithPasskey(formData.username, rememberMe)
 
       if (response.success && response.user) {
-        console.log('Passkey login successful:', response.user)
-
         // Save username for future logins
         localStorage.setItem('rememberedUsername', formData.username)
 

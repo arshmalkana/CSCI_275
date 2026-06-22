@@ -75,6 +75,16 @@ export async function rejectRegistration(request, reply) {
 
 // ── User management ────────────────────────────────────────────────────────────
 
+export async function createUser(request, reply) {
+  try {
+    const result = await adminService.createUser(request.user, request.body)
+    return reply.code(201).send({ success: true, data: result })
+  } catch (err) {
+    request.log.error(err)
+    return reply.code(err.statusCode || 500).send({ success: false, message: err.message })
+  }
+}
+
 export async function listUsers(request, reply) {
   try {
     const users = await adminService.listUsers(request.user)

@@ -208,6 +208,18 @@ export const api = {
   reactivateUser: (staffId: number) =>
     apiRequest(`/admin/users/${staffId}/reactivate`, { method: 'POST', body: JSON.stringify({}) }),
 
+  // Rollup export — returns a Blob (PDF or CSV) using apiClient.fetch directly
+  downloadExport: async (params: { month: string; format: 'pdf' | 'csv'; drill?: string }): Promise<Blob> => {
+    const q = new URLSearchParams({ month: params.month, format: params.format })
+    if (params.drill) q.append('drill', params.drill)
+    const response = await apiClient.fetch(`${API_BASE_URL}/rollup/export?${q}`)
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ message: `HTTP ${response.status}` }))
+      throw new Error((err as { message?: string }).message || 'Export failed')
+    }
+    return response.blob()
+  },
+
   // Consolidated rollup (admin)
   getRollupSummary: (params?: { month?: string; drill?: string }) => {
     const q = new URLSearchParams()
@@ -295,7 +307,81 @@ export const api = {
     apiPost('/push/unsubscribe', { endpoint }),
 
   sendTestPush: () =>
-    apiPost('/push/test', {})
+    apiPost('/push/test', {}),
+
+  // Master Data — Service Charges (HQ_Admin+)
+  listServiceCharges: () => apiGet('/admin/master-data/charges'),
+  createServiceCharge: (data: { serviceCode: string; serviceName: string; category: string; currentRate: number; effectiveFrom?: string }) =>
+    apiPost('/admin/master-data/charges', data),
+  updateServiceChargeRate: (chargeId: number, data: { newRate: number; effectiveMonth: string }) =>
+    apiRequest(`/admin/master-data/charges/${chargeId}/rate`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deactivateServiceCharge: (chargeId: number) =>
+    apiRequest(`/admin/master-data/charges/${chargeId}/deactivate`, { method: 'POST', body: JSON.stringify({}) }),
+  activateServiceCharge: (chargeId: number) =>
+    apiRequest(`/admin/master-data/charges/${chargeId}/activate`, { method: 'POST', body: JSON.stringify({}) }),
+
+  // Master Data — Semen Types (HQ_Admin+)
+  listSemenTypes: () => apiGet('/admin/master-data/semen'),
+  createSemenType: (data: { semenCode: string; semenName: string; species: string; semenCategory: string }) =>
+    apiPost('/admin/master-data/semen', data),
+  updateSemenType: (semenId: number, data: { semenName?: string; species?: string; semenCategory?: string }) =>
+    apiRequest(`/admin/master-data/semen/${semenId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deactivateSemenType: (semenId: number) =>
+    apiRequest(`/admin/master-data/semen/${semenId}/deactivate`, { method: 'POST', body: JSON.stringify({}) }),
+  activateSemenType: (semenId: number) =>
+    apiRequest(`/admin/master-data/semen/${semenId}/activate`, { method: 'POST', body: JSON.stringify({}) }),
+
+  // Master Data — Vaccines (HQ_Admin+)
+  listVaccines: () => apiGet('/admin/master-data/vaccines'),
+  createVaccine: (data: { vaccineCode: string; vaccineName: string; serviceChargeId?: number }) =>
+    apiPost('/admin/master-data/vaccines', data),
+  updateVaccine: (vaccineId: number, data: { vaccineName?: string; serviceChargeId?: number | null }) =>
+    apiRequest(`/admin/master-data/vaccines/${vaccineId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deactivateVaccine: (vaccineId: number) =>
+    apiRequest(`/admin/master-data/vaccines/${vaccineId}/deactivate`, { method: 'POST', body: JSON.stringify({}) }),
+  activateVaccine: (vaccineId: number) =>
+    apiRequest(`/admin/master-data/vaccines/${vaccineId}/activate`, { method: 'POST', body: JSON.stringify({}) }),
+
+  // Vaccine Distribution (Admin+)
+  getDistributionVaccines: () => apiGet('/admin/distributions/vaccines'),
+  getMyVaccineStock: () => apiGet('/admin/distributions/vaccines/stock'),
+  getDistributionInstitutes: () => apiGet('/admin/distributions/institutes'),
+  issueVaccineDistribution: (data: {
+    vaccineId: number
+    toInstituteId: number
+    dosesIssued: number
+    transactionDate: string
+    batchNumber?: string
+  }) => apiPost('/admin/distributions/vaccines/issue', data),
+
+  // Direct user creation (HQ_Admin+)
+  createUser: (data: {
+    fullName: string
+    userId: string
+    password: string
+    role: string
+    instituteId: number
+    designation?: string
+    mobile?: string
+    email?: string
+  }) => apiPost('/admin/users', data),
+
+  // Institute Targets (Admin+, subtree-scoped)
+  listTargets: (params?: { instituteId?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.instituteId) q.append('instituteId', String(params.instituteId))
+    return apiGet(`/admin/master-data/targets${q.toString() ? `?${q}` : ''}`)
+  },
+  getTargetsForInstitute: (instituteId: number) =>
+    apiGet(`/admin/master-data/targets/${instituteId}`),
+  setTarget: (data: {
+    instituteId: number
+    targetType: 'OPD' | 'AI_Cattle' | 'AI_Buffalo' | 'Vaccine'
+    vaccineId?: number
+    annualTarget: number
+    effectiveFrom: string
+    financialYear: string
+  }) => apiPost('/admin/master-data/targets', data)
 }
 
 export default api

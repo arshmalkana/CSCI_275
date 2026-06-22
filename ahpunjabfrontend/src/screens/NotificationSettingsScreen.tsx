@@ -76,9 +76,7 @@ export default function NotificationSettingsScreen() {
   const handleSendTest = async () => {
     setTestStatus('sending')
     try {
-      console.log('[NotificationSettings] Sending test push notification...')
-      const result = await api.sendTestPush()
-      console.log('[NotificationSettings] Test push result:', result)
+      await api.sendTestPush()
       setTestStatus('sent')
       setTimeout(() => setTestStatus(null), 3000)
     } catch (error) {

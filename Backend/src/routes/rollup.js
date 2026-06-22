@@ -25,4 +25,20 @@ export default async function rollupRoutes(fastify) {
       }
     }
   }, rollupController.getRollupSummary)
+
+  fastify.get('/export', {
+    preHandler: [authenticate, requireAdmin],
+    schema: {
+      description: 'Download consolidated rollup as PDF or CSV',
+      tags: ['Rollup'],
+      querystring: {
+        type: 'object',
+        properties: {
+          month:  { type: 'string', pattern: '^\\d{4}-\\d{2}$' },
+          drill:  { type: 'string' },
+          format: { type: 'string', enum: ['pdf', 'csv'], default: 'pdf' }
+        }
+      }
+    }
+  }, rollupController.exportRollup)
 }

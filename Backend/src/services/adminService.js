@@ -8,6 +8,7 @@ import { query, getClient } from '../database/db.js'
 import { getVisibleInstituteIds, assertInstituteInScope } from '../utils/scope.js'
 import * as notificationsService from './notificationsService.js'
 import * as authService from './authService.js'
+import refreshTokenService from './refreshTokenService.js'
 
 // ── Approval queue ────────────────────────────────────────────────────────────
 
@@ -290,7 +291,42 @@ export async function updateUser(adminUser, targetStaffId, updates) {
     `, [adminUser.staffId, k, String(v)])
   }
 
+  // Force re-login when role or institute changes — JWT payload would be stale
+  if (updates.user_role !== undefined || updates.current_institute_id !== undefined) {
+    await refreshTokenService.revokeAllUserTokens(targetStaffId, 'Role or institute changed by admin')
+  }
+
   return { updated: true }
+}
+
+export async function createUser(adminUser, { fullName, userId, password, role, instituteId, designation, mobile, email }) {
+  await assertInstituteInScope(adminUser, instituteId)
+
+  const existing = await query('SELECT staff_id FROM staff WHERE LOWER(user_id) = LOWER($1)', [userId])
+  if (existing.rows.length > 0) {
+    const e = new Error('User ID already taken')
+    e.statusCode = 409
+    throw e
+  }
+
+  const hashedPassword = await authService.hashPassword(password)
+
+  const result = await query(`
+    INSERT INTO staff
+      (full_name, user_id, password_hash, user_role, current_institute_id, designation, mobile, email, is_active, is_first_time)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE, FALSE)
+    RETURNING staff_id
+  `, [fullName, userId, hashedPassword, role, instituteId, designation || null, mobile || null, email || null])
+
+  const staffId = result.rows[0].staff_id
+
+  await query(`
+    INSERT INTO report_edits_audit
+      (report_id, edited_by, table_name, field_name, old_value, new_value, edit_reason)
+    VALUES (0, $1, 'staff', 'staff_id', NULL, $2, 'Admin created user directly')
+  `, [adminUser.staffId, String(staffId)])
+
+  return { staffId }
 }
 
 export async function setUserActive(adminUser, targetStaffId, active) {
@@ -307,6 +343,11 @@ export async function setUserActive(adminUser, targetStaffId, active) {
       (report_id, edited_by, table_name, field_name, old_value, new_value, edit_reason)
     VALUES (0, $1, 'staff', 'is_active', $2, $3, $4)
   `, [adminUser.staffId, String(!active), String(active), active ? 'Admin reactivated user' : 'Admin deactivated user'])
+
+  // Revoke all sessions when deactivating so the user can't use existing tokens
+  if (!active) {
+    await refreshTokenService.revokeAllUserTokens(targetStaffId, 'Account deactivated by admin')
+  }
 
   return { active }
 }

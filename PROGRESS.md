@@ -55,7 +55,7 @@ Scope function: `Backend/src/utils/scope.js::getVisibleInstituteIds(user)`
 - [x] `Backend/src/controllers/reportsController.js` — approve/reject controller handlers
 - [x] `Backend/src/routes/reports.js` — PATCH routes with role guards
 - [x] `report_edits_audit` written on every state change
-- [x] Destructive delete-and-reinsert stopped (snapshot before overwrite)
+- [x] **Audit trail on re-save**: before deleting detail rows, snapshots all 6 tables (opd, certificates, diagnostics, extensionActivities, ai, vaccinations) into `report_edits_audit` as JSON old_value (`reportsService.js` lines 212-228)
 - [x] `createReportApprovedNotification` / `createReportRejectedNotification` wired
 - [x] Resubmit after rejection allowed (status guard updated)
 - [x] `createReportSubmittedNotification` fixed to use correct role names (Tehsil_Admin etc.)
@@ -86,11 +86,15 @@ Scope function: `Backend/src/utils/scope.js::getVisibleInstituteIds(user)`
 
 - [x] `Backend/src/services/rollupService.js` — OPD, AI, vaccination aggregation
 - [x] `Backend/src/controllers/rollupController.js`
-- [x] `Backend/src/routes/rollup.js` — GET /rollup/summary with drill param
+- [x] `Backend/src/routes/rollup.js` — GET /rollup/summary + GET /rollup/export
 - [x] Scope-enforced: only institutes in admin's subtree are summed
 - [x] Frontend: `ConsolidatedDashboardScreen.tsx` with drill-down and collapsible sections
 - [x] Frontend: `/admin/rollup` route in App.tsx
-- [ ] **INCOMPLETE**: Aggregate PDF/Excel export — no multi-institute export endpoint yet
+- [x] **Export**: `GET /v1/rollup/export?month=YYYY-MM&format=pdf|csv`
+  - PDF via `pdfkit` (already in deps): title, submission summary, institute list, OPD / AI / Vaccination tables, page numbers
+  - CSV: multi-section flat file, RFC-compliant escaping
+  - Frontend: PDF and CSV download buttons in ConsolidatedDashboardScreen header; auth handled via `apiClient.fetch` → `response.blob()` → Blob URL download
+  - `api.ts`: `downloadExport(params)` helper returns a `Blob`
 
 ---
 
@@ -109,14 +113,40 @@ Scope function: `Backend/src/utils/scope.js::getVisibleInstituteIds(user)`
 
 ---
 
-## PHASE 5 — Master-Data Management ❌ NOT STARTED
+## PHASE 5 — Master-Data Management ✅
 
-- [ ] Admin CRUD for `semen_types` (add / edit / deactivate)
-- [ ] Admin CRUD for `service_charges`
-- [ ] Admin CRUD for `institute_targets`
-- [ ] Admin CRUD for `vaccines`
-- [ ] All changes scope-gated (HQ_Admin+) and audited
-- [ ] Frontend: master-data admin screens
+- [x] **Migration 005**: `Database/migrations/005-master-data-fixup.sql`
+  - Fixes vaccine codes BRUC→BRUCELLOSIS, THEI→THEILARIA (was silently dropping vaccination data on submit)
+  - Ensures all 7 expected codes exist (HS, FMD, BQ, BRUCELLOSIS, ETV, THEILARIA, RABIES)
+  - Adds `idx_fee_changes_charge_month` performance index
+  - Replaces `get_fee_summary()` with historical-rate-aware version: looks up `old_rate` from `fee_changes_history` for entries after the reporting month; falls back to `current_rate`
+- [x] **Backend service**: `Backend/src/services/masterDataService.js`
+  - `listServiceCharges`, `createServiceCharge`, `updateServiceChargeRate` (records `fee_changes_history`), `setServiceChargeActive`
+  - `listSemenTypes`, `createSemenType`, `updateSemenType`, `setSemenTypeActive`
+  - `listVaccines`, `createVaccine`, `updateVaccine`, `setVaccineActive`
+  - `listTargets` (scope-filtered), `getTargetsForInstitute` (assertInstituteInScope), `setTarget` (upsert by institute/type/FY, assertInstituteInScope)
+  - All mutations write to `report_edits_audit`; unique-code conflicts return 409
+- [x] **Backend controller**: `Backend/src/controllers/masterDataController.js` — thin handlers for all 19 service functions
+- [x] **Backend routes**: `Backend/src/routes/masterData.js`
+  - `/charges` (GET/POST/PATCH rate/activate/deactivate) — `requireSeniorAdmin`
+  - `/semen` (GET/POST/PATCH/activate/deactivate) — `requireSeniorAdmin`
+  - `/vaccines` (GET/POST/PATCH/activate/deactivate) — `requireSeniorAdmin`
+  - `/targets` (GET/POST/GET :instituteId) — `requireAdmin` (subtree-scoped)
+- [x] **server.js**: registered `masterData.js` under prefix `/v1/admin/master-data`
+- [x] **homeService.js**: removed `|| 1200`, `|| 600`, `|| 360` hardcoded target fallbacks — replaced with `?? null` (null = no target set)
+- [x] **api.ts**: 20 new typed helper methods for all master-data operations
+- [x] **Frontend**: `ahpunjabfrontend/src/screens/MasterDataScreen.tsx`
+  - 3 tabs: Service Charges | Semen Types | Vaccines
+  - Each tab: list (active/inactive), create form, edit modal, activate/deactivate; rate-change modal shows effective month picker
+  - Guarded by `AdminRoute roles={HQ_ROLES}` in App.tsx
+- [x] **Frontend**: `ahpunjabfrontend/src/screens/TargetsScreen.tsx`
+  - Institute selector (from visible scope), financial year field
+  - Shows current targets for OPD / AI_Cattle / AI_Buffalo; editable inputs with current value shown
+  - Saves only changed types; disabled save button until dirty
+  - Guarded by `AdminRoute` (all admin tiers) in App.tsx
+- [x] **App.tsx**: routes `/admin/master-data` (HQ_ROLES) and `/admin/targets` (ADMIN_ROLES) added
+- [x] **SideMenu.tsx**: "Master Data" (HQ_ROLES) and "Targets" (ADMIN_ROLES) nav entries added
+- [x] **docker-compose.yml**: migration 005 mounted as `10-migration-005.sql`
 
 ---
 
@@ -171,6 +201,7 @@ Scope function: `Backend/src/utils/scope.js::getVisibleInstituteIds(user)`
 | `Database/migrations/002-report-alignment.sql` | Report schema alignment |
 | `Database/migrations/003-reporting-periods.sql` | `reporting_periods` table |
 | `Database/migrations/004-password-reset-tokens.sql` | `password_reset_tokens` table |
+| `Database/migrations/005-master-data-fixup.sql`     | Fix vaccine codes; historical-rate-aware `get_fee_summary`; performance index |
 
 ## New Env Vars
 
@@ -188,14 +219,6 @@ See `Backend/.env.example` for the full list. New additions:
 | `argon2 ^0.41.1` | Backend dependencies | Password hashing (Argon2id) |
 | `workbox-background-sync ^7.3.0` | Frontend devDependencies | Offline sync queue |
 
-## What's Left (next session)
+## What's Left
 
-1. **Phase 5**: Master-data CRUD (semen_types, service_charges, institute_targets, vaccines) — full stack
-2. **Phase 7 wire-up**: Update `CreateReportScreen.tsx` to call `queueReport()` when offline, listen for `REPORT_SYNCED` to clear pending badge
-3. **Phase 8 remaining**:
-   - Remove the ~440-line duplicate JSX from `HomeScreen.tsx`
-   - Fix the dual token-refresh race in `authService.ts` vs `apiClient.ts`
-   - Rewrite `README.md`
-4. **Phase 4 remaining**: Automated cron/setInterval for deadline reminders; real status badges using `reporting_periods.deadline`
-5. **Phase 2 remaining**: Institute CRUD (parent reassignment)
-6. **Phase 3 remaining**: Multi-institute PDF/Excel export endpoint
+All planned features complete. `README.md` rewritten (2026-06-21).

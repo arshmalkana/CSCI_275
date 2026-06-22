@@ -267,6 +267,7 @@ export async function getHomeDataByUserId(userId) {
     if (mainStaff.user_role === 'Tehsil_Admin' || mainStaff.user_role === 'District_Admin') {
       const attachedQuery = `
         SELECT
+          i.institute_id,
           i.institute_name,
           mr.submission_status as report_status,
           mr.submitted_at,
@@ -287,6 +288,7 @@ export async function getHomeDataByUserId(userId) {
 
       const attachedResult = await query(attachedQuery, [instituteId, currentMonth])
       attachedInstitutes = attachedResult.rows.map(row => ({
+        id: row.institute_id,
         name: row.institute_name,
         reportStatus: row.report_status || 'Pending',
         statusType: row.status_type || 'error'
@@ -330,15 +332,15 @@ export async function getHomeDataByUserId(userId) {
       stats: {
         opd: {
           monthly: { completed: parseInt(opdStatsResult.rows[0].monthly_opd) },
-          annual: { completed: parseInt(annualOpdResult.rows[0].annual_opd), target: targets.OPD || 1200 }
+          annual: { completed: parseInt(annualOpdResult.rows[0].annual_opd), target: targets.OPD ?? null }
         },
         aiCow: {
           monthly: { completed: parseInt(aiCowMonthlyResult.rows[0].monthly_ai_cow) },
-          annual: { completed: parseInt(aiCowAnnualResult.rows[0].annual_ai_cow), target: targets.AI_Cattle || 600 }
+          annual: { completed: parseInt(aiCowAnnualResult.rows[0].annual_ai_cow), target: targets.AI_Cattle ?? null }
         },
         aiBuf: {
           monthly: { completed: parseInt(aiBufMonthlyResult.rows[0].monthly_ai_buf) },
-          annual: { completed: parseInt(aiBufAnnualResult.rows[0].annual_ai_buf), target: targets.AI_Buffalo || 360 }
+          annual: { completed: parseInt(aiBufAnnualResult.rows[0].annual_ai_buf), target: targets.AI_Buffalo ?? null }
         }
       },
       vaccines: {},

@@ -65,6 +65,8 @@ export default async function (fastify, opts) {
   await fastify.register(import('./routes/periods.js'), { prefix: '/v1/periods' })
   await fastify.register(import('./routes/notifications.js'), { prefix: '/v1/notifications' })
   await fastify.register(import('./routes/push.js'), { prefix: '/v1/push' })
+  await fastify.register(import('./routes/masterData.js'), { prefix: '/v1/admin/master-data' })
+  await fastify.register(import('./routes/distributions.js'), { prefix: '/v1/admin/distributions' })
 
   // Cleanup expired data + send deadline reminders on server startup
   fastify.addHook('onReady', async () => {

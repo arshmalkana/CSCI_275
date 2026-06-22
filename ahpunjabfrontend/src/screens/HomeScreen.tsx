@@ -49,6 +49,7 @@ interface HomeData {
   }>
   reportingStatus: string
   attachedInstitutes: Array<{
+    id: number
     name: string
     reportStatus: string
     statusType: string
@@ -109,52 +110,24 @@ export default function HomeScreen() {
     setStorageItem('statsMode', statsMode)
   }, [statsMode])
 
-  const handleSendReminder = (instituteName: string) => {
-    // TODO: Implement API call to send reminder
-    setSuccessDialog({
-      isOpen: true,
-      message: `Reminder sent to ${instituteName}`
-    })
+  const [reminderLoading, setReminderLoading] = useState<number | null>(null)
+  const [reminderError, setReminderError] = useState('')
+
+  const handleSendReminder = async (institute: { id: number; name: string }) => {
+    const currentMonth = new Date().toISOString().slice(0, 7)
+    setReminderLoading(institute.id)
+    setReminderError('')
+    try {
+      await api.sendReminder(institute.id, currentMonth)
+      setSuccessDialog({ isOpen: true, message: `Reminder sent to ${institute.name}` })
+    } catch (err) {
+      setReminderError((err as Error).message || 'Failed to send reminder')
+    } finally {
+      setReminderLoading(null)
+    }
   }
 
-  // Vaccine data from API with fallback
-  const vaccineData = JSON.stringify(instituteData?.vaccines) == '{}' ? {
-      'FMD': {
-        name: 'FMD',
-        monthly: { completed: 350},
-        annual: { completed: 3850, target: 6000 }
-      },
-      'HS': {
-        name: 'HS',
-        monthly: { completed: 280 },
-        annual: { completed: 3120, target: 3600 }
-      },
-      'BQ': {
-        name: 'Black Quarter',
-        monthly: { completed: 150 },
-        annual: { completed: 1650, target: 2400 }
-      },
-      'BRUC': {
-        name: 'Brucellosis',
-        monthly: { completed: 120 },
-        annual: { completed: 1320, target: 1800 }
-      },
-      'THEI': {
-        name: 'Theilaria',
-        monthly: { completed: 95},
-        annual: { completed: 1045, target: 1200 }
-      },
-      'RABIES': {
-        name: 'Rabies',
-        monthly: { completed: 70},
-        annual: { completed: 770, target: 960 }
-      },
-      'ETV': {
-        name: 'Entero Toximia',
-        monthly: { completed: 100},
-        annual: { completed: 1100, target: 1440 }
-      }
-  } : instituteData?.vaccines || {}
+  const vaccineData: Record<string, VaccineData> = instituteData?.vaccines || {}
 
   // Get color based on category (fixed colors)
   const getCategoryColor = (category: 'opd' | 'aiCow' | 'aiBuf' | 'vaccine'): 'blue' | 'green' | 'orange' | 'yellow' | 'red' => {
@@ -551,6 +524,9 @@ export default function HomeScreen() {
           {instituteData.attachedInstitutes && instituteData.attachedInstitutes.length > 0 && (
             <Card className="InstituteStatusSection">
               <CardTitle>Attached Institutes</CardTitle>
+              {reminderError && (
+                <p className="text-xs text-red-600 font-['Poppins'] mb-2">{reminderError}</p>
+              )}
               <div className="space-y-2">
                 {instituteData.attachedInstitutes.map((institute, index) => (
                   <div key={index} className="border border-gray-200 rounded-lg overflow-hidden bg-white">
@@ -570,11 +546,12 @@ export default function HomeScreen() {
                         </div>
                         {institute.reportStatus !== 'Submitted' && (
                           <button
-                            onClick={() => handleSendReminder(institute.name)}
-                            className="flex-shrink-0 flex items-center justify-center gap-1.5 bg-yellow-50 hover:bg-yellow-100 active:bg-yellow-200 border border-yellow-300 text-yellow-700 text-xs font-medium font-['Poppins'] py-1.5 px-3 rounded-md transition-colors"
+                            onClick={() => handleSendReminder(institute)}
+                            disabled={reminderLoading === institute.id}
+                            className="flex-shrink-0 flex items-center justify-center gap-1.5 bg-yellow-50 hover:bg-yellow-100 active:bg-yellow-200 border border-yellow-300 text-yellow-700 text-xs font-medium font-['Poppins'] py-1.5 px-3 rounded-md transition-colors disabled:opacity-50"
                           >
                             <BellRing size={13} />
-                            Remind
+                            {reminderLoading === institute.id ? '…' : 'Remind'}
                           </button>
                         )}
                       </div>
