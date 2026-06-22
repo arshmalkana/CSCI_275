@@ -1,73 +1,67 @@
-# React + TypeScript + Vite
+# AH Punjab Reporting — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Progressive Web App for Punjab's Animal Husbandry Department. Replaces Google Sheets with secure authentication, role-based access, and proper workflow management.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- React 19.1.1 + TypeScript (strict mode)
+- Vite 7 with PWA plugin (auto-updating service workers)
+- TailwindCSS v4 + PostCSS
+- React Query v5 for server state
+- React Router v6
 
-## React Compiler
+## Development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev          # Vite dev server on port 3000 (proxies /v1 to backend at :8080)
+npm run build        # TypeScript compile + Vite PWA build
+npm run lint         # ESLint
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Backend must be running on port 8080 (see `../Backend/`). The dev proxy in `vite.config.ts` forwards all `/v1/*` requests to the backend.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Architecture
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+**Screen layout pattern** — all screens use flexbox, never fixed positioning:
+```tsx
+<div className="w-full h-screen max-w-md mx-auto bg-white flex flex-col overflow-hidden">
+  <div className="flex-shrink-0">{/* header */}</div>
+  <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+    {/* scrollable content with pb-32 for button clearance */}
+  </div>
+  <div className="flex-shrink-0">{/* sticky button */}</div>
+</div>
 ```
+
+**API calls** — all go through `src/utils/apiClient.ts` which handles JWT refresh (single-flight `_refreshPromise` pattern) and `src/utils/api.ts` which exposes typed helpers per endpoint group.
+
+**Role guards** — `AdminRoute` in `App.tsx` accepts a `roles` prop; role constants (`ADMIN_ROLES`, `HQ_ROLES`, etc.) live in `src/utils/roles.ts`.
+
+**Offline** — `CreateReportScreen.tsx` detects `navigator.onLine`, queues reports via IndexedDB (`src/utils/offlineQueue.ts`), and listens for `REPORT_SYNCED` messages from the service worker.
+
+## Key Screens
+
+| Screen | Path | Roles |
+|--------|------|-------|
+| Login | `/login` | all |
+| Home dashboard | `/home` | all |
+| Create / submit report | `/create-report` | INAPH, AIW |
+| Monthly report detail | `/report/:id` | all |
+| Approval queue | `/admin/approval-queue` | Tehsil_Admin+ |
+| Consolidated rollup | `/admin/rollup` | Tehsil_Admin+ |
+| Admin panel | `/admin/panel` | HQ_Admin, Super_Admin |
+| Institutes | `/admin/institutes` | HQ_Admin+ |
+| Master data | `/admin/master-data` | HQ_Admin+ |
+| Targets | `/admin/targets` | Tehsil_Admin+ |
+| Periods config | `/admin/periods` | Tehsil_Admin+ |
+| Vaccine distribution | `/admin/vaccine-distribution` | Tehsil_Admin+ |
+| Profile | `/profile` | all |
+| Change password | `/change-password` | all |
+| Push notifications | `/notification-settings` | all |
+
+## Environment
+
+Copy `../Backend/.env.example` and set `VITE_API_BASE_URL` if the backend is not on the default port.
+
+The `VITE_API_BASE_URL` env var is read in `src/utils/apiClient.ts` and `src/utils/authService.ts`.

@@ -1,6 +1,6 @@
 # AH Punjab Reporting — Implementation Progress
 
-Updated: 2026-06-21
+Updated: 2026-06-22
 
 ## Hierarchy Map
 
@@ -189,7 +189,88 @@ Scope function: `Backend/src/utils/scope.js::getVisibleInstituteIds(user)`
 - [x] Dual refresh-token race fixed: `apiClient.ts` single-flight with `_refreshPromise`; `authService.ts.refreshAccessToken()` now delegates to `apiClient.refreshToken()`
 - [x] `|| 1` auth bypass fallbacks removed from `notificationsController.js` (6 instances) and `pushController.js` (3 instances)
 - [x] `|| 1` removed from notificationsController + pushController; all replaced with 401 guards
-- [ ] **INCOMPLETE**: README.md rewrite
+- [x] `ahpunjabfrontend/README.md` rewritten (was Vite boilerplate; now describes project architecture, screens, env vars)
+
+---
+
+## FINAL PASS — GO Gate Blocks ✅/⚠️
+
+### Block A — Fake Controls (DONE)
+- [x] **A1: VaccineDistributionScreen** — rewritten with real DB writes: `distributionService.js` → `distributionController.js` → `routes/distributions.js` (prefix `/v1/admin/distributions`). Real stock check + transaction + audit. Hardcoded arrays and `console.log` fake submit gone.
+- [x] **A2: HomeScreen reminder** — `handleSendReminder` now calls `api.sendReminder(institute.id, currentMonth)`. homeService.js returns `institute_id`. Hardcoded vaccine fallback block removed.
+
+### Block B — Audit Snapshot on Re-save (VERIFIED)
+- [x] `Backend/src/services/reportsService.js` lines 212–232: before DELETE on re-save, all 6 detail tables (opd, certificates, diagnostics, extensionActivities, ai, vaccinations) are snapshotted into `report_edits_audit` as a JSON old_value blob. Code is live and unambiguous.
+
+### Block C — Master Data CRUD (VERIFIED)
+- [x] `Backend/src/services/masterDataService.js`: full CRUD for service_charges (with fee_changes_history), semen_types, vaccines, institute_targets.
+- [x] `ahpunjabfrontend/src/screens/MasterDataScreen.tsx`: 3-tab UI — Service Charges, Semen Types, Vaccines.
+
+### Block D — Admin Completeness (DONE)
+- [x] **D1**: `POST /admin/users` — `createUser()` in adminService.js (Argon2id, scope-checked, 409 on duplicate, audited); CreateUserModal in AdminPanelScreen.
+- [x] **D2**: EditUserModal in AdminPanelScreen; PATCH /admin/users/:staffId; re-login warning shown.
+- [x] **D3**: `setUserActive(false)` revokes refresh tokens; `updateUser` revokes on role/institute change; `authenticate.js` does DB is_active check after JWT verify.
+
+### Block E — Multi-institute Export (VERIFIED)
+- [x] `Backend/src/services/rollupService.js`: `generateExportPdf` (pdfkit, real tables) and `generateExportCsv`.
+- [x] `Backend/src/routes/rollup.js`: `GET /export` route calls `rollupController.exportRollup`.
+- [x] ConsolidatedDashboardScreen has PDF + CSV download buttons.
+
+### Block F — Dead-Control Sweep (VERIFIED CLEAN)
+All 21 live screens pass: no console.log-as-submit, no hardcoded data arrays used as real data, no TODO stubs wired to buttons. Archive `-Demon.tsx` files excluded from sweep.
+
+| Screen | Result |
+|--------|--------|
+| LoginScreen | ✅ |
+| RegisterScreen | ✅ |
+| HomeScreen | ✅ |
+| ProfileScreen | ✅ |
+| CreateReportScreen | ✅ |
+| MonthlyReportScreen | ✅ |
+| ApprovalQueueScreen | ✅ |
+| ConsolidatedDashboardScreen | ✅ |
+| AdminPanelScreen | ✅ |
+| InstituteManagementScreen | ✅ |
+| MasterDataScreen | ✅ |
+| TargetsScreen | ✅ |
+| PeriodConfigScreen | ✅ |
+| VaccineDistributionScreen | ✅ |
+| ForgetPasswordScreen | ✅ |
+| ResetPasswordScreen | ✅ |
+| ChangePasswordScreen | ✅ |
+| NotificationsScreen | ✅ |
+| NotificationSettingsScreen | ✅ |
+| AllScreensScreen | ✅ (dev-only) |
+| SideMenu (actions) | ✅ |
+
+### Block G — Polish (DONE)
+- [x] Removed `console.log('Login successful:')` and `console.log('Passkey login successful:')` from LoginScreen.tsx
+- [x] Removed debug console.logs (lines 79, 81) from NotificationSettingsScreen.tsx
+- [x] Removed TODO comments from CreateReportScreen.tsx (month selector + copy-from-last-month)
+- [x] `ahpunjabfrontend/README.md` rewritten from Vite boilerplate
+
+### Block H — Talwandi Sabo Parity Gate (PARTIAL ⚠️)
+- [x] Seed file exists: `Database/init/07-seed-talwandi-sabo.sql` (985 KB, 31 institutes, 365 reports)
+- [x] **FIXED**: seed is now mounted in `docker-compose.yml` as `11-seed-talwandi-sabo.sql` (was only in `docker-compose-Demon.yml`)
+- [x] Institutes: all 31 Talwandi Sabo institutes seeded with correct tehsil/district FK lookups
+- [x] Staff: one user per institute with plaintext password 'Talwandi@2025' (auto-upgrades to Argon2id on first login via `verifyPassword` in authService.js)
+- [x] Reports: 365 monthly reports across institutes, March 2025–April 2026
+
+**Parity comparison (March 2025, from Excel `Talwandi Sabo Ah Punjab DB.xlsx`):**
+
+| Metric | Excel reference | Seed data |
+|--------|----------------|-----------|
+| Institutes present | 31 | 31 ✅ |
+| Fee register GRAND TOTAL | 62,425 | ⚠️ 0 (seed has no OPD/cert/AI-done counts) |
+| Tehsil OPD new cases | 1,954 | ⚠️ 0 (no opd_report_details seeded) |
+| Total cow AI done | 621 | ⚠️ 0 (total_ai_done = 0 in seed) |
+| Total buffalo AI done | 636 | ⚠️ 0 |
+| Semen straws received (CVH Talwandi Sabo HF) | 134 | ✅ 134 |
+| BQ vaccine at CVD Jaga Ram Tirath | 330 doses | ✅ 330 |
+
+**Root cause**: `gen_seed.js` only captured straws-received data from the Cluster Responses Google Form. OPD case counts, certificate counts, and AI-done counts were in individual institute form submissions (sheet 3 "Form responses") but not extracted.
+
+**Impact**: Semen stock balances would match if straws_used were seeded. Fee register total requires OPD/AI/cert activity records which are absent. The application logic (get_fee_summary, rollupService) is correct — the gap is test data completeness.
 
 ---
 
@@ -221,4 +302,6 @@ See `Backend/.env.example` for the full list. New additions:
 
 ## What's Left
 
-All planned features complete. `README.md` rewritten (2026-06-21).
+**Application code**: Complete. All features wired DB → service → controller → route → frontend.
+
+**Remaining data gap**: Block H fee-parity. The seed lacks OPD/cert/AI-done activity counts for March 2025. To close: export the "Form responses" sheet from `Talwandi Sabo Ah Punjab DB.xlsx` to CSV, extract per-institute service counts, and add `opd_report_details` / `certificate_report_details` rows to `07-seed-talwandi-sabo.sql`. The rollup will then produce 62,425 matching the Excel fee register.

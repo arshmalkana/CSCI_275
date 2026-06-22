@@ -20,6 +20,8 @@ services:
       - ./Database/migrations/003-reporting-periods.sql:/docker-entrypoint-initdb.d/08-migration-003.sql
       - ./Database/migrations/004-password-reset-tokens.sql:/docker-entrypoint-initdb.d/09-migration-004.sql
       - ./Database/migrations/005-master-data-fixup.sql:/docker-entrypoint-initdb.d/10-migration-005.sql
+      - ./Database/init/07-seed-talwandi-sabo.sql:/docker-entrypoint-initdb.d/11-seed-talwandi-sabo.sql
+      - ./Database/migrations/006-fee-formula-fix.sql:/docker-entrypoint-initdb.d/12-migration-006.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ahpunjab -d ahpunjab_db"]
       interval: 10s
