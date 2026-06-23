@@ -1,6 +1,7 @@
 import { query } from '../database/db.js'
 import * as pushService from './pushService.js'
 import log from '../utils/logger.js'
+import { ADMIN_ROLES } from '../config/roles.js'
 
 /**
  * Create a new notification
@@ -156,9 +157,9 @@ export async function createReportSubmittedNotification(reportId, reportingMonth
     JOIN staff s ON s.current_institute_id = parent.institute_id
     WHERE i.institute_id = $1
       AND s.is_active = TRUE
-      AND s.user_role IN ('Tehsil_Admin', 'District_Admin', 'HQ_Admin', 'Super_Admin')
+      AND s.user_role = ANY($2)
     LIMIT 1
-  `, [instituteId])
+  `, [instituteId, ADMIN_ROLES])
 
   if (supervisorResult.rows.length === 0) {
     return null // No supervisor found

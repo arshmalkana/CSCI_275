@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { FlaskConical } from 'lucide-react'
 
 export default function AllScreensScreen() {
   const navigate = useNavigate()
@@ -21,7 +22,7 @@ export default function AllScreensScreen() {
       {/* Header */}
       <div className="flex-shrink-0 bg-yellow-500 p-6">
         <h1 className="text-2xl font-bold text-black font-['Poppins']">
-          🧪 All Screens (Dev)
+          <FlaskConical size={22} className="inline mr-2" />All Screens (Dev)
         </h1>
         <p className="text-sm text-gray-700 font-['Poppins'] mt-1">
           Development screen for testing

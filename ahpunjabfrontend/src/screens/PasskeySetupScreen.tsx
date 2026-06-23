@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Fingerprint, ShieldCheck, Smartphone, X } from 'lucide-react'
+import { Fingerprint, ShieldCheck, Smartphone, X, Info } from 'lucide-react'
 import webauthnService from '../services/webauthnService'
 import authService from '../services/authService'
 import { PrimaryButton } from '../components/Button'
@@ -171,7 +171,7 @@ export default function PasskeySetupScreen() {
           {/* Info Box */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-800 font-['Poppins']">
-              💡 <strong>Tip:</strong> You can always setup passkeys later from your profile settings, or use your password as a fallback.
+              <Info size={14} className="inline mr-1 text-blue-700" /><strong>Tip:</strong> You can always setup passkeys later from your profile settings, or use your password as a fallback.
             </p>
           </div>
         </div>

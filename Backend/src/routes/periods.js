@@ -1,8 +1,6 @@
 import * as periodsController from '../controllers/periodsController.js'
 import { authenticate } from '../middleware/authenticate.js'
-
-const ADMIN_ROLES = ['Tehsil_Admin', 'District_Admin', 'HQ_Admin', 'Super_Admin']
-const HQ_ROLES = ['HQ_Admin', 'Super_Admin']
+import { ADMIN_ROLES, SENIOR_ADMIN_ROLES as HQ_ROLES } from '../config/roles.js'
 
 function requireAdmin(request, reply, done) {
   if (!ADMIN_ROLES.includes(request.user?.role)) {

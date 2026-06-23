@@ -31,7 +31,6 @@ interface HomeData {
     role: string
     phone: string
     email: string
-    whatsapp: string
   }>
   villages: Array<{
     name: string

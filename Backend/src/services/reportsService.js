@@ -300,8 +300,6 @@ export async function saveMonthlyReport(data) {
     }
 
     // Insert Vaccination details
-    // data.vaccinations: { hs, fmd, bq, brucellosis, etv, theilaria, rabies }
-    // Each entry: { received, used, vaccinated }
     if (data.vaccinations) {
       const vaccineCodeMap = {
         hs:          'HS',
@@ -313,6 +311,15 @@ export async function saveMonthlyReport(data) {
         rabies:      'RABIES',
       }
 
+      // Pre-load all vaccine IDs in one query
+      const vaccineCodesNeeded = Object.values(vaccineCodeMap)
+      const vaccineIdRes = await query(
+        `SELECT vaccine_id, vaccine_code FROM vaccines WHERE vaccine_code = ANY($1)`,
+        [vaccineCodesNeeded]
+      )
+      const vaccineIdMap = {}
+      for (const row of vaccineIdRes.rows) vaccineIdMap[row.vaccine_code] = row.vaccine_id
+
       await query('DELETE FROM vaccination_report_details WHERE report_id = $1', [reportId])
 
       for (const [key, vacCode] of Object.entries(vaccineCodeMap)) {
@@ -323,12 +330,9 @@ export async function saveMonthlyReport(data) {
         const vaccinated = parseInt(vac.vaccinated)  || 0
         if (received === 0 && used === 0 && vaccinated === 0) continue
 
-        const vacTypeResult = await query(
-          `SELECT vaccine_id FROM vaccines WHERE vaccine_code = $1`, [vacCode]
-        )
-        if (vacTypeResult.rows.length === 0) continue
+        const vaccineId = vaccineIdMap[vacCode]
+        if (!vaccineId) continue
 
-        const vaccineId = vacTypeResult.rows[0].vaccine_id
         await query(`
           INSERT INTO vaccination_report_details
             (report_id, vaccine_id, doses_received, doses_used, animals_vaccinated)
@@ -499,33 +503,29 @@ export async function saveMonthlyReport(data) {
 
     // Insert AI Reports details
     if (aiReports) {
-      // Process each category and its breeds
+      // Pre-load all semen type IDs in one query
+      const semenIdRes = await query(`SELECT semen_id, semen_code FROM semen_types WHERE is_active = TRUE`)
+      const semenIdMap = {}
+      for (const row of semenIdRes.rows) semenIdMap[row.semen_code] = row.semen_id
+
       const categories = ['localSemen', 'girSemen', 'ettImported', 'sexedSemen', 'buffaloes']
 
       for (const category of categories) {
         const categoryData = aiReports[category]
         if (!categoryData) continue
 
-        // Process each breed in the category
         for (const [breedId, breedData] of Object.entries(categoryData)) {
-          // Get the semen code for this breed
           const semenCode = getSemenCode(breedId)
           if (!semenCode) {
             log.warn(`Unknown breed ID: ${breedId}, skipping...`)
             continue
           }
 
-          // Look up semen_type_id from database
-          const semenTypeResult = await query(`
-            SELECT semen_id FROM semen_types WHERE semen_code = $1
-          `, [semenCode])
-
-          if (semenTypeResult.rows.length === 0) {
+          const semenTypeId = semenIdMap[semenCode]
+          if (!semenTypeId) {
             log.warn(`Semen type not found for code: ${semenCode}, skipping...`)
             continue
           }
-
-          const semenTypeId = semenTypeResult.rows[0].semen_id
 
           // Extract data from the three periods
           const current = breedData.current || {}
@@ -662,49 +662,19 @@ export async function getMonthlyReport(instituteId, reportingMonth) {
     const report = reportResult.rows[0]
     const reportId = report.report_id
 
-    // Get OPD details
-    const opdResult = await query(`
-      SELECT opd_type, case_category, total_cases, beneficiaries_covered
-      FROM opd_report_details
-      WHERE report_id = $1
-    `, [reportId])
-
-    // Get certificate details
-    const certResult = await query(`
-      SELECT certificate_type, total_issued, beneficiaries_covered
-      FROM certificate_report_details
-      WHERE report_id = $1
-    `, [reportId])
-
-    // Get lab details
-    const labResult = await query(`
-      SELECT diagnostic_type, tests_conducted, beneficiaries_covered
-      FROM diagnostic_report_details
-      WHERE report_id = $1
-    `, [reportId])
-
-    // Get extension details
-    const extensionResult = await query(`
-      SELECT activity_type, events_conducted, locations_covered, total_attendees, animals_treated
-      FROM extension_activities_details
-      WHERE report_id = $1
-    `, [reportId])
-
-    // Get AI report details with semen type information
-    const aiResult = await query(`
-      SELECT
-        ai.total_ai_done,
-        ai.animals_covered,
-        ai.animals_tested,
-        ai.animals_positive,
-        ai.male_calves,
-        ai.female_calves,
-        ai.beneficiaries_covered,
-        st.semen_code
-      FROM ai_report_details ai
-      JOIN semen_types st ON ai.semen_type_id = st.semen_id
-      WHERE ai.report_id = $1
-    `, [reportId])
+    const [opdResult, certResult, labResult, extensionResult, aiResult] = await Promise.all([
+      query(`SELECT opd_type, case_category, total_cases, beneficiaries_covered FROM opd_report_details WHERE report_id = $1`, [reportId]),
+      query(`SELECT certificate_type, total_issued, beneficiaries_covered FROM certificate_report_details WHERE report_id = $1`, [reportId]),
+      query(`SELECT diagnostic_type, tests_conducted, beneficiaries_covered FROM diagnostic_report_details WHERE report_id = $1`, [reportId]),
+      query(`SELECT activity_type, events_conducted, locations_covered, total_attendees, animals_treated FROM extension_activities_details WHERE report_id = $1`, [reportId]),
+      query(`
+        SELECT ai.total_ai_done, ai.animals_covered, ai.animals_tested, ai.animals_positive,
+               ai.male_calves, ai.female_calves, ai.beneficiaries_covered, st.semen_code
+        FROM ai_report_details ai
+        JOIN semen_types st ON ai.semen_type_id = st.semen_id
+        WHERE ai.report_id = $1
+      `, [reportId]),
+    ])
 
     // Transform AI data back to frontend structure
     // We need to reverse the mapping: semen_code -> breedId -> category structure
@@ -896,9 +866,7 @@ export async function listMonthlyReports(instituteId, filters = {}) {
     const result = await query(queryText, params)
 
     return result.rows.map(row => ({
-      id: row.report_id.toString(),
       reportId: row.report_id,
-      month: row.reporting_month,
       reportingMonth: row.reporting_month,
       status: row.status,
       submittedAt: row.submitted_at,
@@ -945,49 +913,14 @@ export async function getMonthlyReportDetails(reportId) {
 
     const report = reportResult.rows[0]
 
-    // Get OPD details
-    const opdResult = await query(`
-      SELECT opd_type, case_category, total_cases, beneficiaries_covered
-      FROM opd_report_details
-      WHERE report_id = $1
-    `, [reportId])
-
-    // Get certificate details
-    const certResult = await query(`
-      SELECT certificate_type, total_issued, beneficiaries_covered
-      FROM certificate_report_details
-      WHERE report_id = $1
-    `, [reportId])
-
-    // Get diagnostic details
-    const diagnosticResult = await query(`
-      SELECT diagnostic_type, tests_conducted, beneficiaries_covered
-      FROM diagnostic_report_details
-      WHERE report_id = $1
-    `, [reportId])
-
-    // Get vaccination details
-    const vaccineResult = await query(`
-      SELECT vaccine_id, doses_received, doses_used, animals_vaccinated, beneficiaries_covered
-      FROM vaccination_report_details
-      WHERE report_id = $1
-    `, [reportId])
-
-    // Get AI details
-    const aiResult = await query(`
-      SELECT semen_type_id, total_ai_done, animals_covered, beneficiaries_covered,
-             straws_received, straws_used_inaph, straws_issued_aiw,
-             animals_tested, animals_positive, male_calves, female_calves
-      FROM ai_report_details
-      WHERE report_id = $1
-    `, [reportId])
-
-    // Get extension activities
-    const extensionResult = await query(`
-      SELECT activity_type, events_conducted, locations_covered, total_attendees, animals_treated
-      FROM extension_activities_details
-      WHERE report_id = $1
-    `, [reportId])
+    const [opdResult, certResult, diagnosticResult, vaccineResult, aiResult, extensionResult] = await Promise.all([
+      query(`SELECT opd_type, case_category, total_cases, beneficiaries_covered FROM opd_report_details WHERE report_id = $1`, [reportId]),
+      query(`SELECT certificate_type, total_issued, beneficiaries_covered FROM certificate_report_details WHERE report_id = $1`, [reportId]),
+      query(`SELECT diagnostic_type, tests_conducted, beneficiaries_covered FROM diagnostic_report_details WHERE report_id = $1`, [reportId]),
+      query(`SELECT vaccine_id, doses_received, doses_used, animals_vaccinated, beneficiaries_covered FROM vaccination_report_details WHERE report_id = $1`, [reportId]),
+      query(`SELECT semen_type_id, total_ai_done, animals_covered, beneficiaries_covered, straws_received, straws_used_inaph, straws_issued_aiw, animals_tested, animals_positive, male_calves, female_calves FROM ai_report_details WHERE report_id = $1`, [reportId]),
+      query(`SELECT activity_type, events_conducted, locations_covered, total_attendees, animals_treated FROM extension_activities_details WHERE report_id = $1`, [reportId]),
+    ])
 
     // Return complete report - properly formatted
     return {

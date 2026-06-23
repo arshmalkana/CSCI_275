@@ -1,35 +1,35 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, X } from 'lucide-react'
+import {
+  User, X, Home, BarChart2, Truck, ClipboardCheck, TrendingUp,
+  Settings, Calendar, Building2, Database, Target, LogOut, type LucideIcon
+} from 'lucide-react'
 import authService from '../services/authService'
+import { ADMIN_ROLES, HQ_ROLES } from '../config/roles'
 
 interface SideMenuProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen: boolean
+  onClose: () => void
 }
-
-const ADMIN_ROLES = ['Tehsil_Admin', 'District_Admin', 'HQ_Admin', 'Super_Admin']
-const HQ_ROLES = ['HQ_Admin', 'Super_Admin']
 
 interface MenuItem {
   name: string
-  icon: string
+  icon: LucideIcon
   path: string
   roles?: string[]
 }
 
 const ALL_MENU_ITEMS: MenuItem[] = [
-  { name: 'Home',                   icon: '🏠',  path: '/home' },
-  { name: 'Monthly Reporting',      icon: '📊',  path: '/reports/monthly' },
-  { name: 'Vaccine Distribution',   icon: '🚚',  path: '/vaccine-distribution',  roles: ADMIN_ROLES },
-  // Admin-only items
-  { name: 'Approval Queue',         icon: '✅',  path: '/admin/approval-queue',  roles: ADMIN_ROLES },
-  { name: 'Consolidated Dashboard', icon: '📈',  path: '/admin/rollup',           roles: ADMIN_ROLES },
-  { name: 'Admin Panel',            icon: '⚙️',  path: '/admin/panel',            roles: HQ_ROLES },
-  { name: 'Period Config',          icon: '📅',  path: '/admin/periods',          roles: HQ_ROLES },
-  { name: 'Institutes',             icon: '🏛️',  path: '/admin/institutes',        roles: HQ_ROLES },
-  { name: 'Master Data',           icon: '📋',  path: '/admin/master-data',       roles: HQ_ROLES },
-  { name: 'Targets',               icon: '🎯',  path: '/admin/targets',           roles: ADMIN_ROLES },
+  { name: 'Home',                   icon: Home,          path: '/home' },
+  { name: 'Monthly Reporting',      icon: BarChart2,     path: '/reports/monthly' },
+  { name: 'Vaccine Distribution',   icon: Truck,         path: '/vaccine-distribution',  roles: ADMIN_ROLES },
+  { name: 'Approval Queue',         icon: ClipboardCheck,path: '/admin/approval-queue',  roles: ADMIN_ROLES },
+  { name: 'Consolidated Dashboard', icon: TrendingUp,    path: '/admin/rollup',           roles: ADMIN_ROLES },
+  { name: 'Admin Panel',            icon: Settings,      path: '/admin/panel',            roles: HQ_ROLES },
+  { name: 'Period Config',          icon: Calendar,      path: '/admin/periods',          roles: HQ_ROLES },
+  { name: 'Institutes',             icon: Building2,     path: '/admin/institutes',       roles: HQ_ROLES },
+  { name: 'Master Data',            icon: Database,      path: '/admin/master-data',      roles: HQ_ROLES },
+  { name: 'Targets',                icon: Target,        path: '/admin/targets',          roles: ADMIN_ROLES },
 ]
 
 export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
@@ -59,8 +59,8 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
 
   const handleLogout = () => {
     authService.logout()
-    navigate('/login')
     onClose()
+    navigate('/login')
   }
 
   const handleProfileClick = () => {
@@ -72,7 +72,6 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className={`fixed inset-0 z-40 transition-opacity duration-500 ease-in-out ${
           isOpen ? 'opacity-100' : 'opacity-0'
@@ -81,15 +80,11 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
         style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
       />
 
-      {/* Side Menu */}
       <div
         className={`fixed left-0 top-0 safe-top h-full w-80 bg-white z-50 shadow-2xl transform transition-all duration-500 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
-        style={{
-          transitionProperty: 'transform, opacity',
-          transitionTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
-        }}
+        style={{ transitionTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
@@ -117,30 +112,32 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
         {/* Menu Items */}
         <div className="flex-1 py-4 overflow-y-auto">
           <div className="px-4 space-y-1">
-            {menuItems.map((item, index) => (
-              <button
-                key={index}
-                onClick={() => handleMenuItemClick(item.path)}
-                className="w-full flex items-center space-x-3 px-4 py-3 text-left rounded-lg hover:bg-gray-50 hover:text-yellow-600 transition-all duration-200 group"
-              >
-                <span className="text-xl group-hover:scale-110 transition-transform duration-200">
-                  {item.icon}
-                </span>
-                <span className="text-gray-700 text-sm font-medium font-['Poppins'] group-hover:text-yellow-600">
-                  {item.name}
-                </span>
-              </button>
-            ))}
+            {menuItems.map((item) => {
+              const Icon = item.icon
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => handleMenuItemClick(item.path)}
+                  className="w-full flex items-center space-x-3 px-4 py-3 text-left rounded-lg hover:bg-gray-50 hover:text-yellow-600 transition-all duration-200 group"
+                >
+                  <Icon size={20} className="text-gray-500 group-hover:text-yellow-600 transition-colors flex-shrink-0" />
+                  <span className="text-gray-700 text-sm font-medium font-['Poppins'] group-hover:text-yellow-600">
+                    {item.name}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         </div>
 
-        {/* Logout Button */}
+        {/* Logout */}
         <div className="p-6 border-t border-gray-100">
           <button
             onClick={handleLogout}
-            className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-white py-3 px-4 rounded-lg font-semibold font-['Poppins'] hover:from-yellow-500 hover:to-yellow-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white py-3 px-4 rounded-lg font-semibold font-['Poppins'] hover:from-yellow-500 hover:to-yellow-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
           >
-            🚪 Logout
+            <LogOut size={18} />
+            Logout
           </button>
         </div>
       </div>

@@ -17,8 +17,7 @@
  */
 
 import { query } from '../database/db.js'
-
-const ADMIN_ROLES = ['Tehsil_Admin', 'District_Admin', 'HQ_Admin', 'Super_Admin']
+import { ADMIN_ROLES } from '../config/roles.js'
 
 /**
  * Returns the set of institute_ids this user is permitted to see/act on.

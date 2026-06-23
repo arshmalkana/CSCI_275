@@ -24,12 +24,10 @@ import MasterDataScreen from './screens/MasterDataScreen'
 import TargetsScreen from './screens/TargetsScreen'
 import authService from './services/authService'
 import { initializePushNotifications } from './utils/pushNotifications'
+import { ADMIN_ROLES, HQ_ROLES } from './config/roles'
 
 // Dev-only screen — lazy so the 440 duplicate lines aren't bundled in prod
 const AllScreensScreen = lazy(() => import('./screens/AllScreensScreen'))
-
-const ADMIN_ROLES = ['Tehsil_Admin', 'District_Admin', 'HQ_Admin', 'Super_Admin']
-const HQ_ROLES = ['HQ_Admin', 'Super_Admin']
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (!authService.isAuthenticated()) return <Navigate to="/login" replace />

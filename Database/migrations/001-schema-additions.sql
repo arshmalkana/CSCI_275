@@ -1,4 +1,51 @@
 -- ============================================================================
+-- Migration: Update Buffalo Breeds
+-- ============================================================================
+-- Replace Surti and Jaffarabadi with Murrah Sexed and Nili Ravi Sexed
+--
+-- Date: 2025-11-12
+-- Description: Updates buffalo semen types to align with current
+--              breeding program requirements
+-- ============================================================================
+
+-- Step 1: Deactivate old buffalo breeds (don't delete to preserve data integrity)
+UPDATE semen_types
+SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
+WHERE semen_code IN ('SURTI', 'JAFFARABADI');
+
+-- Step 2: Add new sexed buffalo breeds
+INSERT INTO semen_types (semen_code, semen_name, species, semen_category, is_active)
+VALUES
+  ('MURRAH_SEXED', 'Murrah Buffalo (Sexed)', 'Buffalo', 'Sexed', TRUE),
+  ('NILI_RAVI_SEXED', 'Nili Ravi Buffalo (Sexed)', 'Buffalo', 'Sexed', TRUE)
+ON CONFLICT (semen_code) DO UPDATE
+SET
+  semen_name = EXCLUDED.semen_name,
+  species = EXCLUDED.species,
+  semen_category = EXCLUDED.semen_category,
+  is_active = EXCLUDED.is_active,
+  updated_at = CURRENT_TIMESTAMP;
+
+-- Step 3: Verify the changes
+SELECT
+  semen_code,
+  semen_name,
+  species,
+  semen_category,
+  is_active,
+  created_at,
+  updated_at
+FROM semen_types
+WHERE species = 'Buffalo'
+ORDER BY is_active DESC, semen_code;
+
+-- Step 4: Report any existing AI reports using deactivated breeds
+SELECT
+  COUNT(*) as reports_with_old_breeds,
+  'WARNING: These reports use deactivated buffalo breeds' as message
+FROM ai_reports
+WHERE semen_type IN ('SURTI', 'JAFFARABADI');
+-- ============================================================================
 -- Migration 002: Align schema with Bathinda AH Punjab DB spreadsheet
 -- Adds missing columns, views, and functions that mirror spreadsheet formulas
 -- ============================================================================
@@ -463,3 +510,41 @@ VALUES
   ('VAC_HS',      'HS Vaccine Fee',                    'Vaccination', 5,  '2021-04-01', TRUE),
   ('VAC_RABIES',  'Rabies Vaccine Fee',                'Vaccination', 10, '2021-04-01', TRUE)
 ON CONFLICT (service_code) DO NOTHING;
+-- Migration 003: Reporting periods / deadlines
+-- Adds a reporting_periods table so HQ/Super_Admin can open/close months,
+-- set submission deadlines, and lock periods after approval.
+
+CREATE TABLE IF NOT EXISTS reporting_periods (
+    period_id        SERIAL PRIMARY KEY,
+    reporting_month  VARCHAR(7) NOT NULL UNIQUE,   -- YYYY-MM
+    opens_at         TIMESTAMPTZ NOT NULL,
+    deadline         TIMESTAMPTZ NOT NULL,
+    closes_at        TIMESTAMPTZ,                   -- NULL = still open
+    is_locked        BOOLEAN NOT NULL DEFAULT FALSE,
+    locked_by        INTEGER REFERENCES staff(staff_id),
+    locked_at        TIMESTAMPTZ,
+    created_by       INTEGER REFERENCES staff(staff_id),
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_reporting_periods_month ON reporting_periods(reporting_month);
+
+-- Trigger to auto-update updated_at
+CREATE TRIGGER update_reporting_periods_updated_at
+    BEFORE UPDATE ON reporting_periods
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Migration 004: Password reset tokens
+-- Supports the self-service forgot-password flow.
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    token_id    SERIAL PRIMARY KEY,
+    staff_id    INTEGER NOT NULL REFERENCES staff(staff_id) ON DELETE CASCADE,
+    token_hash  TEXT NOT NULL,                -- SHA-256 hash of the random token
+    expires_at  TIMESTAMPTZ NOT NULL,
+    used_at     TIMESTAMPTZ,                  -- NULL = unused
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_prt_token_hash ON password_reset_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_prt_staff_id   ON password_reset_tokens(staff_id);

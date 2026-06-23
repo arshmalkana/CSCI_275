@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Fingerprint, Trash2, Plus, Smartphone } from 'lucide-react'
-import webauthnService,  { type PasskeyCredential } from '../services/webauthnService'
+import { Fingerprint, Trash2, Plus, Smartphone, AlertTriangle } from 'lucide-react'
+import webauthnService, { type PasskeyCredential } from '../services/webauthnService'
 import authService from '../services/authService'
-// import { ScreenHeader } from '../components/ScreenHeader'
 import { SuccessDialog, ErrorDialog } from '../components/DialogBox'
 import DialogBox from '../components/DialogBox'
 import { BackHeader } from '../components/Headers'
-// import {PrimaryButton} from '../components/Button'
 
 export default function ManagePasskeysScreen() {
   const navigate = useNavigate()
@@ -250,7 +248,7 @@ export default function ManagePasskeysScreen() {
         {credentials.length > 0 && (
           <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <p className="text-sm text-yellow-800 font-['Poppins']">
-              ⚠️ <strong>Note:</strong> Deleting a passkey will prevent you from logging in with that device's biometrics. You can always use your password as a fallback.
+              <AlertTriangle size={14} className="inline mr-1 text-yellow-700" /><strong>Note:</strong> Deleting a passkey will prevent you from logging in with that device's biometrics. You can always use your password as a fallback.
             </p>
           </div>
         )}

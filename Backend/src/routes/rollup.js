@@ -1,7 +1,6 @@
 import * as rollupController from '../controllers/rollupController.js'
 import { authenticate } from '../middleware/authenticate.js'
-
-const ADMIN_ROLES = ['Tehsil_Admin', 'District_Admin', 'HQ_Admin', 'Super_Admin']
+import { ADMIN_ROLES } from '../config/roles.js'
 
 function requireAdmin(request, reply, done) {
   if (!ADMIN_ROLES.includes(request.user?.role)) {
