@@ -2,6 +2,7 @@ import Fastify from 'fastify'
 import appPlugin from './src/server.js'
 
 const app = Fastify({
+  trustProxy: true,
   logger: {
     level: process.env.LOG_LEVEL || 'info',
     ...(process.env.NODE_ENV !== 'production' && {

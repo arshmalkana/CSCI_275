@@ -1,36 +1,24 @@
-import nodemailer from 'nodemailer'
+import { Resend } from 'resend'
 import log from '../utils/logger.js'
 
 const IS_PROD = process.env.NODE_ENV === 'production'
+const EMAIL_FROM = process.env.EMAIL_FROM || 'AH Punjab <noreply@ahdp.in>'
 
-function createTransport() {
-  if (IS_PROD) {
-    const required = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS']
-    const missing = required.filter(k => !process.env[k])
-    if (missing.length) throw new Error(`FATAL: Missing SMTP env vars: ${missing.join(', ')}`)
-
-    return nodemailer.createTransport({
-      host:   process.env.SMTP_HOST,
-      port:   parseInt(process.env.SMTP_PORT),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    })
+function getClient() {
+  const key = process.env.RESEND_API_KEY
+  if (!key) {
+    if (IS_PROD) throw new Error('FATAL: RESEND_API_KEY env var is required in production')
+    return null
   }
-
-  // Development: print to console, no real sending
-  return nodemailer.createTransport({ jsonTransport: true })
+  return new Resend(key)
 }
 
 export async function sendPasswordResetEmail(toEmail, resetLink) {
-  const transport = createTransport()
-  const from = process.env.SMTP_FROM || 'AH Punjab <noreply@ahpunjab.gov.in>'
+  const client = getClient()
 
-  const info = await transport.sendMail({
-    from,
-    to: toEmail,
+  const payload = {
+    from: EMAIL_FROM,
+    to: [toEmail],
     subject: 'Password Reset — AH Punjab Reporting',
     text: [
       'You requested a password reset for your AH Punjab account.',
@@ -46,11 +34,14 @@ export async function sendPasswordResetEmail(toEmail, resetLink) {
       </a></p>
       <p style="color:#6b7280;font-size:13px;">Link expires in 1 hour. If you did not request this, ignore this email.</p>
     `,
-  })
-
-  if (!IS_PROD) {
-    log.info({ email: JSON.parse(info.message) }, 'Password reset email sent (dev mode — not real)'  )
   }
 
-  return info
+  if (!client) {
+    log.info({ to: toEmail, resetLink }, 'Password reset email (dev mode — not sent via Resend)')
+    return
+  }
+
+  const { data, error } = await client.emails.send(payload)
+  if (error) throw new Error(`Resend error: ${error.message}`)
+  return data
 }

@@ -12,7 +12,6 @@
     "start": "fastify start -c fastify.config.json src/server.js"
   },
   "dependencies": {
-    "fastify": "^5.6.0",
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.1.0",
     "@fastify/rate-limit": "^10.3.0",
@@ -22,6 +21,7 @@
     "abstract-logging": "^2.0.1",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
+    "argon2": "^0.41.1",
     "atomic-sleep": "^1.0.0",
     "avvio": "^9.1.0",
     "colorette": "^2.0.20",
@@ -37,6 +37,7 @@
     "fast-redact": "^3.5.0",
     "fast-safe-stringify": "^2.1.1",
     "fast-uri": "^3.1.0",
+    "fastify": "^5.6.0",
     "fastq": "^1.19.1",
     "find-my-way": "^9.3.0",
     "help-me": "^5.0.0",
@@ -60,6 +61,7 @@
     "quick-format-unescaped": "^4.0.4",
     "real-require": "^0.2.0",
     "require-from-string": "^2.0.2",
+    "resend": "^6.14.0",
     "ret": "^0.5.0",
     "reusify": "^1.1.0",
     "rfdc": "^1.4.1",
@@ -74,8 +76,6 @@
     "thread-stream": "^3.1.0",
     "toad-cache": "^3.7.0",
     "validator": "^13.15.15",
-    "argon2": "^0.41.1",
-    "nodemailer": "^6.9.16",
     "web-push": "^3.6.7",
     "wrappy": "^1.0.2"
   },

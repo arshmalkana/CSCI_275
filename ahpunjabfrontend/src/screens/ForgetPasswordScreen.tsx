@@ -156,7 +156,7 @@ export default function ForgetPasswordScreen() {
 
       {/* Reset Password Button */}
       <div className="mt-8">
-        <PrimaryButton onClick={handleResetPassword}>
+        <PrimaryButton onClick={handleResetPassword} disabled={isLoading}>
           Send Reset Link
         </PrimaryButton>
       </div>

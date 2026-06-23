@@ -6,6 +6,23 @@
 -- Default login password for all seeded users: Talwandi@2025
 -- ============================================================================
 
+-- 0. ENSURE VILLAGES
+-- Idempotent: adds only village names used by this seed that differ from geo seed spellings.
+INSERT INTO villages (village_name, tehsil_id, district_id)
+SELECT v, t.tehsil_id, t.district_id
+FROM unnest(ARRAY[
+  'Talwandi Sabo', 'Jaga Ram Tirath', 'Rayia', 'Raman Mandi',
+  'Sekhu', 'Bangi Deepa', 'Phallar', 'Bangi Kalan', 'Laleana',
+  'Bhagwangarh', 'Kanakwal', 'Gurthari', 'Bhagiwander',
+  'Behman Kaur Singh', 'Chak Heera Singh Wala'
+]) AS v
+CROSS JOIN (
+  SELECT tehsil_id, district_id FROM tehsils
+  WHERE tehsil_name = 'Talwandi Sabo'
+    AND district_id = (SELECT district_id FROM districts WHERE district_name = 'Bathinda')
+) AS t
+ON CONFLICT (village_name, tehsil_id) DO NOTHING;
+
 -- 1. INSTITUTES (Talwandi Sabo, Bathinda)
 
 INSERT INTO institutes (org_id, institute_name, institute_type, village_id, tehsil_id, district_id, is_active)
@@ -163,7 +180,7 @@ SELECT 'TS_CVH_KANAKWAL', 'CVH Kanakwal', 'CVH',
 WHERE NOT EXISTS (SELECT 1 FROM institutes WHERE org_id = 'TS_CVH_KANAKWAL');
 
 INSERT INTO institutes (org_id, institute_name, institute_type, village_id, tehsil_id, district_id, is_active)
-SELECT 'TS_PAW_GURTHARI', 'PAW Gurthari', 'PAW',
+SELECT 'TS_PAW_GURTHARI', 'PAW Gurthari', 'PAIW',
   (SELECT village_id FROM villages WHERE village_name = 'Gurthari' AND district_id = (SELECT district_id FROM districts WHERE district_name = 'Bathinda') LIMIT 1),
   (SELECT tehsil_id FROM tehsils WHERE tehsil_name = 'Talwandi Sabo' AND district_id = (SELECT district_id FROM districts WHERE district_name = 'Bathinda')),
   (SELECT district_id FROM districts WHERE district_name = 'Bathinda'), TRUE
@@ -184,46 +201,54 @@ SELECT 'TS_CVH_MALKANA', 'CVH Malkana', 'CVH',
 WHERE NOT EXISTS (SELECT 1 FROM institutes WHERE org_id = 'TS_CVH_MALKANA');
 
 INSERT INTO institutes (org_id, institute_name, institute_type, village_id, tehsil_id, district_id, is_active)
-SELECT 'TS_PAW_JAJJAL', 'PAW Jajjal', 'PAW',
+SELECT 'TS_PAW_JAJJAL', 'PAW Jajjal', 'PAIW',
   (SELECT village_id FROM villages WHERE village_name = 'Jajjal' AND district_id = (SELECT district_id FROM districts WHERE district_name = 'Bathinda') LIMIT 1),
   (SELECT tehsil_id FROM tehsils WHERE tehsil_name = 'Talwandi Sabo' AND district_id = (SELECT district_id FROM districts WHERE district_name = 'Bathinda')),
   (SELECT district_id FROM districts WHERE district_name = 'Bathinda'), TRUE
 WHERE NOT EXISTS (SELECT 1 FROM institutes WHERE org_id = 'TS_PAW_JAJJAL');
 
 INSERT INTO institutes (org_id, institute_name, institute_type, village_id, tehsil_id, district_id, is_active)
-SELECT 'TS_PAW_GEHLEWALA', 'PAW Gehlewala', 'PAW',
+SELECT 'TS_PAW_GEHLEWALA', 'PAW Gehlewala', 'PAIW',
   (SELECT village_id FROM villages WHERE village_name = 'Gehlewala' AND district_id = (SELECT district_id FROM districts WHERE district_name = 'Bathinda') LIMIT 1),
   (SELECT tehsil_id FROM tehsils WHERE tehsil_name = 'Talwandi Sabo' AND district_id = (SELECT district_id FROM districts WHERE district_name = 'Bathinda')),
   (SELECT district_id FROM districts WHERE district_name = 'Bathinda'), TRUE
 WHERE NOT EXISTS (SELECT 1 FROM institutes WHERE org_id = 'TS_PAW_GEHLEWALA');
 
 INSERT INTO institutes (org_id, institute_name, institute_type, village_id, tehsil_id, district_id, is_active)
-SELECT 'TS_PAW_KAMALU', 'PAW Kamalu', 'PAW',
+SELECT 'TS_PAW_KAMALU', 'PAW Kamalu', 'PAIW',
   (SELECT village_id FROM villages WHERE village_name = 'Kamalu' AND district_id = (SELECT district_id FROM districts WHERE district_name = 'Bathinda') LIMIT 1),
   (SELECT tehsil_id FROM tehsils WHERE tehsil_name = 'Talwandi Sabo' AND district_id = (SELECT district_id FROM districts WHERE district_name = 'Bathinda')),
   (SELECT district_id FROM districts WHERE district_name = 'Bathinda'), TRUE
 WHERE NOT EXISTS (SELECT 1 FROM institutes WHERE org_id = 'TS_PAW_KAMALU');
 
 INSERT INTO institutes (org_id, institute_name, institute_type, village_id, tehsil_id, district_id, is_active)
-SELECT 'TS_PAW_BEHMAN_KAUR_SINGH', 'PAW Behman Kaur Singh', 'PAW',
+SELECT 'TS_PAW_BEHMAN_KAUR_SINGH', 'PAW Behman Kaur Singh', 'PAIW',
   (SELECT village_id FROM villages WHERE village_name = 'Behman Kaur Singh' AND district_id = (SELECT district_id FROM districts WHERE district_name = 'Bathinda') LIMIT 1),
   (SELECT tehsil_id FROM tehsils WHERE tehsil_name = 'Talwandi Sabo' AND district_id = (SELECT district_id FROM districts WHERE district_name = 'Bathinda')),
   (SELECT district_id FROM districts WHERE district_name = 'Bathinda'), TRUE
 WHERE NOT EXISTS (SELECT 1 FROM institutes WHERE org_id = 'TS_PAW_BEHMAN_KAUR_SINGH');
 
 INSERT INTO institutes (org_id, institute_name, institute_type, village_id, tehsil_id, district_id, is_active)
-SELECT 'TS_PAW_MAHI_NANGAL', 'PAW Mahi Nangal', 'PAW',
+SELECT 'TS_PAW_MAHI_NANGAL', 'PAW Mahi Nangal', 'PAIW',
   (SELECT village_id FROM villages WHERE village_name = 'Mahi Nangal' AND district_id = (SELECT district_id FROM districts WHERE district_name = 'Bathinda') LIMIT 1),
   (SELECT tehsil_id FROM tehsils WHERE tehsil_name = 'Talwandi Sabo' AND district_id = (SELECT district_id FROM districts WHERE district_name = 'Bathinda')),
   (SELECT district_id FROM districts WHERE district_name = 'Bathinda'), TRUE
 WHERE NOT EXISTS (SELECT 1 FROM institutes WHERE org_id = 'TS_PAW_MAHI_NANGAL');
 
 INSERT INTO institutes (org_id, institute_name, institute_type, village_id, tehsil_id, district_id, is_active)
-SELECT 'TS_PAW_CHAK_HEERA_SINGH_WALA', 'PAW Chak Heera Singh Wala', 'PAW',
+SELECT 'TS_PAW_CHAK_HEERA_SINGH_WALA', 'PAW Chak Heera Singh Wala', 'PAIW',
   (SELECT village_id FROM villages WHERE village_name = 'Chak Heera Singh Wala' AND district_id = (SELECT district_id FROM districts WHERE district_name = 'Bathinda') LIMIT 1),
   (SELECT tehsil_id FROM tehsils WHERE tehsil_name = 'Talwandi Sabo' AND district_id = (SELECT district_id FROM districts WHERE district_name = 'Bathinda')),
   (SELECT district_id FROM districts WHERE district_name = 'Bathinda'), TRUE
 WHERE NOT EXISTS (SELECT 1 FROM institutes WHERE org_id = 'TS_PAW_CHAK_HEERA_SINGH_WALA');
+
+-- 1b. REPORTING HIERARCHY
+-- All TS_ sub-institutes report to CVH Talwandi Sabo (tehsil HQ).
+UPDATE institutes
+SET reporting_authority_id = (SELECT institute_id FROM institutes WHERE org_id = 'TS_CVH_TALWANDI_SABO')
+WHERE org_id LIKE 'TS_%'
+  AND org_id != 'TS_CVH_TALWANDI_SABO'
+  AND reporting_authority_id IS NULL;
 
 -- 2. STAFF USERS (user_id = login username, password_hash = plain text for now)
 

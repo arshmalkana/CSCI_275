@@ -5,7 +5,8 @@ import {
   FileText,
   Plus,
   Download,
-  ChevronRight
+  ChevronRight,
+  Mail
 } from 'lucide-react'
 
 // Shared app components used across the app for consistent look & feel

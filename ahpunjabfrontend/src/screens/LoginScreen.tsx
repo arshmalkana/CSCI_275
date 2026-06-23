@@ -154,6 +154,10 @@ export default function LoginScreen() {
         localStorage.setItem('rememberedUsername', formData.username)
 
         navigate('/home')
+      } else if (response.message?.toLowerCase().includes('no passkeys')) {
+        // Backend correctly says this user has no passkeys — fall through to password silently
+        setShowPasskeyOption(false)
+        setUsePasswordMode(true)
       } else {
         setErrors({ general: response.message })
       }

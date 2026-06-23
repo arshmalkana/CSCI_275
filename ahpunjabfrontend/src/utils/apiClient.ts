@@ -1,9 +1,7 @@
 // API Client with automatic token refresh
 // Handles rolling JWT tokens and automatic retry on 401
 
-const API_BASE_URL: string =
-  import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.PROD ? 'https://api-ahpunjab.itsarsh.dev/v1' : '/v1')
+const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL || '/v1'
 
 interface RequestOptions extends RequestInit {
   skipAuth?: boolean

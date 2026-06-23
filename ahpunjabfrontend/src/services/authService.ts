@@ -1,9 +1,7 @@
 import apiClient from '../utils/apiClient'
 
 // API base URL — set VITE_API_BASE_URL in .env.production to override
-const API_BASE_URL: string =
-  import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.PROD ? 'https://api-ahpunjab.itsarsh.dev/v1' : '/v1')
+const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL || '/v1'
 
 export interface LoginCredentials {
   username: string
@@ -95,19 +93,17 @@ class AuthService {
   }
 
   async logout() {
+    // Clear local state first so route guards see us as signed out immediately
+    localStorage.removeItem('authToken')
+    localStorage.removeItem('tokenExpiry')
+    localStorage.removeItem('user')
     try {
-      // Call logout endpoint to clear refresh token cookie
       await fetch(`${API_BASE_URL}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       })
     } catch (error) {
       console.error('Logout error:', error)
-    } finally {
-      // Clear local storage
-      localStorage.removeItem('authToken')
-      localStorage.removeItem('tokenExpiry')
-      localStorage.removeItem('user')
     }
   }
 

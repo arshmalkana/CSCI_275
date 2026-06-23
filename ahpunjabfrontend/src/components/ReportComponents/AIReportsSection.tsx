@@ -202,13 +202,6 @@ export const AIReportsSection = ({ data, setData }: AIReportsSectionProps) => {
                   const isBreedExpanded = expandedBreed === breed.id;
                   const breedComplete = isBreedComplete(breedData);
 
-                  // TODO: Context data from previous months - will integrate with backend API
-                  // Using temp data for demonstration
-                  const tempContextData = {
-                    lastMonth: { ai: 45, covered: 42, beneficiaries: 38 },
-                    twoMonthsAgo: { ai: 52, covered: 48, beneficiaries: 45 },
-                  };
-
                   return (
                     <div key={breed.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                       {/* Breed Header */}
