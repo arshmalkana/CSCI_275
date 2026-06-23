@@ -1,0 +1,49 @@
+strip username before login
+FIX LOGOUT IT DOES NOT WORK
+
+
+
+FOR SUPER ADMIN, DONT EVEN NEED THAT USER FOR PWA
+approval queue should be in other panel
+consoledated dashboard to be in other panel
+admin panel to be in other panel
+period config to be in other panel
+institutes to be in other panel
+intitute manager in other panel
+master data in other panel
+target in other panel
+
+WE WILL DESIGN THE OTHER PANEL LATER
+
+
+FOR PUNJAB HQ ASWELL SAME, DONT EVEN NEED THAT USER FOR PWA
+FOR DISTRICT HQ ASWELL SAME, DONT EVEN NEED THAT USER FOR PWA
+FOR Tehsil HQ ASWELL SAME, DONT EVEN NEED THAT USER FOR PWA
+
+
+USERS ROLES needed in PWA are-
+SemonBank - will do semon distribution report which will issue semon to other semon banks/cvd/cvh.
+VaccineBank - will do Vaccine distribution report which will issue Vaccine to other Vaccine banks/cvh.
+CVD - will report to parent institute which will be CVD and have option to submit monthly reports, daily vaccine done reports,.
+CVH -will report to parent institute which will be Tehsil HQ and have option to submit monthly reports, vaccine done reports, (its also a VaccineBank which can only issue to CVD).
+PAIW - will report to parent institute which can be cvd or cvh. it will only fill AI section of monthly report.
+
+
+
+"will report to parent institute" means parent user is able to see its summary/report and have to approve it 
+
+
+HOW REPORTS are PROCESSED, Inluding (Monthly/Vacccine reports)
+
+IF PAIW, It can only do AI, he can only fill AI section and submit the monthly report as he can only access that. can see old filled reports and he can see the semon he is issued. then the report goes to Parent tehsil to review and approve. the his parent tehsil approves it and values gets added to tehsil report of that month.
+IF CVD, It can do monthly report, daily vaccination, can see old reports, can see vaccine and semon recieved and balance. then the report goes to Parent tehsil to review and approve. the his parent tehsil approves it and values gets added to tehsil report of that month.
+IF CVH, It can do monthly report, daily vaccination, can see old reports, can see vaccine and semon recieved and balance. can issue Vaccine though vaccine distibution to its dependent CVD'sthen the report goes to Parent tehsil to review and approve. the his parent tehsil approves it and values gets added to tehsil report of that month.
+
+After all that, when tehsil approves all the submissions from its institutes/users, the numbers gets added and one report gets compiled and gets sent to district for aproval. 
+after all tehsils send thier final reports, district will approve them and numbers gets added and that will make a district report
+after all district send thier final reports, Punjab will approve them and numbers gets added and that will make a Punjab report
+
+
+other user role is "somecooluserroleforparentinstitute" which will have tehsils and districts and punjab itself. it will have its reporting institute value aswell, so all tehsils of a "district A" will have user role "somecooluserroleforparentinstitute" and reporting institute "District A" and all districts will have user role"somecooluserroleforparentinstitute" and reporting insistute "Punjab" and all other user roled defined above will have reporting institure value of thier tehsil. and parent institute of thier direct parent (for paiw its gonna be cvd/cvh, and for cvd its gonna be cvh, for cvh its gonna be tehsil) but all users will report directly to tehsil. this parent institute value will be to find a institute's direct childs so he can see report status or issue things like semon or vaccine. same with semon bank.
+
+
