@@ -24,9 +24,9 @@ interface SummaryData {
   closedAt?: string
   totalFee?: number
   institutes?: unknown[]
-  aiSummary?: unknown[]
-  opdSummary?: unknown[]
-  vaccinationSummary?: unknown[]
+  ai?: unknown[]
+  opd?: unknown[]
+  vaccinations?: unknown[]
 }
 
 export default function ConsolidatedDashboardScreen() {
@@ -57,13 +57,13 @@ export default function ConsolidatedDashboardScreen() {
     setConfirmClose(false)
   }
 
-  const aiRows = (summary.aiSummary ?? []) as Array<{ semen_name: string; semen_code: string; total_ai_done: number; animals_covered: number }>
-  const opdRows = (summary.opdSummary ?? []) as Array<{ opd_type: string; case_category: string; total_cases: number; beneficiaries: number }>
-  const vacRows = (summary.vaccinationSummary ?? []) as Array<{ vaccine_name: string; total_doses: number; total_animals: number }>
+  const aiRows = (summary.ai ?? []) as Array<{ semen_name: string; semen_code: string; total_ai_done: number; animals_covered: number }>
+  const opdRows = (summary.opd ?? []) as Array<{ opd_type: string; case_category: string; total_cases: number; beneficiaries: number }>
+  const vacRows = (summary.vaccinations ?? []) as Array<{ vaccine_name: string; doses_used: number; animals_vaccinated: number }>
 
   const totalAI = aiRows.reduce((sum, r) => sum + (Number(r.total_ai_done) || 0), 0)
   const totalOPD = opdRows.reduce((sum, r) => sum + (Number(r.total_cases) || 0), 0)
-  const totalVac = vacRows.reduce((sum, r) => sum + (Number(r.total_doses) || 0), 0)
+  const totalVac = vacRows.reduce((sum, r) => sum + (Number(r.doses_used) || 0), 0)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -197,8 +197,8 @@ export default function ConsolidatedDashboardScreen() {
                     {vacRows.map((r, i) => (
                       <tr key={i} className="hover:bg-gray-50">
                         <td className="px-4 py-2 text-gray-700">{r.vaccine_name}</td>
-                        <td className="px-4 py-2 text-right text-gray-900 font-medium">{fmtNum(r.total_doses)}</td>
-                        <td className="px-4 py-2 text-right text-gray-600">{fmtNum(r.total_animals)}</td>
+                        <td className="px-4 py-2 text-right text-gray-900 font-medium">{fmtNum(r.doses_used)}</td>
+                        <td className="px-4 py-2 text-right text-gray-600">{fmtNum(r.animals_vaccinated)}</td>
                       </tr>
                     ))}
                   </tbody>

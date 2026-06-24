@@ -33,11 +33,15 @@ import {
 } from '../components/ReportComponents';
 import api from '../utils/api';
 import { queueReport, clearSynced } from '../utils/offlineQueue';
+import authService from '../services/authService';
 
 const CreateReportScreen = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [activeSection, setActiveSection] = useState<Section>('opd');
+  const isPAIW = authService.getUser()?.role === 'PAIW';
+  const [activeSection, setActiveSection] = useState<Section>(() =>
+    authService.getUser()?.role === 'PAIW' ? 'ai' : 'opd'
+  );
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
@@ -298,8 +302,9 @@ const CreateReportScreen = () => {
     return 'pending';
   };
 
-  // Check if all sections are complete
+  // Check if all visible sections are complete
   const isAllSectionsComplete = () => {
+    if (isPAIW) return getSectionStatus('ai') === 'complete';
     return getSectionStatus('opd') === 'complete' &&
            getSectionStatus('certificates') === 'complete' &&
            getSectionStatus('lab') === 'complete' &&
@@ -307,15 +312,19 @@ const CreateReportScreen = () => {
            getSectionStatus('ai') === 'complete';
   };
 
-  // Calculate completion percentage
+  // Calculate completion percentage across visible sections
   const calculateProgress = () => {
-    const opdStatus = getSectionStatus('opd');
-    const certStatus = getSectionStatus('certificates');
-    const labStatus = getSectionStatus('lab');
-    const extensionStatus = getSectionStatus('extension');
-    const aiStatus = getSectionStatus('ai');
-
-    const statuses = [opdStatus, certStatus, labStatus, extensionStatus, aiStatus];
+    if (isPAIW) {
+      const weights = { complete: 100, partial: 50, pending: 0 };
+      return weights[getSectionStatus('ai')];
+    }
+    const statuses = [
+      getSectionStatus('opd'),
+      getSectionStatus('certificates'),
+      getSectionStatus('lab'),
+      getSectionStatus('extension'),
+      getSectionStatus('ai'),
+    ];
     const weights = { complete: 1, partial: 0.5, pending: 0 };
     const total = statuses.reduce((sum, status) => sum + weights[status as SectionStatus], 0);
     return Math.round((total / 5) * 100);
@@ -1092,7 +1101,7 @@ const CreateReportScreen = () => {
             />
           </div>
           <div className="flex justify-between items-center text-xs text-gray-600 font-['Poppins']">
-            <span>{progress}% Complete • 5 Sections</span>
+            <span>{progress}% Complete • {isPAIW ? '1 Section' : '5 Sections'}</span>
             <button
               onClick={handleCopyFromLastMonth}
               className="flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium transition-colors"
@@ -1234,34 +1243,38 @@ const CreateReportScreen = () => {
         style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="flex justify-around items-center px-2 pt-2">
-          <NavButton
-            icon={Stethoscope}
-            label="OPD"
-            active={activeSection === 'opd'}
-            status={getSectionStatus('opd')}
-            onClick={() => setActiveSection('opd')}
-          />
-          <NavButton
-            icon={FileText}
-            label="Cert"
-            active={activeSection === 'certificates'}
-            status={getSectionStatus('certificates')}
-            onClick={() => setActiveSection('certificates')}
-          />
-          <NavButton
-            icon={FlaskConical}
-            label="Lab"
-            active={activeSection === 'lab'}
-            status={getSectionStatus('lab')}
-            onClick={() => setActiveSection('lab')}
-          />
-          <NavButton
-            icon={Megaphone}
-            label="Ext"
-            active={activeSection === 'extension'}
-            status={getSectionStatus('extension')}
-            onClick={() => setActiveSection('extension')}
-          />
+          {!isPAIW && (
+            <>
+              <NavButton
+                icon={Stethoscope}
+                label="OPD"
+                active={activeSection === 'opd'}
+                status={getSectionStatus('opd')}
+                onClick={() => setActiveSection('opd')}
+              />
+              <NavButton
+                icon={FileText}
+                label="Cert"
+                active={activeSection === 'certificates'}
+                status={getSectionStatus('certificates')}
+                onClick={() => setActiveSection('certificates')}
+              />
+              <NavButton
+                icon={FlaskConical}
+                label="Lab"
+                active={activeSection === 'lab'}
+                status={getSectionStatus('lab')}
+                onClick={() => setActiveSection('lab')}
+              />
+              <NavButton
+                icon={Megaphone}
+                label="Ext"
+                active={activeSection === 'extension'}
+                status={getSectionStatus('extension')}
+                onClick={() => setActiveSection('extension')}
+              />
+            </>
+          )}
           <NavButton
             icon={Syringe}
             label="AI"
