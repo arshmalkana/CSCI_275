@@ -60,6 +60,7 @@ CREATE TYPE institute_type AS ENUM (
     'CVH_Lab',       -- CVH with Lab
     'Semen_Cluster', -- Semen Cluster
     'SemenBank',     -- Semen Bank
+    'VaccineBank',   -- Vaccine Bank
     'TehsilHQ',      -- Tehsil Headquarters
     'PAIW',          -- Private AI Worker
     'District_HQ',   -- District Headquarters
@@ -71,7 +72,7 @@ CREATE TABLE institutes (
     org_id VARCHAR(50) UNIQUE NOT NULL, -- From sheets: OrgIds
     institute_name VARCHAR(200) NOT NULL,
     institute_type institute_type NOT NULL,
-    village_id INTEGER NOT NULL REFERENCES villages(village_id),
+    village_id INTEGER REFERENCES villages(village_id),
     tehsil_id INTEGER NOT NULL REFERENCES tehsils(tehsil_id),
     district_id INTEGER NOT NULL REFERENCES districts(district_id),
     latitude DECIMAL(10, 8),              -- Institute GPS latitude
@@ -80,8 +81,8 @@ CREATE TABLE institutes (
     is_lab_available BOOLEAN DEFAULT FALSE,     -- Has laboratory facility
     is_tehsil_hq BOOLEAN DEFAULT FALSE,         -- Serves as tehsil headquarters
     current_incharge_id INTEGER,
-    parent_institute_id INTEGER REFERENCES institutes(institute_id),
-    reporting_authority_id INTEGER REFERENCES institutes(institute_id), -- From sheets: Reporting Authority
+    parent_institute_id INTEGER REFERENCES institutes(institute_id),    -- Direct parent: stock-issuing + child visibility ONLY
+    reporting_institute_id INTEGER REFERENCES institutes(institute_id), -- Tehsil: approval routing + rollup target (NEVER parent hierarchy)
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -117,12 +118,12 @@ CREATE TYPE designation_type AS ENUM (
 );
 
 CREATE TYPE user_role AS ENUM (
-    'INAPH',         -- Institute In-charge
-    'AIW',           -- AI Worker
-    'Tehsil_Admin',  -- Tehsil level admin
-    'District_Admin',-- District level admin
-    'HQ_Admin',      -- HQ level admin
-    'Super_Admin'    -- System admin
+    'CVD',       -- Veterinary Dispensary field user
+    'CVH',       -- Veterinary Hospital field user
+    'PAIW',      -- Private AI Worker field user
+    'SemenBank', -- Semen Bank operator
+    'VaccineBank',-- Vaccine Bank operator
+    'Oversight'  -- Panel-only oversight role (Tehsil/District/Punjab) — NOT a PWA role
 );
 
 CREATE TABLE staff (
@@ -647,6 +648,7 @@ CREATE INDEX idx_villages_location ON villages(latitude, longitude);
 -- Institute indexes
 CREATE INDEX idx_institutes_village ON institutes(village_id);
 CREATE INDEX idx_institutes_parent ON institutes(parent_institute_id);
+CREATE INDEX idx_institutes_reporting ON institutes(reporting_institute_id);
 CREATE INDEX idx_institutes_type ON institutes(institute_type);
 CREATE INDEX idx_institutes_org_id ON institutes(org_id);
 CREATE INDEX idx_institutes_location ON institutes(latitude, longitude);
@@ -774,14 +776,14 @@ SELECT
     s.mobile AS incharge_mobile,
     s.email AS incharge_email,
     pi.institute_name AS parent_institute_name,
-    ra.institute_name AS reporting_authority_name
+    ri.institute_name AS reporting_institute_name
 FROM institutes i
 LEFT JOIN villages v ON i.village_id = v.village_id
 LEFT JOIN tehsils t ON i.tehsil_id = t.tehsil_id
 LEFT JOIN districts d ON i.district_id = d.district_id
 LEFT JOIN staff s ON i.current_incharge_id = s.staff_id
 LEFT JOIN institutes pi ON i.parent_institute_id = pi.institute_id
-LEFT JOIN institutes ra ON i.reporting_authority_id = ra.institute_id;
+LEFT JOIN institutes ri ON i.reporting_institute_id = ri.institute_id;
 
 -- Village population details view
 CREATE VIEW v_village_populations AS
@@ -1189,7 +1191,7 @@ BEGIN
     SELECT i.institute_id, i.institute_name
     FROM   institutes i
     WHERE  i.institute_id = p_institute_id
-       OR  i.reporting_authority_id = p_institute_id
+       OR  i.reporting_institute_id = p_institute_id
   ),
   report_ids AS (
     SELECT mr.report_id, mr.institute_id
@@ -1321,3 +1323,87 @@ BEGIN
   ORDER BY iis.institute_id;
 END;
 $$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- 32. PER-SECTION REPORT STATUS
+--     Panel approver can approve or reject individual sections of a report.
+--     Rejected sections return to the field user for correction; the report
+--     itself stays "Submitted" until all sections are resolved.
+-- ============================================================================
+
+CREATE TYPE section_status AS ENUM ('Pending', 'Approved', 'Rejected');
+
+CREATE TABLE report_section_status (
+    id              SERIAL PRIMARY KEY,
+    report_id       INTEGER NOT NULL REFERENCES monthly_reports(report_id) ON DELETE CASCADE,
+    section_name    VARCHAR(50) NOT NULL,  -- 'OPD', 'AI', 'Vaccination', 'Lab', 'Extension', 'Certificates'
+    status          section_status NOT NULL DEFAULT 'Pending',
+    reviewed_by     INTEGER REFERENCES staff(staff_id),
+    reviewed_at     TIMESTAMPTZ,
+    rejection_reason TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(report_id, section_name)
+);
+
+CREATE INDEX idx_report_section_status_report ON report_section_status(report_id);
+CREATE INDEX idx_report_section_status_status ON report_section_status(status) WHERE status != 'Approved';
+
+CREATE TRIGGER update_report_section_status_updated_at BEFORE UPDATE ON report_section_status
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- 33. COMPILED (FROZEN) TIER REPORTS
+--     When an overseer manually closes a period, a frozen snapshot of the
+--     aggregated data is written here. Reads for rollup always use this table,
+--     never live SUM queries against monthly_reports.
+--     Tiers: 'Tehsil', 'District', 'Punjab'
+-- ============================================================================
+
+CREATE TYPE compile_tier AS ENUM ('Tehsil', 'District', 'Punjab');
+CREATE TYPE compile_status AS ENUM ('Open', 'Closed');
+
+CREATE TABLE compiled_reports (
+    compiled_id      SERIAL PRIMARY KEY,
+    tier             compile_tier NOT NULL,
+    institute_id     INTEGER NOT NULL REFERENCES institutes(institute_id),
+    reporting_month  VARCHAR(7) NOT NULL,
+    status           compile_status NOT NULL DEFAULT 'Open',
+    closed_by        INTEGER REFERENCES staff(staff_id),
+    closed_at        TIMESTAMPTZ,
+    payload          JSONB NOT NULL DEFAULT '{}',
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(tier, institute_id, reporting_month)
+);
+
+CREATE INDEX idx_compiled_reports_lookup ON compiled_reports(tier, institute_id, reporting_month);
+CREATE INDEX idx_compiled_reports_status ON compiled_reports(status, reporting_month);
+
+CREATE TRIGGER update_compiled_reports_updated_at BEFORE UPDATE ON compiled_reports
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- 34. SEMEN DISTRIBUTION TRANSACTIONS
+--     Mirrors vaccine_transactions for semen. SemenBank issues semen
+--     to CVD/CVH/other SemenBanks; CVH issues to its own PAIW children.
+-- ============================================================================
+
+CREATE TABLE semen_distribution_transactions (
+    transaction_id          SERIAL PRIMARY KEY,
+    transaction_date        DATE NOT NULL,
+    semen_type_id           INTEGER NOT NULL REFERENCES semen_types(semen_id),
+    issuing_institute_id    INTEGER NOT NULL REFERENCES institutes(institute_id),
+    receiving_institute_id  INTEGER NOT NULL REFERENCES institutes(institute_id),
+    straws_issued           INTEGER NOT NULL CHECK (straws_issued > 0),
+    batch_number            VARCHAR(50),
+    expiry_date             DATE,
+    issued_by               INTEGER REFERENCES staff(staff_id),
+    notes                   TEXT,
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_semen_dist_tx_date      ON semen_distribution_transactions(transaction_date);
+CREATE INDEX idx_semen_dist_tx_issuer    ON semen_distribution_transactions(issuing_institute_id);
+CREATE INDEX idx_semen_dist_tx_receiver  ON semen_distribution_transactions(receiving_institute_id);
+CREATE INDEX idx_semen_dist_tx_type      ON semen_distribution_transactions(semen_type_id);

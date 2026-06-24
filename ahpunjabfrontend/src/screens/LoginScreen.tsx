@@ -6,6 +6,7 @@ import { User, Lock, Fingerprint } from 'lucide-react'
 import authService from '../services/authService'
 import webauthnService from '../services/webauthnService'
 import { SuccessDialog } from '../components/DialogBox'
+import { isFieldRole } from '../config/roles'
 
 export default function LoginScreen() {
   const navigate = useNavigate()
@@ -35,11 +36,13 @@ export default function LoginScreen() {
   }, [])
 
   const handleNextStep = async () => {
-    if (!formData.username.trim()) {
+    const trimmedUsername = formData.username.trim()
+    if (!trimmedUsername) {
       setErrors({ username: 'Username is required' })
       return
     }
 
+    setFormData(prev => ({ ...prev, username: trimmedUsername }))
     setErrors({})
     setIsLoading(true)
 
@@ -49,7 +52,7 @@ export default function LoginScreen() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ username: formData.username })
+        body: JSON.stringify({ username: trimmedUsername })
       })
 
       if (response.ok) {
@@ -107,15 +110,21 @@ export default function LoginScreen() {
     setErrors({})
 
     try {
+      const trimmedUsername = formData.username.trim()
       const response = await authService.login(
-        formData.username,
+        trimmedUsername,
         formData.password,
         rememberMe
       )
 
       if (response.success && response.user) {
-        // Save username for future logins
-        localStorage.setItem('rememberedUsername', formData.username)
+        if (!isFieldRole(response.user.role)) {
+          await authService.logout()
+          setErrors({ general: 'This account uses the oversight panel, not the field app.' })
+          return
+        }
+
+        localStorage.setItem('rememberedUsername', trimmedUsername)
 
         // Check if first time login - redirect to passkey setup
         if (response.user.isFirstTime && passkeySupported) {
@@ -138,7 +147,8 @@ export default function LoginScreen() {
   }
 
   const handlePasskeyLogin = async () => {
-    if (!formData.username.trim()) {
+    const trimmedUsername = formData.username.trim()
+    if (!trimmedUsername) {
       setErrors({ username: 'Username is required for passkey login' })
       return
     }
@@ -147,11 +157,16 @@ export default function LoginScreen() {
     setErrors({})
 
     try {
-      const response = await webauthnService.loginWithPasskey(formData.username, rememberMe)
+      const response = await webauthnService.loginWithPasskey(trimmedUsername, rememberMe)
 
       if (response.success && response.user) {
-        // Save username for future logins
-        localStorage.setItem('rememberedUsername', formData.username)
+        if (!isFieldRole(response.user.role)) {
+          await authService.logout()
+          setErrors({ general: 'This account uses the oversight panel, not the field app.' })
+          return
+        }
+
+        localStorage.setItem('rememberedUsername', trimmedUsername)
 
         navigate('/home')
       } else if (response.message?.toLowerCase().includes('no passkeys')) {

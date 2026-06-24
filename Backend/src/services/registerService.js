@@ -106,7 +106,7 @@ export async function createRegistration(data) {
       data.incharge.type,
       data.incharge.mobile,
       data.incharge.email,
-      'INAPH', // Institute In-charge role
+      'CVD', // Institute In-charge role
       institute_id,
       false, // is_active = false (pending approval)
       true
@@ -140,7 +140,7 @@ export async function createRegistration(data) {
           employee.type,
           employee.mobile,
           employee.email || null,
-          'AIW', // Default role for other employees
+          'PAIW', // Default role for other employees
           institute_id,
           false, // is_active = false (pending approval)
           true

@@ -11,7 +11,7 @@ function requireAdmin(request, reply, done) {
 
 function requireHQ(request, reply, done) {
   if (!HQ_ROLES.includes(request.user?.role)) {
-    return reply.code(403).send({ success: false, message: 'HQ_Admin or Super_Admin required' })
+    return reply.code(403).send({ success: false, message: 'Oversight role required' })
   }
   done()
 }

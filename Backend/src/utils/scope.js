@@ -1,57 +1,67 @@
 /**
  * Scope resolution — the single chokepoint for data-isolation.
  *
- * HIERARCHY:
- *   institutes.reporting_authority_id is the FK to the parent institute.
- *   Village inst → Tehsil HQ → District HQ → State HQ
+ * FIXED DECISIONS (from domain re-architecture):
+ *
+ *   institutes.reporting_institute_id  → the Tehsil institute this field institute
+ *                                        routes approvals to and rolls up into.
+ *                                        ONE HOP ONLY. Never traversed recursively.
+ *
+ *   institutes.parent_institute_id     → direct parent for stock-issuing and child
+ *                                        discovery only. NEVER used for approval routing.
  *
  * ROLE → VISIBLE SCOPE:
- *   INAPH / AIW     → own institute only
- *   Tehsil_Admin    → own institute + entire recursive subtree below it
- *   District_Admin  → own institute + entire recursive subtree below it
- *   HQ_Admin        → own institute + entire recursive subtree below it
- *   Super_Admin     → all institutes (no filter)
+ *   CVD / CVH / PAIW / SemenBank / VaccineBank  → own institute only
+ *   Oversight  → all institutes whose reporting_institute_id = their institute_id
+ *                (i.e. the Tehsil-level institutes that report to them, one hop)
  *
  * All authorization guards AND aggregation queries MUST call this function.
- * Never scatter `reporting_authority_id` logic across controllers.
+ * Never scatter reporting_institute_id logic across controllers.
  */
 
 import { query } from '../database/db.js'
-import { ADMIN_ROLES } from '../config/roles.js'
+import { FIELD_ROLES, OVERSIGHT_ROLE } from '../config/roles.js'
 
 /**
  * Returns the set of institute_ids this user is permitted to see/act on.
  * @param {{ staffId: number, role: string, instituteId: number }} user
- * @returns {Promise<number[]>} Array of visible institute_ids
+ * @returns {Promise<number[]>}
  */
 export async function getVisibleInstituteIds(user) {
   const { role, instituteId } = user
 
-  // Super_Admin sees everything
-  if (role === 'Super_Admin') {
-    const result = await query('SELECT institute_id FROM institutes WHERE is_active = TRUE')
-    return result.rows.map(r => r.institute_id)
-  }
-
-  // Field staff see only their own institute
-  if (!ADMIN_ROLES.includes(role)) {
+  // Field roles: own institute only
+  if (FIELD_ROLES.includes(role)) {
     return [instituteId]
   }
 
-  // Admin roles: own institute + full recursive subtree via reporting_authority_id
+  // Oversight: own Tehsil node + every field institute whose reporting_institute_id points to it
+  if (role === OVERSIGHT_ROLE) {
+    const result = await query(`
+      SELECT institute_id FROM institutes
+      WHERE  is_active = TRUE
+        AND  (institute_id = $1 OR reporting_institute_id = $1)
+    `, [instituteId])
+    return result.rows.map(r => r.institute_id)
+  }
+
+  // Unknown role — no access
+  return []
+}
+
+/**
+ * Returns the set of field institute_ids that submit reports TO this Oversight
+ * user's Tehsil — i.e. direct one-hop children for approval purposes.
+ * @param {{ staffId: number, role: string, instituteId: number }} user
+ * @returns {Promise<number[]>}
+ */
+export async function getApprovalScopeInstituteIds(user) {
+  if (user.role !== OVERSIGHT_ROLE) return []
+
   const result = await query(`
-    WITH RECURSIVE subtree AS (
-      SELECT institute_id
-      FROM   institutes
-      WHERE  institute_id = $1
-      UNION ALL
-      SELECT i.institute_id
-      FROM   institutes i
-      JOIN   subtree    s ON i.reporting_authority_id = s.institute_id
-      WHERE  i.is_active = TRUE
-    )
-    SELECT institute_id FROM subtree
-  `, [instituteId])
+    SELECT institute_id FROM institutes
+    WHERE  reporting_institute_id = $1 AND is_active = TRUE
+  `, [user.instituteId])
 
   return result.rows.map(r => r.institute_id)
 }
@@ -63,11 +73,8 @@ export async function getVisibleInstituteIds(user) {
  * @param {number} targetInstituteId
  */
 export async function assertInstituteInScope(user, targetInstituteId) {
-  // Super_Admin always in scope
-  if (user.role === 'Super_Admin') return
-
   const visible = await getVisibleInstituteIds(user)
-  if (!visible.includes(targetInstituteId)) {
+  if (!visible.includes(Number(targetInstituteId))) {
     const err = new Error('Access denied: institute is outside your reporting scope')
     err.statusCode = 403
     throw err

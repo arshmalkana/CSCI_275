@@ -11,7 +11,7 @@ function requireAdmin(request, reply, done) {
 
 function requireSeniorAdmin(request, reply, done) {
   if (!SENIOR_ADMIN_ROLES.includes(request.user?.role)) {
-    return reply.code(403).send({ success: false, message: 'HQ_Admin or Super_Admin required' })
+    return reply.code(403).send({ success: false, message: 'Oversight role required' })
   }
   done()
 }
@@ -85,7 +85,7 @@ export default async function adminRoutes(fastify) {
         properties: {
           userId:      { type: 'string' },
           password:    { type: 'string', minLength: 8 },
-          role:        { type: 'string', enum: ['INAPH', 'AIW', 'Tehsil_Admin', 'District_Admin', 'HQ_Admin'] },
+          role:        { type: 'string', enum: ['CVD', 'CVH', 'PAIW', 'SemenBank', 'VaccineBank', 'Oversight'] },
           instituteId: { type: 'integer' }
         }
       }
@@ -120,7 +120,7 @@ export default async function adminRoutes(fastify) {
           fullName:    { type: 'string', minLength: 2 },
           userId:      { type: 'string', minLength: 3 },
           password:    { type: 'string', minLength: 8 },
-          role:        { type: 'string', enum: ['INAPH', 'AIW', 'Tehsil_Admin', 'District_Admin', 'HQ_Admin'] },
+          role:        { type: 'string', enum: ['CVD', 'CVH', 'PAIW', 'SemenBank', 'VaccineBank', 'Oversight'] },
           instituteId: { type: 'integer' },
           designation: { type: 'string' },
           mobile:      { type: 'string' },

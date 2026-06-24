@@ -153,7 +153,7 @@ export async function createReportSubmittedNotification(reportId, reportingMonth
   const supervisorResult = await query(`
     SELECT s.staff_id, s.full_name
     FROM institutes i
-    JOIN institutes parent ON parent.institute_id = i.reporting_authority_id
+    JOIN institutes parent ON parent.institute_id = i.reporting_institute_id
     JOIN staff s ON s.current_institute_id = parent.institute_id
     WHERE i.institute_id = $1
       AND s.is_active = TRUE
@@ -365,7 +365,7 @@ export async function sendDeadlineReminders() {
       SELECT s.staff_id
       FROM staff s
       WHERE s.is_active = TRUE
-        AND s.user_role IN ('INAPH', 'AIW')
+        AND s.user_role IN ('CVD', 'CVH', 'PAIW', 'SemenBank', 'VaccineBank')
         AND NOT EXISTS (
           SELECT 1
           FROM monthly_reports mr
