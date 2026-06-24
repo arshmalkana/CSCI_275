@@ -172,3 +172,55 @@ export async function rejectReport(request, reply) {
     return reply.code(code).send({ success: false, message: error.message })
   }
 }
+
+export async function approveSections(request, reply) {
+  try {
+    const { month } = request.params
+    const { instituteId: targetInstituteId, sections } = request.body
+    const approver = request.user
+
+    const result = await reportsService.approveSections(approver, targetInstituteId, month, sections)
+
+    const msg = result.fullyApproved ? 'All sections approved — report fully approved' : 'Sections approved'
+    return reply.send({ success: true, message: msg, data: result })
+  } catch (error) {
+    request.log.error('Approve sections error:', error)
+    const code = error.statusCode || 500
+    return reply.code(code).send({ success: false, message: error.message })
+  }
+}
+
+export async function rejectSection(request, reply) {
+  try {
+    const { month } = request.params
+    const { instituteId: targetInstituteId, section, reason } = request.body
+    const approver = request.user
+
+    const result = await reportsService.rejectSection(approver, targetInstituteId, month, section, reason)
+
+    return reply.send({ success: true, message: 'Section rejected — report returned for revision', data: result })
+  } catch (error) {
+    request.log.error('Reject section error:', error)
+    const code = error.statusCode || 500
+    return reply.code(code).send({ success: false, message: error.message })
+  }
+}
+
+export async function closeTehsilPeriod(request, reply) {
+  try {
+    const { month } = request.params
+    const approver = request.user
+
+    const result = await reportsService.closeTehsilPeriod(approver, month)
+
+    return reply.code(201).send({
+      success: true,
+      message: `Period ${month} closed and frozen`,
+      data: result
+    })
+  } catch (error) {
+    request.log.error('Close period error:', error)
+    const code = error.statusCode || 500
+    return reply.code(code).send({ success: false, message: error.message })
+  }
+}

@@ -10,26 +10,11 @@ import { query } from '../database/db.js'
 import { getVisibleInstituteIds } from '../utils/scope.js'
 
 /**
- * Get summed report totals for all institutes visible to the admin for a given month.
- * Optionally drill into a single child institute (drill = institute_id to examine).
+ * Build a live rollup payload by aggregating across the given institute IDs.
+ * Exported so closeTehsilPeriod can snapshot it into compiled_reports.
  */
-export async function getRollupSummary(adminUser, { month, drill } = {}) {
-  const visibleIds = await getVisibleInstituteIds(adminUser)
-  if (visibleIds.length === 0) return null
-
-  // If drilling into a specific institute, verify it's in scope
-  const scopedIds = drill ? [parseInt(drill)] : visibleIds
-  if (drill && !visibleIds.includes(parseInt(drill))) {
-    const err = new Error('Drill target is outside your reporting scope')
-    err.statusCode = 403
-    throw err
-  }
-
-  // Default month to current
-  const targetMonth = month || new Date().toISOString().slice(0, 7)
-
+export async function buildLiveRollup(scopedIds, targetMonth) {
   const [opdRes, aiRes, vacRes, childRes] = await Promise.all([
-    // Aggregate OPD
     query(`
       SELECT
         opd.opd_type,
@@ -45,7 +30,6 @@ export async function getRollupSummary(adminUser, { month, drill } = {}) {
       ORDER BY opd.opd_type, opd.case_category
     `, [scopedIds, targetMonth]),
 
-    // Aggregate AI
     query(`
       SELECT
         st.semen_code,
@@ -68,7 +52,6 @@ export async function getRollupSummary(adminUser, { month, drill } = {}) {
       ORDER BY st.species, st.semen_code
     `, [scopedIds, targetMonth]),
 
-    // Aggregate vaccinations
     query(`
       SELECT
         v.vaccine_code,
@@ -86,7 +69,6 @@ export async function getRollupSummary(adminUser, { month, drill } = {}) {
       ORDER BY v.vaccine_code
     `, [scopedIds, targetMonth]),
 
-    // Child institutes with their submission status
     query(`
       SELECT
         i.institute_id,
@@ -109,15 +91,62 @@ export async function getRollupSummary(adminUser, { month, drill } = {}) {
   ])
 
   return {
-    month: targetMonth,
-    scope: { instituteCount: scopedIds.length, drill: drill ? parseInt(drill) : null },
     opd:          opdRes.rows,
     ai:           aiRes.rows,
     vaccinations: vacRes.rows,
-    institutes:   childRes.rows.map(r => ({
-      ...r,
-      status: r.submission_status || 'Missing'
-    }))
+    institutes:   childRes.rows.map(r => ({ ...r, status: r.submission_status || 'Missing' }))
+  }
+}
+
+/**
+ * Get summed report totals for all institutes visible to the admin for a given month.
+ *
+ * If a compiled_reports row exists for this Tehsil + month (period is closed),
+ * the frozen payload is returned — NO live SUM aggregation on closed periods.
+ * Optionally drill into a single child institute.
+ */
+export async function getRollupSummary(adminUser, { month, drill } = {}) {
+  const visibleIds = await getVisibleInstituteIds(adminUser)
+  if (visibleIds.length === 0) return null
+
+  const scopedIds = drill ? [parseInt(drill)] : visibleIds
+  if (drill && !visibleIds.includes(parseInt(drill))) {
+    const err = new Error('Drill target is outside your reporting scope')
+    err.statusCode = 403
+    throw err
+  }
+
+  const targetMonth = month || new Date().toISOString().slice(0, 7)
+
+  // Check for a frozen compile for this Tehsil/month
+  const compiledRes = await query(`
+    SELECT payload, closed_at FROM compiled_reports
+    WHERE tier = 'Tehsil' AND institute_id = $1 AND reporting_month = $2 AND status = 'Closed'
+  `, [adminUser.instituteId, targetMonth])
+
+  if (compiledRes.rows.length > 0) {
+    const { payload, closed_at } = compiledRes.rows[0]
+    return {
+      month: targetMonth,
+      frozen: true,
+      closedAt: closed_at,
+      scope: { instituteCount: (payload.institutes || []).length, drill: drill ? parseInt(drill) : null },
+      opd:          payload.opd || [],
+      ai:           payload.ai || [],
+      vaccinations: payload.vaccinations || [],
+      feeSummary:   payload.feeSummary || [],
+      institutes:   payload.institutes || []
+    }
+  }
+
+  // Period still open — build from live data
+  const liveData = await buildLiveRollup(scopedIds, targetMonth)
+
+  return {
+    month: targetMonth,
+    frozen: false,
+    scope: { instituteCount: scopedIds.length, drill: drill ? parseInt(drill) : null },
+    ...liveData
   }
 }
 

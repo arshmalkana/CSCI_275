@@ -342,7 +342,7 @@ export const api = {
   activateVaccine: (vaccineId: number) =>
     apiRequest(`/admin/master-data/vaccines/${vaccineId}/activate`, { method: 'POST', body: JSON.stringify({}) }),
 
-  // Vaccine Distribution (Admin+)
+  // Vaccine Distribution (VaccineBank, CVH)
   getDistributionVaccines: () => apiGet('/admin/distributions/vaccines'),
   getMyVaccineStock: () => apiGet('/admin/distributions/vaccines/stock'),
   getDistributionInstitutes: () => apiGet('/admin/distributions/institutes'),
@@ -353,6 +353,22 @@ export const api = {
     transactionDate: string
     batchNumber?: string
   }) => apiPost('/admin/distributions/vaccines/issue', data),
+  getMyVaccineReceipts: () => apiGet('/admin/distributions/vaccines/received'),
+
+  // Semen Distribution (SemenBank)
+  getSemenTypes: () => apiGet('/admin/distributions/semen/types'),
+  getMySemenStock: () => apiGet('/admin/distributions/semen/stock'),
+  getSemenReceivingInstitutes: () => apiGet('/admin/distributions/semen/receiving-institutes'),
+  issueSemenDistribution: (data: {
+    semenTypeId: number
+    toInstituteId: number
+    strawsIssued: number
+    transactionDate: string
+    batchNumber?: string
+    expiryDate?: string
+    notes?: string
+  }) => apiPost('/admin/distributions/semen/issue', data),
+  getMySemenReceipts: () => apiGet('/admin/distributions/semen/received'),
 
   // Direct user creation (HQ_Admin+)
   createUser: (data: {

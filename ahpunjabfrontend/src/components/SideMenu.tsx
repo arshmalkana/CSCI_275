@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  User, X, Home, BarChart2, Truck, ClipboardCheck, TrendingUp,
-  Settings, Calendar, Building2, Database, Target, LogOut, type LucideIcon
+  User, X, Home, BarChart2, Truck, LogOut, Syringe, ClipboardList, type LucideIcon
 } from 'lucide-react'
 import authService from '../services/authService'
-import { ADMIN_ROLES, HQ_ROLES } from '../config/roles'
 
 interface SideMenuProps {
   isOpen: boolean
@@ -20,16 +18,11 @@ interface MenuItem {
 }
 
 const ALL_MENU_ITEMS: MenuItem[] = [
-  { name: 'Home',                   icon: Home,          path: '/home' },
-  { name: 'Monthly Reporting',      icon: BarChart2,     path: '/reports/monthly' },
-  { name: 'Vaccine Distribution',   icon: Truck,         path: '/vaccine-distribution',  roles: ADMIN_ROLES },
-  { name: 'Approval Queue',         icon: ClipboardCheck,path: '/admin/approval-queue',  roles: ADMIN_ROLES },
-  { name: 'Consolidated Dashboard', icon: TrendingUp,    path: '/admin/rollup',           roles: ADMIN_ROLES },
-  { name: 'Admin Panel',            icon: Settings,      path: '/admin/panel',            roles: HQ_ROLES },
-  { name: 'Period Config',          icon: Calendar,      path: '/admin/periods',          roles: HQ_ROLES },
-  { name: 'Institutes',             icon: Building2,     path: '/admin/institutes',       roles: HQ_ROLES },
-  { name: 'Master Data',            icon: Database,      path: '/admin/master-data',      roles: HQ_ROLES },
-  { name: 'Targets',                icon: Target,        path: '/admin/targets',          roles: ADMIN_ROLES },
+  { name: 'Home',                 icon: Home,          path: '/home' },
+  { name: 'Monthly Reporting',    icon: BarChart2,     path: '/reports/monthly',        roles: ['CVD', 'CVH', 'PAIW'] },
+  { name: 'Vaccine Distribution', icon: Truck,         path: '/vaccine-distribution',   roles: ['CVH', 'VaccineBank'] },
+  { name: 'Semen Distribution',   icon: Syringe,       path: '/semen-distribution',     roles: ['SemenBank'] },
+  { name: 'Semen Ledger',         icon: ClipboardList, path: '/semen-ledger',           roles: ['CVD', 'CVH', 'PAIW'] },
 ]
 
 export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
@@ -37,11 +30,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
   const [isAnimating, setIsAnimating] = useState(false)
 
   const user = authService.getUser()
-  const userRole = user?.role || ''
-
-  const menuItems = ALL_MENU_ITEMS.filter(item =>
-    !item.roles || item.roles.includes(userRole)
-  )
+  const MENU_ITEMS = ALL_MENU_ITEMS.filter(item => !item.roles || item.roles.includes(user?.role ?? ''))
 
   useEffect(() => {
     if (isOpen) {
@@ -57,8 +46,8 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
     navigate(path)
   }
 
-  const handleLogout = () => {
-    authService.logout()
+  const handleLogout = async () => {
+    await authService.logout()
     onClose()
     navigate('/login')
   }
@@ -112,7 +101,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
         {/* Menu Items */}
         <div className="flex-1 py-4 overflow-y-auto">
           <div className="px-4 space-y-1">
-            {menuItems.map((item) => {
+            {MENU_ITEMS.map((item) => {
               const Icon = item.icon
               return (
                 <button

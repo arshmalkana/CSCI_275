@@ -5,7 +5,9 @@
       "Bash(npm run dev:*)",
       "PowerShell($xlPath = \"C:\\\\Users\\\\arshp\\\\OneDrive\\\\Code\\\\CSCI_275\\\\Talwandi Sabo Ah Punjab DB.xlsx\"; if \\(Test-Path $xlPath\\) { \"File size: $\\(\\(Get-Item $xlPath\\).Length\\) bytes\" } else { \"NOT FOUND\" })",
       "PowerShell(python --version 2>&1)",
-      "PowerShell(node --version 2>&1)"
+      "PowerShell(node --version 2>&1)",
+      "Bash(npm install *)",
+      "Bash(node gen_seed.js)"
     ],
     "deny": [],
     "ask": []

@@ -50,7 +50,17 @@ export async function getApprovalQueue(adminUser, filters = {}) {
       d.district_name,
       t.tehsil_name,
       s.full_name     AS prepared_by_name,
-      s.designation   AS prepared_by_designation
+      s.designation   AS prepared_by_designation,
+      COALESCE(
+        (SELECT json_agg(json_build_object(
+            'section', rss.section_name,
+            'status',  rss.status,
+            'reason',  rss.rejection_reason
+         ))
+         FROM report_section_status rss
+         WHERE rss.report_id = mr.report_id),
+        '[]'::json
+      ) AS section_statuses
     FROM monthly_reports mr
     JOIN institutes i ON mr.institute_id = i.institute_id
     LEFT JOIN districts d ON i.district_id = d.district_id
@@ -106,7 +116,7 @@ export async function sendReminder(adminUser, targetInstituteId, month) {
     FROM staff s
     WHERE s.current_institute_id = $1
       AND s.is_active = TRUE
-      AND s.user_role IN ('INAPH', 'AIW')
+      AND s.user_role IN ('CVD', 'CVH', 'PAIW', 'SemenBank', 'VaccineBank')
     LIMIT 1
   `, [targetInstituteId])
 
@@ -364,13 +374,13 @@ export async function listInstitutes(adminUser) {
       i.institute_name,
       i.institute_type,
       i.is_active,
-      i.reporting_authority_id,
+      i.reporting_institute_id,
       parent.institute_name AS parent_name,
       d.district_name,
       t.tehsil_name,
       v.village_name
     FROM institutes i
-    LEFT JOIN institutes parent ON i.reporting_authority_id = parent.institute_id
+    LEFT JOIN institutes parent ON i.reporting_institute_id = parent.institute_id
     LEFT JOIN districts d ON i.district_id = d.district_id
     LEFT JOIN tehsils   t ON i.tehsil_id   = t.tehsil_id
     LEFT JOIN villages  v ON i.village_id  = v.village_id
@@ -382,19 +392,19 @@ export async function listInstitutes(adminUser) {
 }
 
 export async function createInstitute(adminUser, {
-  instituteName, instituteType, orgId, reportingAuthorityId, districtId, tehsilId, villageId
+  instituteName, instituteType, orgId, reportingInstituteId, districtId, tehsilId, villageId
 }) {
-  // Admin may only assign a parent inside their own scope
-  if (reportingAuthorityId) {
-    await assertInstituteInScope(adminUser, reportingAuthorityId)
+  // Admin may only assign a reporting institute inside their own scope
+  if (reportingInstituteId) {
+    await assertInstituteInScope(adminUser, reportingInstituteId)
   }
 
   const result = await query(`
     INSERT INTO institutes
-      (institute_name, institute_type, org_id, reporting_authority_id, district_id, tehsil_id, village_id, is_active)
+      (institute_name, institute_type, org_id, reporting_institute_id, district_id, tehsil_id, village_id, is_active)
     VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE)
     RETURNING institute_id
-  `, [instituteName, instituteType, orgId || null, reportingAuthorityId || null, districtId || null, tehsilId || null, villageId || null])
+  `, [instituteName, instituteType, orgId || null, reportingInstituteId || null, districtId || null, tehsilId || null, villageId || null])
 
   const newId = result.rows[0].institute_id
 
@@ -410,19 +420,19 @@ export async function createInstitute(adminUser, {
 export async function updateInstitute(adminUser, instituteId, updates) {
   await assertInstituteInScope(adminUser, instituteId)
 
-  if (updates.reportingAuthorityId) {
-    await assertInstituteInScope(adminUser, updates.reportingAuthorityId)
+  if (updates.reportingInstituteId) {
+    await assertInstituteInScope(adminUser, updates.reportingInstituteId)
   }
 
-  const allowed = ['institute_name', 'institute_type', 'org_id', 'reporting_authority_id']
+  const allowed = ['institute_name', 'institute_type', 'org_id', 'reporting_institute_id']
   const setClauses = []
   const params = []
 
   const keyMap = {
-    instituteName:        'institute_name',
-    instituteType:        'institute_type',
-    orgId:                'org_id',
-    reportingAuthorityId: 'reporting_authority_id'
+    instituteName:       'institute_name',
+    instituteType:       'institute_type',
+    orgId:               'org_id',
+    reportingInstituteId: 'reporting_institute_id'
   }
 
   for (const [jsKey, dbKey] of Object.entries(keyMap)) {

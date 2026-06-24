@@ -1,5 +1,8 @@
-export const ADMIN_ROLES = ['Tehsil_Admin', 'District_Admin', 'HQ_Admin', 'Super_Admin'] as const
-export const HQ_ROLES = ['HQ_Admin', 'Super_Admin'] as const
+export const FIELD_ROLES = ['CVD', 'CVH', 'PAIW', 'SemenBank', 'VaccineBank'] as const
+export const OVERSIGHT_ROLE = 'Oversight' as const
 
-export type AdminRole = typeof ADMIN_ROLES[number]
-export type HQRole = typeof HQ_ROLES[number]
+export type FieldRole = typeof FIELD_ROLES[number]
+
+export function isFieldRole(role: string): role is FieldRole {
+  return (FIELD_ROLES as readonly string[]).includes(role)
+}

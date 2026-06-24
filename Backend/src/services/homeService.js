@@ -138,7 +138,7 @@ export async function getHomeDataByUserId(userId) {
           SELECT i.institute_id, i.institute_name, mr.submission_status AS report_status
           FROM institutes i
           LEFT JOIN monthly_reports mr ON i.institute_id = mr.institute_id AND mr.reporting_month = $2
-          WHERE i.reporting_authority_id = $1 AND i.is_active = TRUE
+          WHERE i.reporting_institute_id = $1 AND i.is_active = TRUE
           ORDER BY i.institute_name
         `, [institute_id, currentMonth])
       : Promise.resolve({ rows: [] }),

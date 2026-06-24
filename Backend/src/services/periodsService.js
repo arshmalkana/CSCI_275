@@ -1,10 +1,9 @@
 import { query } from '../database/db.js'
-
-const HQ_ROLES = ['HQ_Admin', 'Super_Admin']
+import { OVERSIGHT_ROLE } from '../config/roles.js'
 
 function requireHQ(user) {
-  if (!HQ_ROLES.includes(user.role)) {
-    const err = new Error('HQ_Admin or Super_Admin required')
+  if (user.role !== OVERSIGHT_ROLE) {
+    const err = new Error('Oversight role required')
     err.statusCode = 403
     throw err
   }

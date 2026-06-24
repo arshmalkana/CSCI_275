@@ -2,6 +2,7 @@ import { query } from '../database/db.js'
 import { getSemenCode } from '../config/semenTypes.js'
 import * as notificationsService from './notificationsService.js'
 import { assertInstituteInScope } from '../utils/scope.js'
+import { buildLiveRollup } from './rollupService.js'
 import log from '../utils/logger.js'
 
 /**
@@ -1447,4 +1448,232 @@ export async function rejectReport(approver, targetInstituteId, reportingMonth, 
   } catch (_) { /* notification failure must not abort the rejection */ }
 
   return { reportId, status: 'Rejected', reason: reason.trim() }
+}
+
+// ── Per-section approve / reject ─────────────────────────────────────────────
+
+const VALID_SECTIONS = ['ai_report', 'vaccination_report', 'camp_report', 'opd_report', 'lab_report']
+
+/**
+ * Approve one or more named sections of a submitted report.
+ * When ALL sections are approved the report itself flips to 'Approved'.
+ */
+export async function approveSections(approver, targetInstituteId, reportingMonth, sectionNames) {
+  await assertInstituteInScope(approver, targetInstituteId)
+
+  const invalid = sectionNames.filter(s => !VALID_SECTIONS.includes(s))
+  if (invalid.length) {
+    const err = new Error(`Unknown section(s): ${invalid.join(', ')}. Valid: ${VALID_SECTIONS.join(', ')}`)
+    err.statusCode = 400; throw err
+  }
+
+  const reportRes = await query(`
+    SELECT report_id, submission_status, prepared_by
+    FROM monthly_reports
+    WHERE institute_id = $1 AND reporting_month = $2
+  `, [targetInstituteId, reportingMonth])
+
+  if (reportRes.rows.length === 0) {
+    const err = new Error('Report not found'); err.statusCode = 404; throw err
+  }
+
+  const { report_id: reportId, submission_status: currentStatus, prepared_by: preparedBy } = reportRes.rows[0]
+
+  if (currentStatus !== 'Submitted') {
+    const err = new Error(`Cannot approve sections on a report with status "${currentStatus}"`)
+    err.statusCode = 400; throw err
+  }
+
+  for (const section of sectionNames) {
+    await query(`
+      INSERT INTO report_section_status
+        (report_id, section_name, status, reviewed_by)
+      VALUES ($1, $2, 'Approved', $3)
+      ON CONFLICT (report_id, section_name) DO UPDATE
+        SET status      = 'Approved',
+            reviewed_by = EXCLUDED.reviewed_by,
+            rejection_reason = NULL,
+            reviewed_at = CURRENT_TIMESTAMP
+    `, [reportId, section, approver.staffId])
+  }
+
+  // If all sections are approved, flip the whole report to Approved
+  const sectionRes = await query(`
+    SELECT section_name, status FROM report_section_status WHERE report_id = $1
+  `, [reportId])
+
+  const approvedSections = new Set(sectionRes.rows.filter(r => r.status === 'Approved').map(r => r.section_name))
+  const allApproved = VALID_SECTIONS.every(s => approvedSections.has(s))
+
+  if (allApproved) {
+    await query(`
+      UPDATE monthly_reports
+      SET submission_status = 'Approved',
+          verified_by       = $1,
+          verified_at       = CURRENT_TIMESTAMP,
+          updated_at        = CURRENT_TIMESTAMP
+      WHERE report_id = $2
+    `, [approver.staffId, reportId])
+
+    await query(`
+      INSERT INTO report_edits_audit
+        (report_id, edited_by, table_name, field_name, old_value, new_value, edit_reason)
+      VALUES ($1, $2, 'monthly_reports', 'submission_status', 'Submitted', 'Approved', 'All sections approved')
+    `, [reportId, approver.staffId])
+
+    try {
+      await notificationsService.createReportApprovedNotification(reportId, reportingMonth, approver.staffId, preparedBy)
+    } catch (_) {}
+  }
+
+  return { reportId, approvedSections: sectionNames, fullyApproved: allApproved }
+}
+
+/**
+ * Reject a single section — returns it to the field user for revision.
+ * The report overall flips back to 'Draft' so the field user can re-submit.
+ */
+export async function rejectSection(approver, targetInstituteId, reportingMonth, sectionName, reason) {
+  if (!VALID_SECTIONS.includes(sectionName)) {
+    const err = new Error(`Unknown section "${sectionName}". Valid: ${VALID_SECTIONS.join(', ')}`)
+    err.statusCode = 400; throw err
+  }
+  if (!reason || !reason.trim()) {
+    const err = new Error('A reason is required when rejecting a section'); err.statusCode = 400; throw err
+  }
+
+  await assertInstituteInScope(approver, targetInstituteId)
+
+  const reportRes = await query(`
+    SELECT report_id, submission_status, prepared_by
+    FROM monthly_reports
+    WHERE institute_id = $1 AND reporting_month = $2
+  `, [targetInstituteId, reportingMonth])
+
+  if (reportRes.rows.length === 0) {
+    const err = new Error('Report not found'); err.statusCode = 404; throw err
+  }
+
+  const { report_id: reportId, submission_status: currentStatus, prepared_by: preparedBy } = reportRes.rows[0]
+
+  if (currentStatus !== 'Submitted') {
+    const err = new Error(`Cannot reject a section on a report with status "${currentStatus}"`)
+    err.statusCode = 400; throw err
+  }
+
+  await query(`
+    INSERT INTO report_section_status
+      (report_id, section_name, status, reviewed_by, rejection_reason)
+    VALUES ($1, $2, 'Rejected', $3, $4)
+    ON CONFLICT (report_id, section_name) DO UPDATE
+      SET status           = 'Rejected',
+          reviewed_by      = EXCLUDED.reviewed_by,
+          rejection_reason = EXCLUDED.rejection_reason,
+          reviewed_at      = CURRENT_TIMESTAMP
+  `, [reportId, sectionName, approver.staffId, reason.trim()])
+
+  // Return the whole report to Draft so the field user can fix and re-submit
+  await query(`
+    UPDATE monthly_reports
+    SET submission_status = 'Draft',
+        admin_comment     = $1,
+        updated_at        = CURRENT_TIMESTAMP
+    WHERE report_id = $2
+  `, [reason.trim(), reportId])
+
+  await query(`
+    INSERT INTO report_edits_audit
+      (report_id, edited_by, table_name, field_name, old_value, new_value, edit_reason)
+    VALUES ($1, $2, 'monthly_reports', 'submission_status', 'Submitted', 'Draft', $3)
+  `, [reportId, approver.staffId, `Section "${sectionName}" rejected: ${reason.trim()}`])
+
+  try {
+    await notificationsService.createReportRejectedNotification(
+      reportId, reportingMonth, approver.staffId, preparedBy,
+      `Section "${sectionName}" needs revision: ${reason.trim()}`
+    )
+  } catch (_) {}
+
+  return { reportId, rejectedSection: sectionName, reason: reason.trim(), reportStatus: 'Draft' }
+}
+
+// ── Staged compile / close-period ────────────────────────────────────────────
+
+/**
+ * Tehsil Oversight user closes a period.
+ *
+ * Validates:
+ *   1. All institutes that report to this Tehsil have an Approved monthly report.
+ *   2. A frozen compiled_reports row does not already exist for this period.
+ *
+ * On success, inserts a 'Tehsil' tier compiled_reports row with the frozen
+ * fee-summary payload and marks it 'Closed'.
+ */
+export async function closeTehsilPeriod(approver, reportingMonth) {
+  if (approver.role !== 'Oversight') {
+    const err = new Error('Only Oversight users can close a period'); err.statusCode = 403; throw err
+  }
+
+  // Prevent double-close
+  const existing = await query(`
+    SELECT compile_id FROM compiled_reports
+    WHERE tier = 'Tehsil' AND institute_id = $1 AND reporting_month = $2
+  `, [approver.instituteId, reportingMonth])
+
+  if (existing.rows.length > 0) {
+    const err = new Error('This period is already closed'); err.statusCode = 409; throw err
+  }
+
+  // Block close if any institute has a report in Draft or Submitted (not yet approved).
+  // Institutes with NO report for this month are fine — zero-activity months are valid.
+  const pendingRes = await query(`
+    SELECT i.institute_id, i.institute_name, mr.submission_status
+    FROM institutes i
+    JOIN monthly_reports mr
+      ON mr.institute_id = i.institute_id AND mr.reporting_month = $2
+    WHERE i.reporting_institute_id = $1
+      AND i.is_active = TRUE
+      AND mr.submission_status NOT IN ('Approved')
+  `, [approver.instituteId, reportingMonth])
+
+  if (pendingRes.rows.length > 0) {
+    const names = pendingRes.rows.map(r => `${r.institute_name} (${r.submission_status})`).join(', ')
+    const err = new Error(`Cannot close: reports not yet approved from: ${names}`)
+    err.statusCode = 422; throw err
+  }
+
+  // Collect all field institute IDs that report to this Tehsil
+  const fieldRes = await query(`
+    SELECT institute_id FROM institutes
+    WHERE reporting_institute_id = $1 AND is_active = TRUE
+  `, [approver.instituteId])
+  const fieldIds = fieldRes.rows.map(r => r.institute_id)
+
+  // Snapshot the full rollup breakdown (frozen — no live SUM after close)
+  const rollupData = await buildLiveRollup(fieldIds, reportingMonth)
+
+  // Snapshot the fee summary via the PostgreSQL function
+  const feeSummaryRes = await query(`
+    SELECT * FROM get_fee_summary($1, $2)
+  `, [approver.instituteId, reportingMonth])
+
+  const totalFee = feeSummaryRes.rows.reduce((sum, r) => sum + (Number(r.total_fee) || 0), 0)
+
+  const payload = {
+    closedAt: new Date().toISOString(),
+    closedBy: approver.staffId,
+    reportingMonth,
+    tehsilInstituteId: approver.instituteId,
+    feeSummary: feeSummaryRes.rows,
+    totalFee,
+    ...rollupData
+  }
+
+  await query(`
+    INSERT INTO compiled_reports
+      (tier, institute_id, reporting_month, status, closed_by, payload)
+    VALUES ('Tehsil', $1, $2, 'Closed', $3, $4)
+  `, [approver.instituteId, reportingMonth, approver.staffId, JSON.stringify(payload)])
+
+  return { compiled: true, tier: 'Tehsil', reportingMonth, totalFee }
 }

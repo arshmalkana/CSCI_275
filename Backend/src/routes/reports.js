@@ -1,10 +1,17 @@
 import * as reportsController from '../controllers/reportsController.js'
 import { authenticate } from '../middleware/authenticate.js'
-import { ADMIN_ROLES } from '../config/roles.js'
+import { ADMIN_ROLES, FIELD_ROLES } from '../config/roles.js'
 
 function requireAdminRole(request, reply, done) {
   if (!ADMIN_ROLES.includes(request.user?.role)) {
     return reply.code(403).send({ success: false, message: 'Admin role required' })
+  }
+  done()
+}
+
+function requireFieldRole(request, reply, done) {
+  if (!FIELD_ROLES.includes(request.user?.role)) {
+    return reply.code(403).send({ success: false, message: 'Field role required — use the oversight panel for admin operations' })
   }
   done()
 }
@@ -54,7 +61,7 @@ export default async function reportsRoutes(fastify) {
   // POST /reports/monthly - Submit or save draft monthly report
   fastify.post('/monthly', {
     
-    preHandler: authenticate, // Requires authentication
+    preHandler: [authenticate, requireFieldRole],
     schema: {
       description: 'Submit or save draft monthly report',
       tags: ['Reports'],
@@ -518,4 +525,67 @@ export default async function reportsRoutes(fastify) {
       }
     }
   }, reportsController.rejectReport)
+
+  // PATCH /reports/monthly/:month/approve-sections
+  fastify.patch('/monthly/:month/approve-sections', {
+    preHandler: [authenticate, requireAdminRole],
+    schema: {
+      description: 'Approve one or more named sections of a submitted report',
+      tags: ['Reports'],
+      params: {
+        type: 'object',
+        required: ['month'],
+        properties: { month: { type: 'string', pattern: '^\\d{4}-\\d{2}$' } }
+      },
+      body: {
+        type: 'object',
+        required: ['instituteId', 'sections'],
+        properties: {
+          instituteId: { type: 'integer' },
+          sections: {
+            type: 'array',
+            items: { type: 'string', enum: ['ai_report', 'vaccination_report', 'camp_report', 'opd_report', 'lab_report'] },
+            minItems: 1
+          }
+        }
+      }
+    }
+  }, reportsController.approveSections)
+
+  // PATCH /reports/monthly/:month/reject-section
+  fastify.patch('/monthly/:month/reject-section', {
+    preHandler: [authenticate, requireAdminRole],
+    schema: {
+      description: 'Reject a single section — returns the report to Draft for field-user revision',
+      tags: ['Reports'],
+      params: {
+        type: 'object',
+        required: ['month'],
+        properties: { month: { type: 'string', pattern: '^\\d{4}-\\d{2}$' } }
+      },
+      body: {
+        type: 'object',
+        required: ['instituteId', 'section', 'reason'],
+        properties: {
+          instituteId: { type: 'integer' },
+          section: { type: 'string', enum: ['ai_report', 'vaccination_report', 'camp_report', 'opd_report', 'lab_report'] },
+          reason: { type: 'string', minLength: 5, maxLength: 1000 }
+        }
+      }
+    }
+  }, reportsController.rejectSection)
+
+  // POST /reports/monthly/:month/close-period
+  fastify.post('/monthly/:month/close-period', {
+    preHandler: [authenticate, requireAdminRole],
+    schema: {
+      description: 'Close (freeze) the period for this Tehsil — all field reports must be Approved first',
+      tags: ['Reports'],
+      params: {
+        type: 'object',
+        required: ['month'],
+        properties: { month: { type: 'string', pattern: '^\\d{4}-\\d{2}$' } }
+      }
+    }
+  }, reportsController.closeTehsilPeriod)
 }

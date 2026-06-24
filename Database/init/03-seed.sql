@@ -101,15 +101,15 @@ INSERT INTO service_charges (service_code, service_name, category, current_rate,
 ('HC_SMALL', 'Health Certificate Small Animals', 'Certificate', 50.00, '2024-04-01', '2024-25'),
 ('HC_LARGE', 'Health Certificate Large Animals', 'Certificate', 100.00, '2024-04-01', '2024-25'),
 ('PM_SMALL', 'Post Mortem Small Animals', 'Certificate', 75.00, '2024-04-01', '2024-25'),
-('PM_LARGE', 'Post Mortem Large Animals', 'Certificate', 150.00, '2024-04-01', '2024-25'),
+('PM_LARGE', 'Post Mortem Large Animals', 'Certificate', 100.00, '2024-04-01', '2024-25'),
 ('PM_VETRO', 'Post Mortem Vetro Legal', 'Certificate', 300.00, '2024-04-01', '2024-25'),
 
 -- AI Charges
 ('AI_COW_LOCAL', 'AI Cow (Local Semen)', 'AI', 25.00, '2024-04-01', '2024-25'),
-('AI_COW_ETT', 'AI Cow (ETT Semen)', 'AI', 100.00, '2024-04-01', '2024-25'),
-('AI_COW_IMP', 'AI Cow (Imported Semen)', 'AI', 200.00, '2024-04-01', '2024-25'),
-('AI_COW_SEXED', 'AI Cow (Sexed Semen)', 'AI', 250.00, '2024-04-01', '2024-25'),
-('AI_BUFFALO', 'AI Buffalo', 'AI', 50.00, '2024-04-01', '2024-25'),
+('AI_COW_ETT', 'AI Cow (ETT Semen)', 'AI', 35.00, '2024-04-01', '2024-25'),
+('AI_COW_IMP', 'AI Cow (Imported Semen)', 'AI', 50.00, '2024-04-01', '2024-25'),
+('AI_COW_SEXED', 'AI Cow (Sexed Semen)', 'AI', 200.00, '2024-04-01', '2024-25'),
+('AI_BUFFALO', 'AI Buffalo', 'AI', 25.00, '2024-04-01', '2024-25'),
 
 -- Vaccination Charges
 ('VAC_HS', 'HS Vaccine', 'Vaccination', 5.00, '2024-04-01', '2024-25'),

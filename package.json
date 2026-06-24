@@ -11,6 +11,7 @@
     "install:all": "cd Backend && npm install && cd ../ahpunjabfrontend && npm install"
   },
   "devDependencies": {
-    "concurrently": "^9.0.0"
+    "concurrently": "^9.0.0",
+    "xlsx": "^0.18.5"
   }
 }
