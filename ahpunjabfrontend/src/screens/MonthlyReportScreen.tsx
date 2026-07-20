@@ -29,6 +29,7 @@ type Report = {
   submittedAt?: string | null
   createdAt: string
   updatedAt: string
+  rejection_reason?: string | null
 }
 
 // --- Small UI Building Blocks (encapsulation) ------------------------------
@@ -106,6 +107,13 @@ function ReportRow({ report, onOpen, onDownload }: {
                 ? `Submitted ${new Date(report.submittedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
                 : 'Not submitted'}
             </div>
+            {report.status === 'Rejected' && report.rejection_reason && (
+              <div className="mt-1 flex items-start gap-1">
+                <span className="text-xs text-red-600 font-['Poppins'] leading-snug">
+                  <span className="font-semibold">Reason: </span>{report.rejection_reason}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -216,13 +224,10 @@ export default function MonthlyReportScreen() {
     navigate('/reports/create')
   }
   const handleOpenReport = (report: Report) => {
-    // Only navigate with month for drafts (more secure than reportId)
-    if (report.status === 'Draft') {
+    if (report.status === 'Draft' || report.status === 'Rejected') {
       navigate(`/reports/create?month=${report.month}`)
-    } else {
-      // For submitted/approved reports, just navigate to view mode (to be implemented)
-      navigate('/reports/create')
     }
+    // Submitted/Approved: view-only mode not yet implemented, do nothing
   }
   const handleDownloadReport = async (report: Report) => {
     try {

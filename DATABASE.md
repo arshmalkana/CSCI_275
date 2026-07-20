@@ -1,64 +1,7 @@
-# AH Punjab Reporting — Database Reference
+# AH Punjab — Database Reference
 
-## How to Visualize the Database
-
-### Connect pgAdmin (already running at port 5050)
-
-pgAdmin is in the Docker Compose stack.
-
-1. Open `http://<server-ip>:5050` in your browser
-2. Login: `admin@ahpunjab.local` / password from your `.env` (`PGADMIN_PASSWORD`)
-3. Add a server:
-   - **Name**: AH Punjab
-   - **Host**: `ahpunjab-postgres` (Docker service name, reachable inside the Docker network)
-   - **Port**: `5432`
-   - **Database**: `ahpunjab` (or as configured in `POSTGRES_DB`)
-   - **Username/Password**: from `POSTGRES_USER` / `POSTGRES_PASSWORD` in `.env`
-4. Navigate: Servers → AH Punjab → Databases → ahpunjab → Schemas → public → Tables
-
-### Connect DBeaver / DataGrip from host machine
-
-The postgres container does **not** expose port 5432 to the host by default (security). To connect, either:
-- Use pgAdmin (already exposed at 5050), **or**
-- Temporarily add `ports: ["5432:5432"]` under the `postgres` service in `docker-compose.yml`, restart, connect, then remove it
-
-Connection string: `postgresql://POSTGRES_USER:POSTGRES_PASSWORD@localhost:5432/ahpunjab`
-
-### Quick inspection queries
-
-```sql
--- Count rows in all main tables
-SELECT schemaname, tablename, n_live_tup
-FROM pg_stat_user_tables
-ORDER BY n_live_tup DESC;
-
--- Institute hierarchy: who reports where
-SELECT i.org_id, i.institute_name, i.institute_type,
-       p.institute_name AS parent_name,
-       r.institute_name AS reporting_tehsil
-FROM institutes i
-LEFT JOIN institutes p ON i.parent_institute_id   = p.institute_id
-LEFT JOIN institutes r ON i.reporting_institute_id = r.institute_id
-ORDER BY i.institute_type, i.institute_name;
-
--- Monthly report submission status for April 2026
-SELECT i.institute_name, mr.submission_status, mr.submitted_at
-FROM monthly_reports mr
-JOIN institutes i ON mr.institute_id = i.institute_id
-WHERE mr.reporting_month = '2026-04'
-ORDER BY mr.submission_status, i.institute_name;
-
--- Fee summary for Talwandi Sabo Tehsil, April 2026 (regression anchor = ₹62,425)
-SELECT * FROM get_fee_summary(12, '2026-04');
-
--- Current semen stock across all institutes
-SELECT i.institute_name, st.semen_name, ss.current_stock
-FROM semen_stock ss
-JOIN institutes i  ON ss.institute_id   = i.institute_id
-JOIN semen_types st ON ss.semen_type_id = st.semen_id
-WHERE ss.current_stock > 0
-ORDER BY i.institute_name, st.semen_name;
-```
+> Source: `Database/schema.sql` (combined, post-migration-006)
+> Visualise live: see **§ Connecting to the database** below.
 
 ---
 
@@ -81,15 +24,16 @@ erDiagram
         varchar village_name
         int tehsil_id FK
         int district_id FK
+        int human_population
         int buffaloes
         int cows
-        int human_population
+        int equine
     }
     institutes {
         int institute_id PK
         varchar org_id
         varchar institute_name
-        enum institute_type
+        institute_type institute_type
         int village_id FK
         int tehsil_id FK
         int district_id FK
@@ -108,8 +52,11 @@ erDiagram
         int staff_id PK
         varchar user_id
         varchar full_name
-        enum designation
-        enum user_role
+        designation_type designation
+        varchar mobile
+        varchar email
+        text password_hash
+        user_role user_role
         int current_institute_id FK
         bool is_active
         bool passkey_enabled
@@ -118,7 +65,7 @@ erDiagram
         int posting_id PK
         int staff_id FK
         int institute_id FK
-        enum designation
+        designation_type designation
         date start_date
         date end_date
         bool is_current
@@ -156,7 +103,7 @@ erDiagram
         int charge_id PK
         varchar service_code
         varchar service_name
-        enum category
+        service_category category
         decimal current_rate
         date effective_from
     }
@@ -171,7 +118,7 @@ erDiagram
         int semen_id PK
         varchar semen_code
         varchar semen_name
-        enum species
+        animal_species species
         varchar semen_category
         int service_charge_id FK
         bool is_active
@@ -186,107 +133,17 @@ erDiagram
     vaccine_species_dosage {
         int id PK
         int vaccine_id FK
-        enum species
+        animal_species species
         decimal dose_per_animal
-    }
-    monthly_reports {
-        int report_id PK
-        int institute_id FK
-        varchar reporting_month
-        int prepared_by FK
-        int verified_by FK
-        enum submission_status
-        timestamptz submitted_at
-    }
-    report_section_status {
-        int id PK
-        int report_id FK
-        varchar section_name
-        enum status
-        int reviewed_by FK
-        text rejection_reason
-    }
-    compiled_reports {
-        int compiled_id PK
-        enum tier
-        int institute_id FK
-        varchar reporting_month
-        enum status
-        int closed_by FK
-        jsonb payload
-    }
-    opd_report_details {
-        int detail_id PK
-        int report_id FK
-        enum opd_type
-        enum case_category
-        int total_cases
-        int beneficiaries_covered
-    }
-    ai_report_details {
-        int detail_id PK
-        int report_id FK
-        int semen_type_id FK
-        int total_ai_done
-        int animals_covered
-        int straws_received
-    }
-    vaccination_report_details {
-        int detail_id PK
-        int report_id FK
-        int vaccine_id FK
-        int doses_received
-        int doses_used
-        int animals_vaccinated
-    }
-    diagnostic_report_details {
-        int detail_id PK
-        int report_id FK
-        enum diagnostic_type
-        int tests_conducted
-    }
-    certificate_report_details {
-        int detail_id PK
-        int report_id FK
-        enum certificate_type
-        int total_issued
-    }
-    surgery_report_details {
-        int detail_id PK
-        int report_id FK
-        varchar procedure_type
-        int total_procedures
-    }
-    extension_activities_details {
-        int detail_id PK
-        int report_id FK
-        enum activity_type
-        varchar camp_subtype
-        int events_conducted
-        int ladies_attended
-    }
-    financial_summaries {
-        int summary_id PK
-        int report_id FK
-        enum category
-        decimal total_fees
-    }
-    report_edits_audit {
-        int edit_id PK
-        int report_id FK
-        int edited_by FK
-        varchar table_name
-        varchar field_name
-        text old_value
-        text new_value
     }
     semen_transactions {
         int transaction_id PK
         date transaction_date
+        varchar month
         int semen_bank_id FK
         int institute_id FK
         int semen_type_id FK
-        enum transaction_type
+        transaction_type transaction_type
         int quantity
     }
     semen_stock {
@@ -302,7 +159,6 @@ erDiagram
         int issuing_institute_id FK
         int receiving_institute_id FK
         int straws_issued
-        int issued_by FK
     }
     vaccine_transactions {
         int transaction_id PK
@@ -320,210 +176,447 @@ erDiagram
         int doses_used
         int current_stock
     }
+    monthly_reports {
+        int report_id PK
+        int institute_id FK
+        varchar reporting_month
+        date start_date
+        date end_date
+        int prepared_by FK
+        int verified_by FK
+        report_status submission_status
+        timestamptz submitted_at
+        text admin_comment
+    }
+    opd_report_details {
+        int detail_id PK
+        int report_id FK
+        opd_case_type opd_type
+        case_category case_category
+        int total_cases
+        int beneficiaries_covered
+    }
+    surgery_report_details {
+        int detail_id PK
+        int report_id FK
+        varchar procedure_type
+        int total_procedures
+    }
+    certificate_report_details {
+        int detail_id PK
+        int report_id FK
+        certificate_type certificate_type
+        varchar animal_category
+        int total_issued
+    }
+    vaccination_report_details {
+        int detail_id PK
+        int report_id FK
+        int vaccine_id FK
+        int doses_received
+        int doses_used
+        int animals_vaccinated
+    }
+    ai_report_details {
+        int detail_id PK
+        int report_id FK
+        int semen_type_id FK
+        int total_ai_done
+        int animals_covered
+        int straws_received
+        int straws_used_inaph
+        int straws_issued_aiw
+    }
+    diagnostic_report_details {
+        int detail_id PK
+        int report_id FK
+        diagnostic_type diagnostic_type
+        int tests_conducted
+    }
+    extension_activities_details {
+        int detail_id PK
+        int report_id FK
+        activity_type activity_type
+        varchar camp_subtype
+        int events_conducted
+        int total_attendees
+        int ladies_attended
+    }
+    financial_summaries {
+        int summary_id PK
+        int report_id FK
+        service_category category
+        int total_services
+        decimal total_fees
+    }
+    report_edits_audit {
+        int edit_id PK
+        int report_id FK
+        int edited_by FK
+        varchar table_name
+        varchar field_name
+        text old_value
+        text new_value
+        timestamp edit_timestamp
+    }
+    report_section_status {
+        int id PK
+        int report_id FK
+        varchar section_name
+        section_status status
+        int reviewed_by FK
+        text rejection_reason
+    }
+    compiled_reports {
+        int compiled_id PK
+        compile_tier tier
+        int institute_id FK
+        varchar reporting_month
+        compile_status status
+        int closed_by FK
+        jsonb payload
+    }
     institute_targets {
         int target_id PK
         int institute_id FK
-        enum institute_type
-        enum target_type
+        institute_type institute_type
+        target_type target_type
         int vaccine_id FK
         int annual_target
         date effective_from
         date effective_until
+        varchar financial_year
     }
     reporting_periods {
         int period_id PK
         varchar reporting_month
         timestamptz opens_at
         timestamptz deadline
+        timestamptz closes_at
         bool is_locked
+        int locked_by FK
+        int created_by FK
     }
     notifications {
         int notification_id PK
         int recipient_id FK
         int sender_id FK
+        varchar notification_type
         varchar category
         varchar title
         text message
+        jsonb actions
         bool is_read
+        timestamptz expires_at
     }
     push_subscriptions {
         int subscription_id PK
         int staff_id FK
         text endpoint
+        text p256dh_key
+        text auth_key
         bool is_active
     }
 
-    districts ||--o{ tehsils : "has"
-    tehsils ||--o{ villages : "has"
-    tehsils ||--o{ institutes : "tehsil_id"
-    districts ||--o{ institutes : "district_id"
-    villages ||--o{ institutes : "village_id"
+    districts ||--o{ tehsils : "contains"
+    tehsils ||--o{ villages : "contains"
+    districts ||--o{ villages : "belongs-to"
+    tehsils ||--o{ institutes : "located-in"
+    districts ||--o{ institutes : "located-in"
+    villages ||--o{ institutes : "located-in"
     institutes ||--o{ institute_service_villages : "serves"
-    villages ||--o{ institute_service_villages : "served_by"
-    institutes ||--o| institutes : "parent_institute_id (stock/child)"
-    institutes ||--o| institutes : "reporting_institute_id (approval/rollup)"
-    institutes ||--o| staff : "current_incharge_id"
-    staff ||--o{ staff_postings : "postings"
-    institutes ||--o{ staff_postings : "postings"
-    staff ||--o{ webauthn_credentials : "passkeys"
+    villages ||--o{ institute_service_villages : "served-by"
+    institutes ||--o| institutes : "parent_institute_id (stock)"
+    institutes ||--o| institutes : "reporting_institute_id (approval)"
+    staff ||--o{ institutes : "incharge-of"
+    institutes ||--o{ staff : "works-at"
+    staff ||--o{ staff_postings : "has-postings"
+    institutes ||--o{ staff_postings : "posted-at"
+    staff ||--o{ webauthn_credentials : "has-passkeys"
     staff ||--o{ webauthn_challenges : "challenges"
     staff ||--o{ refresh_tokens : "sessions"
-    staff ||--o{ password_reset_tokens : "reset_tokens"
-    service_charges ||--o{ fee_changes_history : "history"
-    service_charges ||--o{ semen_types : "charge"
-    service_charges ||--o{ vaccines : "charge"
+    staff ||--o{ password_reset_tokens : "reset-tokens"
+    service_charges ||--o{ fee_changes_history : "rate-history"
+    service_charges ||--o{ semen_types : "charge-for"
+    service_charges ||--o{ vaccines : "charge-for"
     vaccines ||--o{ vaccine_species_dosage : "dosage"
+    semen_types ||--o{ semen_transactions : "type"
+    institutes ||--o{ semen_transactions : "bank"
+    semen_types ||--o{ semen_stock : "stock"
+    institutes ||--o{ semen_stock : "holds"
+    semen_types ||--o{ semen_distribution_transactions : "distributed"
+    vaccines ||--o{ vaccine_transactions : "distributed"
+    institutes ||--o{ vaccine_stock : "holds"
+    vaccines ||--o{ vaccine_stock : "stock"
     institutes ||--o{ monthly_reports : "submits"
-    staff ||--o{ monthly_reports : "prepared_by"
-    monthly_reports ||--o{ report_section_status : "sections"
-    monthly_reports ||--o{ opd_report_details : "OPD"
-    monthly_reports ||--o{ ai_report_details : "AI"
-    monthly_reports ||--o{ vaccination_report_details : "vaccinations"
-    monthly_reports ||--o{ diagnostic_report_details : "labs"
-    monthly_reports ||--o{ certificate_report_details : "certs"
-    monthly_reports ||--o{ surgery_report_details : "surgeries"
-    monthly_reports ||--o{ extension_activities_details : "extension"
-    monthly_reports ||--o{ financial_summaries : "fees"
+    staff ||--o{ monthly_reports : "prepared-by"
+    monthly_reports ||--o{ opd_report_details : "has"
+    monthly_reports ||--o{ surgery_report_details : "has"
+    monthly_reports ||--o{ certificate_report_details : "has"
+    monthly_reports ||--o{ vaccination_report_details : "has"
+    monthly_reports ||--o{ ai_report_details : "has"
+    monthly_reports ||--o{ diagnostic_report_details : "has"
+    monthly_reports ||--o{ extension_activities_details : "has"
+    monthly_reports ||--o{ financial_summaries : "has"
     monthly_reports ||--o{ report_edits_audit : "audit"
-    semen_types ||--o{ ai_report_details : "type"
-    vaccines ||--o{ vaccination_report_details : "vaccine"
+    monthly_reports ||--o{ report_section_status : "sections"
+    vaccines ||--o{ vaccination_report_details : "in-report"
+    semen_types ||--o{ ai_report_details : "in-report"
     institutes ||--o{ compiled_reports : "compiled"
-    institutes ||--o{ semen_transactions : "semen_bank"
-    institutes ||--o{ semen_stock : "semen_stock"
-    semen_types ||--o{ semen_stock : "type"
-    semen_types ||--o{ semen_distribution_transactions : "type"
-    institutes ||--o{ semen_distribution_transactions : "issuer"
-    institutes ||--o{ vaccine_transactions : "issuer"
-    institutes ||--o{ vaccine_stock : "stock"
-    vaccines ||--o{ vaccine_stock : "type"
     institutes ||--o{ institute_targets : "targets"
-    staff ||--o{ notifications : "recipient"
-    staff ||--o{ push_subscriptions : "subscriptions"
+    staff ||--o{ notifications : "receives"
+    staff ||--o{ push_subscriptions : "subscribed"
+    staff ||--o{ reporting_periods : "locked-by"
 ```
 
 ---
 
-## Table Reference
+## Table Glossary
 
-### Geographic Hierarchy
+### Geography
 
-| Table | Purpose |
-|---|---|
-| `districts` | 23 Punjab districts |
-| `tehsils` | Sub-district administrative units; each has one or more TehsilHQ institutes |
-| `villages` | Villages with animal population data (buffaloes, cows, etc.) |
+**`districts`** — The 22 districts of Punjab. Top of the geographic hierarchy. Each has a unique name and belongs to state = 'Punjab'.
+
+**`tehsils`** — Sub-district administrative units. Each tehsil belongs to one district. Institutes are located in a tehsil.
+
+**`villages`** — The finest geographic unit. Stores animal population counts (buffaloes, cows, equine, etc.) used for target-setting and the registration form's coverage area. Each village belongs to one tehsil and one district.
+
+**`institute_service_villages`** — Many-to-many join: which villages does an institute serve? The `is_primary` flag marks the primary village (the one the institute is physically in).
 
 ### Institutes
 
-| Table | Purpose |
-|---|---|
-| `institutes` | Core entity. Every CVH, CVD, PAIW, SemenBank, VaccineBank, TehsilHQ, District_HQ, and HQ is a row here |
-| `institute_service_villages` | Many-to-many: which villages an institute serves |
+**`institutes`** — The core entity. Represents every veterinary facility: CVH, CVD, PAIW, SemenBank, VaccineBank, TehsilHQ, District_HQ, HQ. Two FK chains exist on this table:
 
-**The two linkage fields on `institutes`:**
+- **`parent_institute_id`** — direct parent for stock operations and child-discovery. A CVD's parent is the CVH that supplies it semen/vaccines. A PAIW's parent is the CVH. Used only for issuing/receiving stock and for listing "my children" in distribution screens.
+- **`reporting_institute_id`** — the TehsilHQ that approves this institute's monthly report and aggregates it into tehsil rollup. **One hop only; never traversed recursively.** Field institutes point to their TehsilHQ; TehsilHQ points to their District_HQ; etc.
 
-| Field | What it means | Used for |
-|---|---|---|
-| `parent_institute_id` | Direct organisational parent (PAIW→CVD/CVH, CVD→CVH, CVH→TehsilHQ) | Stock-issuing (`getReceivingInstitutes` queries direct children); child visibility |
-| `reporting_institute_id` | The **Tehsil** this institute's monthly reports roll into | ONE-HOP approval routing; rollup aggregation; `close-period` compile scope |
-
-These are intentionally separate. A CVD's `parent_institute_id` may point to a CVH (its administrative parent for vaccine stock), while its `reporting_institute_id` always points to the Tehsil (its approval target). Never use `parent_institute_id` for approval routing.
+These two chains are intentionally independent. A CVD may receive stock from a CVH (parent) but report to a different TehsilHQ (reporting).
 
 ### Staff & Auth
 
-| Table | Purpose |
-|---|---|
-| `staff` | All users: field staff (CVD/CVH/PAIW/Banks) and oversight users |
-| `staff_postings` | Transfer history; `is_current=true` row is the active posting |
-| `webauthn_credentials` | Passkey credentials (FIDO2 public keys + counter) |
-| `webauthn_challenges` | Ephemeral challenges for passkey registration/auth flows |
-| `refresh_tokens` | Active JWT sessions; 7-day rolling tokens stored as SHA-256 hashes |
-| `password_reset_tokens` | One-time tokens for forgot-password flow |
+**`staff`** — All system users. `user_id` is the login username (mirrors OrgId from sheets). `user_role` controls which app and features are accessible. `passkey_enabled` flags WebAuthn availability.
 
-### Master Data
+**`staff_postings`** — Transfer history. When a staff member moves institutes, the old posting's `is_current` is set to FALSE and a new row is inserted.
 
-| Table | Purpose |
-|---|---|
-| `service_charges` | Fee schedule (OPD_LARGE=₹10, AI_COW_ETT=₹35, etc.) |
-| `fee_changes_history` | Historical rate changes — `get_fee_summary` uses this to apply the rate that was in effect at the time of reporting |
-| `semen_types` | Bull breeds (HF, Jersey, Murrah, etc.) with species and category |
-| `vaccines` | Vaccine catalogue (HS, FMD, BQ, etc.) |
-| `vaccine_species_dosage` | Species-specific dose amounts |
+**`webauthn_credentials`** — FIDO2/passkey credential storage. The `counter` field guards against replay attacks.
 
-### Monthly Reports (The Core Workflow)
+**`webauthn_challenges`** — Short-lived challenge tokens for WebAuthn registration and authentication flows. Auto-expires.
 
-| Table | Purpose |
-|---|---|
-| `monthly_reports` | One row per institute per month. Status: Draft → Submitted → Approved/Rejected |
-| `report_section_status` | Per-section status (Pending/Approved/Rejected) for the 5 sections: ai_report, vaccination_report, camp_report, opd_report, lab_report |
-| `opd_report_details` | OPD case counts by type and category |
-| `ai_report_details` | AI (artificial insemination) data by semen type |
-| `vaccination_report_details` | Vaccination data by vaccine |
-| `diagnostic_report_details` | Lab/diagnostic test counts |
-| `certificate_report_details` | Health/PostMortem/VetroLegal certificate counts |
-| `surgery_report_details` | Castration, PD, and other procedure counts |
-| `extension_activities_details` | Camps, farmer training, awareness events |
-| `financial_summaries` | Calculated fee totals per category |
-| `report_edits_audit` | Immutable audit trail of all edits |
+**`refresh_tokens`** — Active JWT sessions. SHA-256 hash stored, never raw token. `is_revoked` is set when user logs out or role/institute changes.
 
-**Report lifecycle:**
-1. Field user creates a Draft (`submission_status = 'Draft'`)
-2. Field user submits (`submission_status = 'Submitted'`); `report_section_status` rows are created as 'Pending'
-3. Oversight (Tehsil) user approves sections one-by-one (or all at once)
-4. Rejecting a section flips it to 'Rejected' and returns the whole report to 'Draft' for re-editing
-5. When all 5 sections are Approved → `monthly_reports.submission_status` → 'Approved'
-6. Oversight clicks "Close Period" → `closeTehsilPeriod` validates all approved, freezes rollup into `compiled_reports`
+**`password_reset_tokens`** — SHA-256 hashed one-time tokens for the forgot-password flow. Expire after 1 hour, single-use (`used_at` set on redemption).
 
-### Staged Compile (Frozen Snapshots)
+### Service Charges
 
-| Table | Purpose |
-|---|---|
-| `compiled_reports` | Frozen tier reports. `tier` ∈ {Tehsil, District, Punjab}. `payload` JSONB holds the full aggregated snapshot. Once `status='Closed'` this is never modified |
-| `reporting_periods` | Panel-configurable month windows: when a period opens, its deadline, and whether it's locked |
+**`service_charges`** — Fee master data. Each service (OPD, AI, certificate, etc.) has a unique `service_code` and `current_rate`. The `get_fee_summary()` function uses these rates.
 
-**Rollup read logic:** `getRollupSummary` first checks `compiled_reports` for a `Closed` row. If found → return frozen payload. If not → live SUM from `monthly_reports`. This means closed periods are immutable and fast.
+**`fee_changes_history`** — Records every rate change with the old and new rate and the effective `month`. The `get_fee_summary()` function looks back in this table to apply the historically-correct rate for a past reporting month.
 
-### Distribution Ledgers
+### Semen & Vaccines
 
-| Table | Purpose |
-|---|---|
-| `vaccine_transactions` | Every vaccine issuance (VaccineBank→CVH, CVH→CVD). Source of truth for vaccine flow |
-| `vaccine_stock` | Running balance per institute per vaccine. Updated transactionally on each issue |
-| `semen_distribution_transactions` | Every semen issuance (SemenBank→CVD/CVH/PAIW). Mirrors `vaccine_transactions` structure |
-| `semen_stock` | Running semen balance per institute per type |
-| `semen_transactions` | Legacy semen bank ledger (pre-re-arch). The new distribution flow uses `semen_distribution_transactions` |
+**`semen_types`** — Semen breed catalogue (HF_LOCAL, MURRAH, NILI_RAVI, etc.). `semen_category` controls fee tier (Local=₹25, ETT=₹35, Imported=₹50, Sexed=₹200).
 
-### Targets & Notifications
+**`semen_transactions`** — Legacy semen bank ledger (Received/Issued/Adjustment rows from the original Semen Bank Management sheet). Mostly superseded by `semen_distribution_transactions` for new issuances.
 
-| Table | Purpose |
-|---|---|
-| `institute_targets` | Annual performance targets per institute (or per institute type as default). Supports historical date ranges |
-| `notifications` | In-app notifications with 90-day retention (audit notifications kept forever) |
-| `push_subscriptions` | Web Push API endpoints for PWA background notifications |
+**`semen_stock`** — Denormalized current stock snapshot per (institute, semen_type). Updated by triggers/service code on each distribution transaction.
 
-### Views & Functions
+**`semen_distribution_transactions`** — New distribution ledger: SemenBank → CVH/CVD → PAIW. Each row records an issuance event. `issuing_institute_id` and `receiving_institute_id` trace the chain.
 
-| Object | Purpose |
-|---|---|
-| `v_institute_hierarchy` | Denormalized institute view with parent name and reporting tehsil name |
-| `v_monthly_report_summary` | Report list with institute/district/tehsil context |
-| `v_current_staff_postings` | Active postings only |
-| `v_current_targets` | Currently-active target rows |
-| `v_opd_progressive_totals` | Fiscal-year cumulative OPD totals (window function) |
-| `v_vaccination_progressive_totals` | Fiscal-year cumulative vaccination totals |
-| `v_ai_progressive_totals` | Fiscal-year cumulative AI totals |
-| `get_active_target(institute_id, type, vaccine_id, date)` | Returns the applicable target for a given date |
-| `get_straw_balance(institute_id, month)` | Returns semen straw balances (last year/month/this month/this year/in-hand) |
-| `get_fee_summary(institute_id, month)` | Returns fee breakdown per institute using historically-correct rates |
+**`vaccines`** / **`vaccine_species_dosage`** — Vaccine master and per-species dosage rates.
+
+**`vaccine_transactions`** — Vaccine issuance events (VaccineBank → institutes).
+
+**`vaccine_stock`** — Current vaccine stock snapshot per (institute, vaccine). Tracks `doses_received`, `doses_used`, `current_stock`.
+
+### Monthly Reports
+
+**`monthly_reports`** — The header record for each institute's monthly report. `(institute_id, reporting_month)` is unique. `submission_status` drives the lifecycle: `Draft → Submitted → Approved` (or `Rejected`).
+
+**`opd_report_details`** — OPD case counts by type (Equine/Bovine/Others/Dogs/Small/Poultry/Pet) and category (New/Old/Camp). Only `New` cases count toward the fee register.
+
+**`certificate_report_details`** — Certificates issued (Health, PostMortem, VetroLegal, Export).
+
+**`vaccination_report_details`** — Doses received/used and animals vaccinated per vaccine per report.
+
+**`ai_report_details`** — The most detailed section. Per semen type: AI done, coverage, PD testing (3-month lag), calving records (6-month lag), straw accounting (received/used/issued to AIW).
+
+**`diagnostic_report_details`** — Lab tests conducted (Fecal/Blood/Urine/Milk/Other).
+
+**`extension_activities_details`** — Extension camps and farmer training. `camp_subtype` (PLDB/ASCAD/Other) distinguishes fertility camp programmes. `ladies_attended` is tracked separately.
+
+**`financial_summaries`** — Calculated totals per report per service category. Populated by `get_fee_summary()`.
+
+**`surgery_report_details`** — Surgical procedures (castrations, pregnancy diagnosis). Currently castration counts flow through `opd_report_details.case_category = 'Camp'` in the fee calculation.
+
+### Audit & Workflow
+
+**`report_edits_audit`** — Immutable audit log of every field change made by an admin. Also used to snapshot full detail-table state before re-save (old_value = JSON blob of deleted rows).
+
+**`report_section_status`** — Per-section approval state for a submitted report. Sections: OPD, AI, Vaccination, Lab, Extension, Certificates. An admin can approve or reject individual sections; rejection returns the report to Draft for that section only.
+
+**`compiled_reports`** — Frozen tier snapshots. When a Tehsil overseer closes a period, the aggregated payload is written here as JSONB. Rollup reads always prefer this table over live SUM queries. Tiers: Tehsil / District / Punjab.
+
+### Targets & Periods
+
+**`institute_targets`** — Annual performance targets per institute or per institute_type (fallback). Supports historical date ranges (`effective_from / effective_until`). The `get_active_target()` function resolves the correct target for any date.
+
+**`reporting_periods`** — HQ-managed calendar of open/locked months. Controls whether field users can submit reports and when the deadline triggers late notifications.
+
+### Notifications
+
+**`notifications`** — In-app notification inbox. `actions` JSONB array drives action buttons (navigate / approve / reject). Critical notifications (approved/rejected) are kept forever; others expire after 90 days.
+
+**`push_subscriptions`** — Web Push API endpoints for out-of-app push notifications. Each browser session that subscribes gets a row.
 
 ---
 
-## Files Reference
+## Institute Hierarchy
 
-| File | Role |
-|---|---|
-| `Database/schema.sql` | Complete authoritative schema — single source of truth. Run this on a fresh DB |
-| `Database/seeds.sql` | Combined seed data in execution order |
-| `Database/init/` | Docker init directory — files run in alphabetical order on `docker compose up` with a fresh volume |
-| `Database/migrations/` | Historical ALTER TABLE / data-fix scripts. Already reflected in `schema.sql` |
-| `Database/migrate.sh` | Applies migrations against a running DB (for upgrades without volume reset) |
+The system supports a 4-tier hierarchy:
+
+```
+HQ (Punjab state)
+  └─ District_HQ (22 districts)
+       └─ TehsilHQ (84 tehsils)
+            └─ Field institutes (CVH, CVD, PAIW, SemenBank, VaccineBank)
+```
+
+Each tier is represented by a row in the `institutes` table with an appropriate `institute_type`. The two FK chains connect the tiers differently:
+
+| Chain | Column | Scope | Used for |
+|-------|--------|-------|----------|
+| Stock / discovery | `parent_institute_id` | 1 hop | Issuing semen/vaccines downward; listing children |
+| Approval / rollup | `reporting_institute_id` | 1 hop | Routing reports up for approval; rollup aggregation |
+
+A field institute sets `reporting_institute_id` → its TehsilHQ. The TehsilHQ sets `reporting_institute_id` → its District_HQ. The `scope.js::getVisibleInstituteIds()` function uses `reporting_institute_id` to determine what an Oversight user can see — it returns all institutes where `reporting_institute_id = user.instituteId`.
+
+> ⚠️ **Inconsistency found**: Migration `005-master-data-fixup.sql` calls this column `reporting_authority_id` (which does not exist). Migration `006-fee-formula-fix.sql` corrects it to `reporting_institute_id`. The combined `schema.sql` uses the correct name.
+
+---
+
+## Report Lifecycle
+
+```
+Draft ──submit──► Submitted ──approve──► Approved
+  ▲                  │
+  └───reject─────────┘  (status → Rejected; can resubmit)
+```
+
+Tables touched at each step:
+
+| Step | Table | Change |
+|------|-------|--------|
+| Save draft | `monthly_reports` | status = 'Draft' |
+| Section data | `opd_report_details`, `ai_report_details`, etc. | rows upserted |
+| Submit | `monthly_reports` | status = 'Submitted', submitted_at set |
+| Notification | `notifications` | report_submitted notification → Tehsil admins |
+| Approve section | `report_section_status` | status = 'Approved' per section |
+| Reject section | `report_section_status` | status = 'Rejected', rejection_reason set; `monthly_reports` status → 'Draft' |
+| Approve whole report | `monthly_reports` | status = 'Approved'; `report_edits_audit` entry |
+| Reject whole report | `monthly_reports` | status = 'Rejected'; `report_edits_audit` entry |
+| Re-save (before delete) | `report_edits_audit` | snapshot of all 6 detail tables as JSON old_value |
+| Close period (Tehsil) | `compiled_reports` | tier='Tehsil' row inserted with aggregated payload |
+| Deadline reminder | `notifications` | system notifications to institutes with missing reports |
+
+---
+
+## Distribution Ledgers
+
+### Semen
+
+```
+SemenBank
+  └─(semen_distribution_transactions)─► CVH/CVD
+       └─(ai_report_details.straws_issued_aiw)─► PAIW
+```
+
+Stock tracking:
+- `semen_stock` stores the current balance snapshot per (institute, semen_type).
+- `distributionService.js` adjusts `semen_stock` atomically within a transaction on each issuance.
+- The historical straw balance is computed by `get_straw_balance()` using `ai_report_details` (received, used, issued fields).
+
+### Vaccines
+
+```
+VaccineBank
+  └─(vaccine_transactions)─► CVH/CVD/TehsilHQ
+```
+
+Stock tracking:
+- `vaccine_stock` stores (doses_received, doses_used, current_stock) per (institute, vaccine).
+- Each issuance creates a `vaccine_transactions` row and updates the receiving and issuing `vaccine_stock` rows.
+
+---
+
+## Connecting to the Database Live
+
+### Prerequisites
+- Docker Compose running: `docker compose up -d` from project root
+- DB service name: `db` (in `docker-compose.yml`)
+- Default port: **5432** (host-mapped from container)
+- Credentials from `Backend/.env`:
+  - `DB_HOST=localhost` (or `db` from inside container network)
+  - `DB_PORT=5432`
+  - `DB_NAME` (default: `ahpunjab`)
+  - `DB_USER` (default: `postgres`)
+  - `DB_PASSWORD` (set in docker-compose env)
+
+### pgAdmin (GUI)
+1. Install pgAdmin 4 or use the Docker image: `docker run -p 5050:80 -e PGADMIN_DEFAULT_EMAIL=admin@admin.com -e PGADMIN_DEFAULT_PASSWORD=admin dpage/pgadmin4`
+2. Open `http://localhost:5050`
+3. Add Server → General: name = `AH Punjab Dev`
+4. Connection tab:
+   - Host: `localhost` (or Docker host IP)
+   - Port: `5432`
+   - Database: value of `$DB_NAME`
+   - Username: value of `$DB_USER`
+   - Password: value of `$DB_PASSWORD`
+5. Expand: Databases → ahpunjab → Schemas → public → Tables to browse ERD visually.
+
+### DBeaver (GUI alternative)
+1. New Connection → PostgreSQL
+2. Host: `localhost`, Port: `5432`
+3. Database / Username / Password from `.env`
+4. Click **Test Connection** → Finish
+5. Right-click database → **ER Diagram** for a visual ERD.
+
+### Useful Inspection Queries
+
+**Institute hierarchy tree (one level):**
+```sql
+SELECT
+  p.institute_name AS parent,
+  p.institute_type AS parent_type,
+  c.institute_name AS child,
+  c.institute_type AS child_type,
+  c.org_id
+FROM institutes c
+JOIN institutes p ON c.reporting_institute_id = p.institute_id
+ORDER BY p.institute_name, c.institute_name;
+```
+
+**Report status counts by month:**
+```sql
+SELECT
+  reporting_month,
+  submission_status,
+  COUNT(*) AS count
+FROM monthly_reports
+GROUP BY reporting_month, submission_status
+ORDER BY reporting_month DESC, submission_status;
+```
+
+**Semen stock balance per institute:**
+```sql
+SELECT
+  i.institute_name,
+  i.institute_type,
+  st.semen_code,
+  st.semen_name,
+  ss.current_stock
+FROM semen_stock ss
+JOIN institutes i ON ss.institute_id = i.institute_id
+JOIN semen_types st ON ss.semen_type_id = st.semen_id
+WHERE ss.current_stock > 0
+ORDER BY i.institute_name, st.semen_code;
+```
