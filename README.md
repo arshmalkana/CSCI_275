@@ -52,10 +52,13 @@ docker compose up --build
 **Prerequisites**: Node.js 20+, PostgreSQL 16 running locally
 
 ```bash
-# 1. Database: run init scripts in order
-psql -U ahpunjab -d ahpunjab_db -f Database/init/01-schema.sql
-psql -U ahpunjab -d ahpunjab_db -f Database/init/02-geo-seed.sql
-# ... (see docker-compose.yml volumes for full order)
+# 1. Database: start Postgres with schema + seeds auto-loaded
+docker compose up -d postgres pgadmin   # or: npm run db
+# Manual alternative — run in order:
+#   psql ... -f Database/schema.sql
+#   psql ... -f Database/seed-geo.sql
+#   psql ... -f Database/seed-login.sql
+#   psql ... -f Database/seed-other.sql
 
 # 2. Backend (port 8080)
 cd Backend
@@ -145,20 +148,16 @@ SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / SMTP_FROM
 VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT
 ```
 
-## Database Migrations
+## Database Schema & Seeds
 
-Migrations are additive SQL files applied in order by Docker's `docker-entrypoint-initdb.d/` mechanism:
+The schema and seed data are consolidated into four files, applied in order by Docker's `docker-entrypoint-initdb.d/` mechanism (see `docker-compose.yml`):
 
 | File | Purpose |
 |---|---|
-| `init/01-schema.sql` | Full schema (all tables, indexes, functions) |
-| `init/02-*.sql` | Geographic + semen-type seed data |
-| `init/03-test-seed.sql` | Dev seed data |
-| `migrations/001` | Buffalo breed names |
-| `migrations/002` | Report schema alignment, `get_fee_summary` |
-| `migrations/003` | `reporting_periods` table |
-| `migrations/004` | `password_reset_tokens` table |
-| `migrations/005` | Fix vaccine codes; historical-rate-aware `get_fee_summary`; fee_changes_history index |
+| `Database/schema.sql` | Full schema — all tables, indexes, views, functions, triggers |
+| `Database/seed-geo.sql` | Punjab geography (districts, tehsils, villages) |
+| `Database/seed-login.sql` | Minimal master data + test user |
+| `Database/seed-other.sql` | Sample test data + Talwandi Sabo real data |
 
 ## Development Commands
 

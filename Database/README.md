@@ -7,8 +7,9 @@ Docker-based PostgreSQL setup for the AH Punjab Reporting System.
 ### 1. Start Database
 
 ```bash
-cd Database
-docker-compose up -d
+# From the project root (uses the root docker-compose.yml)
+docker compose up -d postgres pgadmin
+# or: npm run db
 ```
 
 This will:
@@ -173,11 +174,14 @@ docker exec -i ahpunjab-postgres psql -U ahpunjab ahpunjab_db < backup.sql
 
 ## Files
 
+Loaded in order on first init (see `docker-compose.yml` in the project root):
+
 | File | Purpose |
 |------|---------|
-| `docker-compose.yml` | Docker configuration |
-| `init/01-schema.sql` | Database schema (tables, indexes, views) |
-| `init/02-seed.sql` | Sample data for testing |
+| `schema.sql` | Full schema — all tables, indexes, views, functions, triggers |
+| `seed-geo.sql` | Punjab geography (21 districts, 84 tehsils, 12,354 villages) |
+| `seed-login.sql` | Minimal master data + test user (username `test` / password `test`) |
+| `seed-other.sql` | Sample test data + Talwandi Sabo real data |
 
 ## Troubleshooting
 

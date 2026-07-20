@@ -10,20 +10,14 @@ services:
       POSTGRES_PASSWORD: ahpunjab_dev_2024
       POSTGRES_DB: ahpunjab_db
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    ports:
+      - "127.0.0.1:5432:5432"
     volumes:
-      - ./Database/init/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-      - ./Database/init/02-geo-seed.sql:/docker-entrypoint-initdb.d/02-geo-seed.sql
-      - ./Database/init/02-seed-semen-types.sql:/docker-entrypoint-initdb.d/02-seed-semen-types.sql
-      - ./Database/init/03-test-seed.sql:/docker-entrypoint-initdb.d/03-test-seed.sql
-      - ./Database/init/04-seed-monthly-reports.sql:/docker-entrypoint-initdb.d/04-seed-monthly-reports.sql
-      - ./Database/init/05-seed-notifications.sql:/docker-entrypoint-initdb.d/05-seed-notifications.sql
-      - ./Database/migrations/001-update-buffalo-breeds.sql:/docker-entrypoint-initdb.d/06-migration-001.sql
-      - ./Database/migrations/002-report-alignment.sql:/docker-entrypoint-initdb.d/07-migration-002.sql
-      - ./Database/migrations/003-reporting-periods.sql:/docker-entrypoint-initdb.d/08-migration-003.sql
-      - ./Database/migrations/004-password-reset-tokens.sql:/docker-entrypoint-initdb.d/09-migration-004.sql
-      - ./Database/migrations/005-master-data-fixup.sql:/docker-entrypoint-initdb.d/10-migration-005.sql
-      - ./Database/init/07-seed-talwandi-sabo.sql:/docker-entrypoint-initdb.d/11-seed-talwandi-sabo.sql
-      - ./Database/migrations/006-fee-formula-fix.sql:/docker-entrypoint-initdb.d/12-migration-006.sql
+      # Consolidated schema + seeds (run in order on first init / empty volume)
+      - ./Database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./Database/seed-geo.sql:/docker-entrypoint-initdb.d/02-seed-geo.sql
+      - ./Database/seed-login.sql:/docker-entrypoint-initdb.d/03-seed-login.sql
+      - ./Database/seed-other.sql:/docker-entrypoint-initdb.d/04-seed-other.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ahpunjab -d ahpunjab_db"]
       interval: 10s

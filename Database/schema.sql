@@ -1,6 +1,9 @@
--- AH Punjab Reporting System - PostgreSQL Database Schema
--- Comprehensive schema with all tables and extensions
--- Version: 2.0 - Includes WebAuthn, refresh tokens, and profile features
+-- AH Punjab Reporting System — PostgreSQL Schema
+--
+-- Key design decisions:
+--   reporting_institute_id  → approval routing + rollup target (one hop, Tehsil only)
+--   parent_institute_id     → stock-issuing + child-visibility chain (NEVER approval)
+--   get_fee_summary uses case_category = 'New' for OPD
 
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -77,9 +80,8 @@ CREATE TABLE institutes (
     district_id INTEGER NOT NULL REFERENCES districts(district_id),
     latitude DECIMAL(10, 8),              -- Institute GPS latitude
     longitude DECIMAL(11, 8),             -- Institute GPS longitude
-    is_cluster_available BOOLEAN DEFAULT FALSE, -- Has semen cluster facility
-    is_lab_available BOOLEAN DEFAULT FALSE,     -- Has laboratory facility
-    is_tehsil_hq BOOLEAN DEFAULT FALSE,         -- Serves as tehsil headquarters
+    is_cluster_available BOOLEAN DEFAULT FALSE,
+    is_lab_available BOOLEAN DEFAULT FALSE,
     current_incharge_id INTEGER,
     parent_institute_id INTEGER REFERENCES institutes(institute_id),    -- Direct parent: stock-issuing + child visibility ONLY
     reporting_institute_id INTEGER REFERENCES institutes(institute_id), -- Tehsil: approval routing + rollup target (NEVER parent hierarchy)
@@ -294,39 +296,7 @@ CREATE TABLE vaccine_species_dosage (
 );
 
 -- ============================================================================
--- 8. SEMEN BANK MANAGEMENT (From Semen Bank Management Sheet)
--- ============================================================================
-
-CREATE TYPE transaction_type AS ENUM ('Received', 'Issued', 'Adjustment');
-
-CREATE TABLE semen_transactions (
-    transaction_id SERIAL PRIMARY KEY,
-    transaction_date DATE NOT NULL,
-    month VARCHAR(7) NOT NULL, -- YYYY-MM
-    semen_bank_id INTEGER NOT NULL REFERENCES institutes(institute_id),
-    institute_id INTEGER REFERENCES institutes(institute_id), -- Receiving/Issuing institute
-    semen_type_id INTEGER NOT NULL REFERENCES semen_types(semen_id),
-    transaction_type transaction_type NOT NULL,
-    quantity INTEGER NOT NULL,
-    batch_number VARCHAR(50),
-    expiry_date DATE,
-    remarks TEXT,
-    created_by INTEGER REFERENCES staff(staff_id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Current semen stock (calculated from transactions)
-CREATE TABLE semen_stock (
-    stock_id SERIAL PRIMARY KEY,
-    institute_id INTEGER NOT NULL REFERENCES institutes(institute_id),
-    semen_type_id INTEGER NOT NULL REFERENCES semen_types(semen_id),
-    current_stock INTEGER DEFAULT 0,
-    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(institute_id, semen_type_id)
-);
-
--- ============================================================================
--- 9. VACCINE DISTRIBUTION
+-- 8. VACCINE DISTRIBUTION
 -- ============================================================================
 
 CREATE TABLE vaccine_transactions (
@@ -341,6 +311,7 @@ CREATE TABLE vaccine_transactions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Current vaccine stock per institute (maintained from transactions)
 CREATE TABLE vaccine_stock (
     stock_id SERIAL PRIMARY KEY,
     institute_id INTEGER NOT NULL REFERENCES institutes(institute_id),
@@ -353,7 +324,7 @@ CREATE TABLE vaccine_stock (
 );
 
 -- ============================================================================
--- 10. MONTHLY REPORTS (Main Report from Form Responses Sheet)
+-- 9. MONTHLY REPORTS
 -- ============================================================================
 
 CREATE TYPE report_status AS ENUM ('Draft', 'Submitted', 'Rejected', 'Approved');
@@ -377,7 +348,7 @@ CREATE TABLE monthly_reports (
 );
 
 -- ============================================================================
--- 11. OPD SERVICES REPORTING (From Form Responses)
+-- 10. OPD SERVICES REPORTING
 -- ============================================================================
 
 CREATE TYPE opd_case_type AS ENUM ('Equine', 'Bovine', 'Others', 'Dogs', 'Small', 'Poultry', 'Pet');
@@ -395,7 +366,7 @@ CREATE TABLE opd_report_details (
 );
 
 -- ============================================================================
--- 12. SURGERY/PROCEDURES REPORTING
+-- 11. SURGERY/PROCEDURES REPORTING
 -- ============================================================================
 
 CREATE TABLE surgery_report_details (
@@ -409,7 +380,7 @@ CREATE TABLE surgery_report_details (
 );
 
 -- ============================================================================
--- 13. CERTIFICATE SERVICES
+-- 12. CERTIFICATE SERVICES
 -- ============================================================================
 
 CREATE TYPE certificate_type AS ENUM ('Health', 'PostMortem', 'VetroLegal', 'Export');
@@ -425,7 +396,7 @@ CREATE TABLE certificate_report_details (
 );
 
 -- ============================================================================
--- 14. VACCINATION REPORTING (From Form Responses)
+-- 13. VACCINATION REPORTING
 -- ============================================================================
 
 CREATE TABLE vaccination_report_details (
@@ -440,7 +411,7 @@ CREATE TABLE vaccination_report_details (
 );
 
 -- ============================================================================
--- 15. AI SERVICES REPORTING (From Form Responses - Very Detailed)
+-- 14. AI SERVICES REPORTING
 -- ============================================================================
 
 CREATE TABLE ai_report_details (
@@ -466,7 +437,7 @@ CREATE TABLE ai_report_details (
 );
 
 -- ============================================================================
--- 16. DIAGNOSTIC/LAB SERVICES
+-- 15. DIAGNOSTIC/LAB SERVICES
 -- ============================================================================
 
 CREATE TYPE diagnostic_type AS ENUM ('Fecal', 'Blood', 'Urine', 'Milk', 'Other');
@@ -482,7 +453,7 @@ CREATE TABLE diagnostic_report_details (
 );
 
 -- ============================================================================
--- 17. EXTENSION ACTIVITIES
+-- 16. EXTENSION ACTIVITIES
 -- ============================================================================
 
 CREATE TYPE activity_type AS ENUM ('Camp', 'SchoolLecture', 'FarmerTraining', 'Awareness', 'Other');
@@ -501,20 +472,7 @@ CREATE TABLE extension_activities_details (
 );
 
 -- ============================================================================
--- 18. FINANCIAL SUMMARY (Calculated from all report details)
--- ============================================================================
-
-CREATE TABLE financial_summaries (
-    summary_id SERIAL PRIMARY KEY,
-    report_id INTEGER NOT NULL REFERENCES monthly_reports(report_id) ON DELETE CASCADE,
-    category service_category NOT NULL,
-    total_services INTEGER DEFAULT 0,
-    total_fees DECIMAL(12,2) DEFAULT 0,
-    UNIQUE(report_id, category)
-);
-
--- ============================================================================
--- 19. AUDIT TRAIL (Report Edits by Tehsil/District Admins)
+-- 17. AUDIT TRAIL (Report Edits by Tehsil/District Admins)
 -- ============================================================================
 
 CREATE TABLE report_edits_audit (
@@ -530,7 +488,7 @@ CREATE TABLE report_edits_audit (
 );
 
 -- ============================================================================
--- 20. PERFORMANCE TARGETS (Historical tracking with effective dates)
+-- 18. PERFORMANCE TARGETS
 -- ============================================================================
 
 CREATE TYPE target_type AS ENUM ('OPD', 'AI_Cattle', 'AI_Buffalo', 'Vaccine');
@@ -636,7 +594,7 @@ WHERE it.effective_until IS NULL OR it.effective_until >= CURRENT_DATE
 ORDER BY target_scope, i.institute_name, it.institute_type, it.target_type, v.vaccine_name;
 
 -- ============================================================================
--- 21. INDEXES FOR PERFORMANCE
+-- 19. INDEXES
 -- ============================================================================
 
 -- Geographic indexes
@@ -673,8 +631,6 @@ CREATE INDEX idx_monthly_reports_institute ON monthly_reports(institute_id);
 CREATE INDEX idx_monthly_reports_status ON monthly_reports(submission_status);
 
 -- Transaction indexes
-CREATE INDEX idx_semen_transactions_date ON semen_transactions(transaction_date);
-CREATE INDEX idx_semen_transactions_month ON semen_transactions(month);
 CREATE INDEX idx_vaccine_transactions_date ON vaccine_transactions(transaction_date);
 
 -- Target indexes
@@ -686,7 +642,7 @@ CREATE INDEX idx_institute_targets_effective ON institute_targets(effective_from
 CREATE INDEX idx_institute_targets_active ON institute_targets(institute_id, target_type, effective_from, effective_until) WHERE institute_id IS NOT NULL;
 
 -- ============================================================================
--- 22. TRIGGERS FOR AUTO-UPDATE timestamps
+-- 20. TRIGGERS FOR AUTO-UPDATE timestamps
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -724,7 +680,7 @@ CREATE TRIGGER update_institute_targets_updated_at BEFORE UPDATE ON institute_ta
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
--- 23. CLEANUP FUNCTIONS FOR SECURITY
+-- 21. CLEANUP FUNCTIONS FOR SECURITY
 -- ============================================================================
 
 -- Auto-cleanup expired WebAuthn challenges
@@ -750,7 +706,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================================================
--- 24. VIEWS FOR COMMON QUERIES
+-- 22. VIEWS
 -- ============================================================================
 
 -- Complete institute hierarchy view with location and features
@@ -764,7 +720,6 @@ SELECT
     i.longitude AS institute_longitude,
     i.is_cluster_available,
     i.is_lab_available,
-    i.is_tehsil_hq,
     v.village_name,
     v.latitude AS village_latitude,
     v.longitude AS village_longitude,
@@ -847,7 +802,7 @@ JOIN tehsils t ON i.tehsil_id = t.tehsil_id
 JOIN staff s ON mr.prepared_by = s.staff_id;
 
 -- ============================================================================
--- 25. NOTIFICATIONS SYSTEM
+-- 23. NOTIFICATIONS SYSTEM
 -- ============================================================================
 
 -- Notifications table for in-app and push notifications
@@ -924,32 +879,9 @@ CREATE TRIGGER trigger_set_notification_expiry
     FOR EACH ROW
     EXECUTE FUNCTION set_notification_expiry();
 
--- ============================================================================
--- 26. COMMENTS FOR DOCUMENTATION
--- ============================================================================
-
-COMMENT ON TABLE institutes IS 'Veterinary institutes (CVH, CVD, PAIW, etc.) mapped from Google Sheets OrgIds';
-COMMENT ON TABLE staff IS 'Staff members with login credentials (user_id = OrgIds from sheets)';
-COMMENT ON TABLE monthly_reports IS 'Main monthly reporting form mapped from Form Responses sheet';
-COMMENT ON TABLE semen_transactions IS 'Semen bank management from Semen Bank Management sheet';
-COMMENT ON TABLE service_charges IS 'Fee structure from Fees Management sheet';
-COMMENT ON TABLE webauthn_credentials IS 'Stores WebAuthn/FIDO2 credentials (passkeys) for biometric authentication';
-COMMENT ON TABLE webauthn_challenges IS 'Stores WebAuthn challenges for registration and authentication flows';
-COMMENT ON TABLE refresh_tokens IS 'Stores active refresh token sessions for security and session management';
-COMMENT ON TABLE institute_targets IS 'Performance targets with historical tracking - stores OPD, AI, and vaccine targets with effective date ranges';
-COMMENT ON TABLE notifications IS 'In-app and push notifications with action buttons and attachments - 90 day retention policy (critical notifications kept forever)';
-COMMENT ON TABLE push_subscriptions IS 'Web Push API subscription endpoints for browser push notifications when PWA is closed';
-COMMENT ON COLUMN staff.profile_picture_url IS 'URL or base64 data for user profile picture';
-COMMENT ON COLUMN staff.passkey_enabled IS 'Indicates if user has WebAuthn passkey authentication enabled';
-COMMENT ON COLUMN institute_targets.effective_until IS 'NULL means currently active, otherwise historical record';
-COMMENT ON COLUMN notifications.actions IS 'JSONB array of action buttons with permission checks - e.g., [{"label": "View Report", "type": "navigate", "path": "/reports/monthly/2024-06"}]';
-COMMENT ON COLUMN notifications.expires_at IS 'Auto-set to 90 days from creation unless category is report_approved/report_rejected (kept forever)';
-COMMENT ON FUNCTION get_active_target IS 'Returns active target for a given institute, target type, and date - supports historical target queries';
-COMMENT ON FUNCTION set_notification_expiry IS 'Auto-sets notification expiry to 90 days unless it is a critical audit notification';
 
 -- ============================================================================
--- 27. REPORTING PERIODS
---     HQ/Super_Admin controls which months are open, their deadline, and lock state
+-- 24. REPORTING PERIODS
 -- ============================================================================
 
 CREATE TABLE reporting_periods (
@@ -973,8 +905,7 @@ CREATE TRIGGER update_reporting_periods_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
--- 28. PASSWORD RESET TOKENS
---     Supports self-service forgot-password flow
+-- 25. PASSWORD RESET TOKENS
 -- ============================================================================
 
 CREATE TABLE password_reset_tokens (
@@ -990,10 +921,8 @@ CREATE INDEX idx_prt_token_hash ON password_reset_tokens(token_hash);
 CREATE INDEX idx_prt_staff_id   ON password_reset_tokens(staff_id);
 
 -- ============================================================================
--- 29. PROGRESSIVE TOTAL VIEWS
---     Mirror the "Progressive Total" rows in the Reports spreadsheet.
---     Cumulative sums from the start of the fiscal year (April) up to and
---     including each reporting_month, partitioned per institute.
+-- 26. PROGRESSIVE TOTAL VIEWS
+--     Cumulative sums from fiscal year start (April) per institute.
 -- ============================================================================
 
 CREATE VIEW v_opd_progressive_totals AS
@@ -1071,10 +1000,8 @@ WINDOW w AS (
 );
 
 -- ============================================================================
--- 30. STRAW BALANCE FUNCTION
---     Mirrors the "Account of STRAW Record During Month" section of Reports sheet.
---     Returns running balances (last year, last month, this month, this year)
---     per semen type for a given institute and reporting month.
+-- 27. STRAW BALANCE FUNCTION
+--     Returns running straw balances per semen type for a given institute and month.
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION get_straw_balance(
@@ -1151,12 +1078,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================================================
--- 31. FEE SUMMARY FUNCTION (historical-rate-aware)
---     Mirrors the "TOTAL FEE DEPOSITED" section of Reports sheet.
---     For a given reporting_month X, uses the rate in effect during X by
---     looking up fee_changes_history for any rate change that happened after X.
---     Falls back to current_rate if no change has happened since X.
---     Returns one row per institute in scope (self + sub-institutes).
+-- 28. FEE SUMMARY FUNCTION (historical-rate-aware)
+--     Uses rate in effect during reporting_month by checking fee_changes_history.
+--     Falls back to current_rate if no change has occurred since then.
 -- ============================================================================
 
 CREATE INDEX idx_fee_changes_charge_month ON fee_changes_history(charge_id, month);
@@ -1325,10 +1249,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================================================
--- 32. PER-SECTION REPORT STATUS
---     Panel approver can approve or reject individual sections of a report.
---     Rejected sections return to the field user for correction; the report
---     itself stays "Submitted" until all sections are resolved.
+-- 29. PER-SECTION REPORT STATUS
 -- ============================================================================
 
 CREATE TYPE section_status AS ENUM ('Pending', 'Approved', 'Rejected');
@@ -1353,11 +1274,8 @@ CREATE TRIGGER update_report_section_status_updated_at BEFORE UPDATE ON report_s
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
--- 33. COMPILED (FROZEN) TIER REPORTS
---     When an overseer manually closes a period, a frozen snapshot of the
---     aggregated data is written here. Reads for rollup always use this table,
---     never live SUM queries against monthly_reports.
---     Tiers: 'Tehsil', 'District', 'Punjab'
+-- 30. COMPILED (FROZEN) TIER REPORTS
+--     Frozen aggregate snapshot per tier when a period is closed.
 -- ============================================================================
 
 CREATE TYPE compile_tier AS ENUM ('Tehsil', 'District', 'Punjab');
@@ -1384,9 +1302,8 @@ CREATE TRIGGER update_compiled_reports_updated_at BEFORE UPDATE ON compiled_repo
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
--- 34. SEMEN DISTRIBUTION TRANSACTIONS
---     Mirrors vaccine_transactions for semen. SemenBank issues semen
---     to CVD/CVH/other SemenBanks; CVH issues to its own PAIW children.
+-- 31. SEMEN DISTRIBUTION TRANSACTIONS
+--     SemenBank issues to CVD/CVH; CVH issues to PAIW children.
 -- ============================================================================
 
 CREATE TABLE semen_distribution_transactions (
@@ -1407,3 +1324,15 @@ CREATE INDEX idx_semen_dist_tx_date      ON semen_distribution_transactions(tran
 CREATE INDEX idx_semen_dist_tx_issuer    ON semen_distribution_transactions(issuing_institute_id);
 CREATE INDEX idx_semen_dist_tx_receiver  ON semen_distribution_transactions(receiving_institute_id);
 CREATE INDEX idx_semen_dist_tx_type      ON semen_distribution_transactions(semen_type_id);
+
+-- Current semen stock per institute (maintained from distribution transactions)
+CREATE TABLE semen_stock (
+    stock_id SERIAL PRIMARY KEY,
+    institute_id INTEGER NOT NULL REFERENCES institutes(institute_id),
+    semen_type_id INTEGER NOT NULL REFERENCES semen_types(semen_id),
+    current_stock INTEGER DEFAULT 0,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(institute_id, semen_type_id)
+);
+
+CREATE INDEX idx_semen_stock_institute ON semen_stock(institute_id);
