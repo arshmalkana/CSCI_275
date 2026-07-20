@@ -159,35 +159,8 @@ ON CONFLICT (org_id) DO NOTHING;
 -- 5. TEST USER (username: test, password: test)
 -- ============================================================================
 
--- Insert test staff member
--- NOTE: In production, password should be hashed with Argon2id
--- For testing purposes, using plain text "test"
-INSERT INTO staff (
-    user_id,
-    full_name,
-    designation,
-    date_of_birth,
-    mobile,
-    email,
-    password_hash,
-    user_role,
-    current_institute_id,
-    is_first_time,
-    is_active
-) VALUES (
-    'test',
-    'Dr. Test User',
-    'Veterinary Officer',
-    '1990-01-01',
-    '+919999999999',
-    'test@ahpunjab.gov.in',
-    'testtest',  -- Password: test (should be Argon2id hashed in production)
-    'CVH',
-    (SELECT institute_id FROM institutes WHERE org_id = 'TEST001'),
-    FALSE,
-    TRUE
-)
-ON CONFLICT (user_id) DO NOTHING;
+-- The 'test' staff member (and its posting) are created by seed-login.sql.
+-- Re-inserting here is redundant and burns a sequence id, so it is omitted.
 
 -- Add additional staff members to the test institute
 INSERT INTO staff (
@@ -246,21 +219,7 @@ SET current_incharge_id = (SELECT staff_id FROM staff WHERE user_id = 'test')
 WHERE org_id = 'TEST001';
 
 -- Create staff posting for test user
-INSERT INTO staff_postings (
-    staff_id,
-    institute_id,
-    designation,
-    start_date,
-    is_incharge,
-    is_current
-) VALUES (
-    (SELECT staff_id FROM staff WHERE user_id = 'test'),
-    (SELECT institute_id FROM institutes WHERE org_id = 'TEST001'),
-    'Veterinary Officer',
-    '2024-01-01',
-    TRUE,
-    TRUE
-)
+-- The test user's staff_posting is created by seed-login.sql (omitted here to avoid a duplicate).
 
 -- ============================================================================
 -- 3. TEST INSTITUTE SERVICE VILLAGES
@@ -271,15 +230,19 @@ INSERT INTO staff_postings (
 -- ============================================================================
 
 -- Add 5 service villages for the test institute
+-- (SELECT wrapped in a subquery: ON CONFLICT cannot directly follow a LIMIT)
 INSERT INTO institute_service_villages (institute_id, village_id, is_primary)
-SELECT
-    (SELECT institute_id FROM institutes WHERE org_id = 'TEST001'),
-    village_id,
-    (ROW_NUMBER() OVER ()) = 1 AS is_primary
-FROM villages
-WHERE district_id = (SELECT district_id FROM districts WHERE district_name = 'Ludhiana')
-  AND tehsil_id = (SELECT tehsil_id FROM tehsils WHERE tehsil_name = 'Ludhiana (East)' AND district_id = (SELECT district_id FROM districts WHERE district_name = 'Ludhiana') LIMIT 1)
-LIMIT 5
+SELECT institute_id, village_id, is_primary
+FROM (
+    SELECT
+        (SELECT institute_id FROM institutes WHERE org_id = 'TEST001') AS institute_id,
+        village_id,
+        (ROW_NUMBER() OVER ()) = 1 AS is_primary
+    FROM villages
+    WHERE district_id = (SELECT district_id FROM districts WHERE district_name = 'Ludhiana')
+      AND tehsil_id = (SELECT tehsil_id FROM tehsils WHERE tehsil_name = 'Ludhiana (East)' AND district_id = (SELECT district_id FROM districts WHERE district_name = 'Ludhiana') LIMIT 1)
+    LIMIT 5
+) sub
 ON CONFLICT (institute_id, village_id) DO NOTHING;
 
 -- ============================================================================
@@ -671,7 +634,7 @@ DECLARE
   v_report_id INTEGER;
 BEGIN
   INSERT INTO monthly_reports (institute_id, reporting_month, start_date, end_date, prepared_by, verified_by, submission_status, submitted_at, verified_at, created_at, updated_at)
-  VALUES (1, '2024-09', '2024-09-01', '2024-09-30', 1, 2, 'Approved', '2024-10-02 09:00:00+00', '2024-10-03 14:30:00+00', '2024-10-01 08:00:00+00', '2024-10-03 14:30:00+00')
+  VALUES (1, '2024-09', '2024-09-01', '2024-09-30', 1, (SELECT staff_id FROM staff WHERE email = 'harpreet.singh@ahpunjab.gov.in'), 'Approved', '2024-10-02 09:00:00+00', '2024-10-03 14:30:00+00', '2024-10-01 08:00:00+00', '2024-10-03 14:30:00+00')
   RETURNING report_id INTO v_report_id;
 
   INSERT INTO opd_report_details (report_id, opd_type, case_category, total_cases, beneficiaries_covered)
@@ -711,7 +674,7 @@ DECLARE
   v_report_id INTEGER;
 BEGIN
   INSERT INTO monthly_reports (institute_id, reporting_month, start_date, end_date, prepared_by, verified_by, submission_status, submitted_at, verified_at, created_at, updated_at)
-  VALUES (1, '2024-08', '2024-08-01', '2024-08-31', 1, 2, 'Approved', '2024-09-02 11:00:00+00', '2024-09-03 16:00:00+00', '2024-09-01 08:00:00+00', '2024-09-03 16:00:00+00')
+  VALUES (1, '2024-08', '2024-08-01', '2024-08-31', 1, (SELECT staff_id FROM staff WHERE email = 'harpreet.singh@ahpunjab.gov.in'), 'Approved', '2024-09-02 11:00:00+00', '2024-09-03 16:00:00+00', '2024-09-01 08:00:00+00', '2024-09-03 16:00:00+00')
   RETURNING report_id INTO v_report_id;
 
   INSERT INTO opd_report_details (report_id, opd_type, case_category, total_cases, beneficiaries_covered)
@@ -744,7 +707,7 @@ DECLARE
   v_report_id INTEGER;
 BEGIN
   INSERT INTO monthly_reports (institute_id, reporting_month, start_date, end_date, prepared_by, verified_by, submission_status, submitted_at, verified_at, created_at, updated_at)
-  VALUES (1, '2024-06', '2024-06-01', '2024-06-30', 1, 2, 'Approved', '2024-07-02 10:00:00+00', '2024-07-03 15:00:00+00', '2024-07-01 08:00:00+00', '2024-07-03 15:00:00+00')
+  VALUES (1, '2024-06', '2024-06-01', '2024-06-30', 1, (SELECT staff_id FROM staff WHERE email = 'harpreet.singh@ahpunjab.gov.in'), 'Approved', '2024-07-02 10:00:00+00', '2024-07-03 15:00:00+00', '2024-07-01 08:00:00+00', '2024-07-03 15:00:00+00')
   RETURNING report_id INTO v_report_id;
 
   INSERT INTO opd_report_details (report_id, opd_type, case_category, total_cases, beneficiaries_covered)
@@ -761,7 +724,7 @@ DECLARE
   v_report_id INTEGER;
 BEGIN
   INSERT INTO monthly_reports (institute_id, reporting_month, start_date, end_date, prepared_by, verified_by, submission_status, submitted_at, verified_at, created_at, updated_at)
-  VALUES (1, '2024-05', '2024-05-01', '2024-05-31', 1, 2, 'Approved', '2024-06-02 09:30:00+00', '2024-06-03 14:00:00+00', '2024-06-01 08:00:00+00', '2024-06-03 14:00:00+00')
+  VALUES (1, '2024-05', '2024-05-01', '2024-05-31', 1, (SELECT staff_id FROM staff WHERE email = 'harpreet.singh@ahpunjab.gov.in'), 'Approved', '2024-06-02 09:30:00+00', '2024-06-03 14:00:00+00', '2024-06-01 08:00:00+00', '2024-06-03 14:00:00+00')
   RETURNING report_id INTO v_report_id;
 
   INSERT INTO opd_report_details (report_id, opd_type, case_category, total_cases, beneficiaries_covered)
@@ -778,7 +741,7 @@ DECLARE
   v_report_id INTEGER;
 BEGIN
   INSERT INTO monthly_reports (institute_id, reporting_month, start_date, end_date, prepared_by, verified_by, submission_status, submitted_at, verified_at, created_at, updated_at)
-  VALUES (1, '2024-04', '2024-04-01', '2024-04-30', 1, 2, 'Approved', '2024-05-02 10:00:00+00', '2024-05-03 15:30:00+00', '2024-05-01 08:00:00+00', '2024-05-03 15:30:00+00')
+  VALUES (1, '2024-04', '2024-04-01', '2024-04-30', 1, (SELECT staff_id FROM staff WHERE email = 'harpreet.singh@ahpunjab.gov.in'), 'Approved', '2024-05-02 10:00:00+00', '2024-05-03 15:30:00+00', '2024-05-01 08:00:00+00', '2024-05-03 15:30:00+00')
   RETURNING report_id INTO v_report_id;
 
   INSERT INTO opd_report_details (report_id, opd_type, case_category, total_cases, beneficiaries_covered)
@@ -799,7 +762,7 @@ DECLARE
   v_report_id INTEGER;
 BEGIN
   INSERT INTO monthly_reports (institute_id, reporting_month, start_date, end_date, prepared_by, verified_by, submission_status, submitted_at, verified_at, created_at, updated_at)
-  VALUES (1, '2024-03', '2024-03-01', '2024-03-31', 1, 2, 'Approved', '2024-04-02 09:00:00+00', '2024-04-03 14:00:00+00', '2024-04-01 08:00:00+00', '2024-04-03 14:00:00+00')
+  VALUES (1, '2024-03', '2024-03-01', '2024-03-31', 1, (SELECT staff_id FROM staff WHERE email = 'harpreet.singh@ahpunjab.gov.in'), 'Approved', '2024-04-02 09:00:00+00', '2024-04-03 14:00:00+00', '2024-04-01 08:00:00+00', '2024-04-03 14:00:00+00')
   RETURNING report_id INTO v_report_id;
 
   INSERT INTO opd_report_details (report_id, opd_type, case_category, total_cases, beneficiaries_covered)
@@ -816,7 +779,7 @@ DECLARE
   v_report_id INTEGER;
 BEGIN
   INSERT INTO monthly_reports (institute_id, reporting_month, start_date, end_date, prepared_by, verified_by, submission_status, submitted_at, verified_at, admin_comment, created_at, updated_at)
-  VALUES (1, '2024-02', '2024-02-01', '2024-02-29', 1, 2, 'Rejected', '2024-03-02 10:00:00+00', '2024-03-03 16:00:00+00', 'Vaccination data incomplete. Please provide opening and closing stock details.', '2024-03-01 08:00:00+00', '2024-03-03 16:00:00+00')
+  VALUES (1, '2024-02', '2024-02-01', '2024-02-29', 1, (SELECT staff_id FROM staff WHERE email = 'harpreet.singh@ahpunjab.gov.in'), 'Rejected', '2024-03-02 10:00:00+00', '2024-03-03 16:00:00+00', 'Vaccination data incomplete. Please provide opening and closing stock details.', '2024-03-01 08:00:00+00', '2024-03-03 16:00:00+00')
   RETURNING report_id INTO v_report_id;
 
   INSERT INTO opd_report_details (report_id, opd_type, case_category, total_cases, beneficiaries_covered)
@@ -831,7 +794,7 @@ DECLARE
   v_report_id INTEGER;
 BEGIN
   INSERT INTO monthly_reports (institute_id, reporting_month, start_date, end_date, prepared_by, verified_by, submission_status, submitted_at, verified_at, created_at, updated_at)
-  VALUES (1, '2024-01', '2024-01-01', '2024-01-31', 1, 2, 'Approved', '2024-02-02 09:30:00+00', '2024-02-03 14:30:00+00', '2024-02-01 08:00:00+00', '2024-02-03 14:30:00+00')
+  VALUES (1, '2024-01', '2024-01-01', '2024-01-31', 1, (SELECT staff_id FROM staff WHERE email = 'harpreet.singh@ahpunjab.gov.in'), 'Approved', '2024-02-02 09:30:00+00', '2024-02-03 14:30:00+00', '2024-02-01 08:00:00+00', '2024-02-03 14:30:00+00')
   RETURNING report_id INTO v_report_id;
 
   INSERT INTO opd_report_details (report_id, opd_type, case_category, total_cases, beneficiaries_covered)
@@ -848,7 +811,7 @@ DECLARE
   v_report_id INTEGER;
 BEGIN
   INSERT INTO monthly_reports (institute_id, reporting_month, start_date, end_date, prepared_by, verified_by, submission_status, submitted_at, verified_at, created_at, updated_at)
-  VALUES (1, '2023-12', '2023-12-01', '2023-12-31', 1, 2, 'Approved', '2024-01-02 10:00:00+00', '2024-01-03 15:00:00+00', '2024-01-01 08:00:00+00', '2024-01-03 15:00:00+00')
+  VALUES (1, '2023-12', '2023-12-01', '2023-12-31', 1, (SELECT staff_id FROM staff WHERE email = 'harpreet.singh@ahpunjab.gov.in'), 'Approved', '2024-01-02 10:00:00+00', '2024-01-03 15:00:00+00', '2024-01-01 08:00:00+00', '2024-01-03 15:00:00+00')
   RETURNING report_id INTO v_report_id;
 
   INSERT INTO opd_report_details (report_id, opd_type, case_category, total_cases, beneficiaries_covered)
@@ -865,7 +828,7 @@ DECLARE
   v_report_id INTEGER;
 BEGIN
   INSERT INTO monthly_reports (institute_id, reporting_month, start_date, end_date, prepared_by, verified_by, submission_status, submitted_at, verified_at, created_at, updated_at)
-  VALUES (1, '2023-11', '2023-11-01', '2023-11-30', 1, 2, 'Approved', '2023-12-02 09:00:00+00', '2023-12-03 14:00:00+00', '2023-12-01 08:00:00+00', '2023-12-03 14:00:00+00')
+  VALUES (1, '2023-11', '2023-11-01', '2023-11-30', 1, (SELECT staff_id FROM staff WHERE email = 'harpreet.singh@ahpunjab.gov.in'), 'Approved', '2023-12-02 09:00:00+00', '2023-12-03 14:00:00+00', '2023-12-01 08:00:00+00', '2023-12-03 14:00:00+00')
   RETURNING report_id INTO v_report_id;
 
   INSERT INTO opd_report_details (report_id, opd_type, case_category, total_cases, beneficiaries_covered)
@@ -881,7 +844,7 @@ DECLARE
   v_report_id INTEGER;
 BEGIN
   INSERT INTO monthly_reports (institute_id, reporting_month, start_date, end_date, prepared_by, verified_by, submission_status, submitted_at, verified_at, created_at, updated_at)
-  VALUES (1, '2023-10', '2023-10-01', '2023-10-31', 1, 2, 'Approved', '2023-11-02 10:30:00+00', '2023-11-03 15:30:00+00', '2023-11-01 08:00:00+00', '2023-11-03 15:30:00+00')
+  VALUES (1, '2023-10', '2023-10-01', '2023-10-31', 1, (SELECT staff_id FROM staff WHERE email = 'harpreet.singh@ahpunjab.gov.in'), 'Approved', '2023-11-02 10:30:00+00', '2023-11-03 15:30:00+00', '2023-11-01 08:00:00+00', '2023-11-03 15:30:00+00')
   RETURNING report_id INTO v_report_id;
 
   INSERT INTO opd_report_details (report_id, opd_type, case_category, total_cases, beneficiaries_covered)
@@ -901,7 +864,7 @@ DECLARE
   v_report_id INTEGER;
 BEGIN
   INSERT INTO monthly_reports (institute_id, reporting_month, start_date, end_date, prepared_by, verified_by, submission_status, submitted_at, verified_at, created_at, updated_at)
-  VALUES (1, '2022-12', '2022-12-01', '2022-12-31', 1, 2, 'Approved', '2023-01-02 10:00:00+00', '2023-01-03 15:00:00+00', '2023-01-01 08:00:00+00', '2023-01-03 15:00:00+00')
+  VALUES (1, '2022-12', '2022-12-01', '2022-12-31', 1, (SELECT staff_id FROM staff WHERE email = 'harpreet.singh@ahpunjab.gov.in'), 'Approved', '2023-01-02 10:00:00+00', '2023-01-03 15:00:00+00', '2023-01-01 08:00:00+00', '2023-01-03 15:00:00+00')
   RETURNING report_id INTO v_report_id;
 
   INSERT INTO opd_report_details (report_id, opd_type, case_category, total_cases, beneficiaries_covered)
@@ -916,7 +879,7 @@ DECLARE
   v_report_id INTEGER;
 BEGIN
   INSERT INTO monthly_reports (institute_id, reporting_month, start_date, end_date, prepared_by, verified_by, submission_status, submitted_at, verified_at, created_at, updated_at)
-  VALUES (1, '2022-08', '2022-08-01', '2022-08-31', 1, 2, 'Approved', '2022-09-02 09:00:00+00', '2022-09-03 14:00:00+00', '2022-09-01 08:00:00+00', '2022-09-03 14:00:00+00')
+  VALUES (1, '2022-08', '2022-08-01', '2022-08-31', 1, (SELECT staff_id FROM staff WHERE email = 'harpreet.singh@ahpunjab.gov.in'), 'Approved', '2022-09-02 09:00:00+00', '2022-09-03 14:00:00+00', '2022-09-01 08:00:00+00', '2022-09-03 14:00:00+00')
   RETURNING report_id INTO v_report_id;
 
   INSERT INTO opd_report_details (report_id, opd_type, case_category, total_cases, beneficiaries_covered)
@@ -931,7 +894,7 @@ DECLARE
   v_report_id INTEGER;
 BEGIN
   INSERT INTO monthly_reports (institute_id, reporting_month, start_date, end_date, prepared_by, verified_by, submission_status, submitted_at, verified_at, created_at, updated_at)
-  VALUES (1, '2022-05', '2022-05-01', '2022-05-31', 1, 2, 'Approved', '2022-06-02 10:00:00+00', '2022-06-03 15:00:00+00', '2022-06-01 08:00:00+00', '2022-06-03 15:00:00+00')
+  VALUES (1, '2022-05', '2022-05-01', '2022-05-31', 1, (SELECT staff_id FROM staff WHERE email = 'harpreet.singh@ahpunjab.gov.in'), 'Approved', '2022-06-02 10:00:00+00', '2022-06-03 15:00:00+00', '2022-06-01 08:00:00+00', '2022-06-03 15:00:00+00')
   RETURNING report_id INTO v_report_id;
 
   INSERT INTO opd_report_details (report_id, opd_type, case_category, total_cases, beneficiaries_covered)
@@ -1061,7 +1024,7 @@ INSERT INTO notifications (
   expires_at
 ) VALUES (
   1,
-  2,
+  (SELECT staff_id FROM staff WHERE email = 'harpreet.singh@ahpunjab.gov.in'),
   'system',
   'report_rejected',
   'Report Needs Revision',
@@ -1131,7 +1094,7 @@ INSERT INTO notifications (
   created_at
 ) VALUES (
   1,
-  2,
+  (SELECT staff_id FROM staff WHERE email = 'harpreet.singh@ahpunjab.gov.in'),
   'user',
   'query',
   'Query About Report Data',
@@ -12592,7 +12555,7 @@ INSERT INTO notifications (
   expires_at
 ) VALUES (
   1,
-  2,
+  (SELECT staff_id FROM staff WHERE email = 'harpreet.singh@ahpunjab.gov.in'),
   'system',
   'report_rejected',
   'Report Needs Revision',
@@ -12662,7 +12625,7 @@ INSERT INTO notifications (
   created_at
 ) VALUES (
   1,
-  2,
+  (SELECT staff_id FROM staff WHERE email = 'harpreet.singh@ahpunjab.gov.in'),
   'user',
   'query',
   'Query About Report Data',
