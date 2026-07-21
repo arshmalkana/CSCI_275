@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/ManagePasskeysScreen.tsx
+# File: PWA/src/screens/ManagePasskeysScreen.tsx
 
 Lists registered WebAuthn passkeys and allows the user to delete them.
 

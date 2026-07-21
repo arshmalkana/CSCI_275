@@ -33,8 +33,8 @@ This file contains mock data for all database tables:
 
 ### 3. Frontend Integration
 **Files Modified**:
-- `ahpunjabfrontend/src/screens/HomeScreen.tsx` - Updated to fetch from API
-- `ahpunjabfrontend/src/utils/api.ts` - Created API utility
+- `PWA/src/screens/HomeScreen.tsx` - Updated to fetch from API
+- `PWA/src/utils/api.ts` - Created API utility
 
 **Features**:
 - Fetches homepage data from backend on mount
@@ -74,7 +74,7 @@ The backend will start on `http://localhost:8080`
 ### Step 3: Start Frontend
 
 ```bash
-cd ahpunjabfrontend
+cd PWA
 npm run dev
 ```
 
@@ -251,6 +251,6 @@ After testing, you can:
 - `/Backend/src/server.js` - Route registration
 
 ### Frontend
-- `/ahpunjabfrontend/src/screens/HomeScreen.tsx` - Home screen with API integration
-- `/ahpunjabfrontend/src/utils/api.ts` - API utility functions
-- `/ahpunjabfrontend/src/utils/storage.ts` - Storage utility (for auth tokens)
+- `/PWA/src/screens/HomeScreen.tsx` - Home screen with API integration
+- `/PWA/src/utils/api.ts` - API utility functions
+- `/PWA/src/utils/storage.ts` - Storage utility (for auth tokens)

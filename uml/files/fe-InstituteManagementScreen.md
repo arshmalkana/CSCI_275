@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/InstituteManagementScreen.tsx
+# File: PWA/src/screens/InstituteManagementScreen.tsx
 
 Admin panel for creating and editing institutes (veterinary centres, HQ offices, etc.) within the admin's geographic scope.
 

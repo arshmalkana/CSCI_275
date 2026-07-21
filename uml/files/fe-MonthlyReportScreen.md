@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/MonthlyReportScreen.tsx
+# File: PWA/src/screens/MonthlyReportScreen.tsx
 
 Report list with section-level status indicators.
 
@@ -32,4 +32,4 @@ flowchart TD
     T -->|change| V[refetch with status param]
 ```
 
-**File:** `ahpunjabfrontend/src/screens/MonthlyReportScreen.tsx`
+**File:** `PWA/src/screens/MonthlyReportScreen.tsx`

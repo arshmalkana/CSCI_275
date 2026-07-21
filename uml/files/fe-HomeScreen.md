@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/HomeScreen.tsx
+# File: PWA/src/screens/HomeScreen.tsx
 
 Main dashboard. First screen after login. Shows submission status, targets, recent reports, and quick-action cards.
 

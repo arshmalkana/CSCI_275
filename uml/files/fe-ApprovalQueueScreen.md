@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/ApprovalQueueScreen.tsx
+# File: PWA/src/screens/ApprovalQueueScreen.tsx
 
 Admin-only screen for reviewing and acting on submitted monthly reports. Only visible to users with an oversight/admin role.
 

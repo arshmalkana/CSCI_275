@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/SemenDistributionScreen.tsx
+# File: PWA/src/screens/SemenDistributionScreen.tsx
 
 SemenBank issue form — issue straws to a direct-child institute.
 
@@ -34,4 +34,4 @@ flowchart TD
 
 **Guard:** Backend route has `requireSemenIssuer` — only SemenBank role can hit POST /semen/issue. If another role somehow reaches this screen, the API returns 403.
 
-**File:** `ahpunjabfrontend/src/screens/SemenDistributionScreen.tsx`
+**File:** `PWA/src/screens/SemenDistributionScreen.tsx`

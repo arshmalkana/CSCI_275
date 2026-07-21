@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/offlineQueue.ts
+# File: PWA/src/offlineQueue.ts
 
 IndexedDB-backed queue for draft reports saved while offline. When the device reconnects, the service worker sync event flushes the queue to the API.
 

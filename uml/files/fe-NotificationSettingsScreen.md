@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/NotificationSettingsScreen.tsx
+# File: PWA/src/screens/NotificationSettingsScreen.tsx
 
 Controls which types of push notifications the user receives and manages their push subscription.
 

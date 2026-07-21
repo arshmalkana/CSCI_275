@@ -20,7 +20,7 @@ apiClient.ts (Infrastructure Layer - HTTP Client)
 
 ### **1. `apiClient.ts` - HTTP Infrastructure Layer**
 
-**Location**: `ahpunjabfrontend/src/utils/apiClient.ts`
+**Location**: `PWA/src/utils/apiClient.ts`
 
 **Purpose**: Low-level HTTP client that handles authentication mechanics
 
@@ -50,7 +50,7 @@ apiClient.getBaseUrl()              // Get API base URL
 
 ### **2. `api.ts` - Application Layer**
 
-**Location**: `ahpunjabfrontend/src/utils/api.ts`
+**Location**: `PWA/src/utils/api.ts`
 
 **Purpose**: High-level API interface with typed methods for specific endpoints
 

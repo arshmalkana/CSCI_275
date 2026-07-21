@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/TargetsScreen.tsx
+# File: PWA/src/screens/TargetsScreen.tsx
 
 Admin screen to set monthly reporting targets (OPD cases and AI services) per institute.
 

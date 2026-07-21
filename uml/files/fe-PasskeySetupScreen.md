@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/PasskeySetupScreen.tsx
+# File: PWA/src/screens/PasskeySetupScreen.tsx
 
 Guides the user through registering a new WebAuthn passkey (biometric or hardware key).
 

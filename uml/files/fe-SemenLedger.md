@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/SemenLedgerScreen.tsx
+# File: PWA/src/screens/SemenLedgerScreen.tsx
 
 Received semen history + current stock balance for any field role.
 
@@ -26,4 +26,4 @@ flowchart TD
 
 **Roles:** All FIELD_ROLES can view their receipts (`requireFieldRole`). SemenBank also sees issuance history as receipts in this view (incoming from HQ or district).
 
-**File:** `ahpunjabfrontend/src/screens/SemenLedgerScreen.tsx`
+**File:** `PWA/src/screens/SemenLedgerScreen.tsx`

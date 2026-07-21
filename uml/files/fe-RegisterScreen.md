@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/RegisterScreen.tsx
+# File: PWA/src/screens/RegisterScreen.tsx
 
 Multi-step self-registration form. Steps: Personal Info → Role & Location → Service Villages → Review & Submit. No authentication required.
 

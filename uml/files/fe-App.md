@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/App.tsx
+# File: PWA/src/App.tsx
 
 Root router with role-gating guards — blocks Oversight from PWA.
 
@@ -43,4 +43,4 @@ flowchart TD
 - `useEffect` on mount calls `initializePushNotifications()` when already logged in
 - `AllScreensScreen` is lazy-loaded, dev-only
 
-**File:** `ahpunjabfrontend/src/App.tsx`
+**File:** `PWA/src/App.tsx`

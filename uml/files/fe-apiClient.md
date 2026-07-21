@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/utils/apiClient.ts
+# File: PWA/src/utils/apiClient.ts
 
 Fetch wrapper — auto-attaches JWT, saves rolling token, retries on 401.
 
@@ -37,4 +37,4 @@ sequenceDiagram
 
 **Dedup logic:** `_refreshPromise` is set on the first 401 and cleared when resolved. Concurrent requests all await the same promise — no race condition.
 
-**File:** `ahpunjabfrontend/src/utils/apiClient.ts`
+**File:** `PWA/src/utils/apiClient.ts`

@@ -41,7 +41,7 @@ sequenceDiagram
 ```
 
 **Key files:**
-- `ahpunjabfrontend/src/screens/VaccineDistributionScreen.tsx`
+- `PWA/src/screens/VaccineDistributionScreen.tsx`
 - `Backend/src/services/distributionService.js` — `issueVaccine`, `getReceivingInstitutes`
 - `Backend/src/routes/distributions.js` — `requireVaccineIssuer = ['VaccineBank', 'CVH']`
 - `Database/schema.sql` — `vaccine_transactions`, `vaccine_stock` (sections 9)

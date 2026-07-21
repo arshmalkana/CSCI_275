@@ -1,6 +1,6 @@
 # AH Punjab Reporting — Project Audit
 
-_Scope: **Database + Backend + Frontend PWA only.** The Oversight Panel app is intentionally not built yet; this document maps what belongs to it. Generated 2026-07-21 from a full read of `Database/schema.sql`, the live `ahpunjab_db`, all of `Backend/src`, and `ahpunjabfrontend/src`._
+_Scope: **Database + Backend + Frontend PWA only.** The Oversight Panel app is intentionally not built yet; this document maps what belongs to it. Generated 2026-07-21 from a full read of `Database/schema.sql`, the live `ahpunjab_db`, all of `Backend/src`, and `PWA/src`._
 
 ---
 
@@ -117,13 +117,13 @@ Legend for "Used by": backend service/controller files that read or write the ta
 `docker compose up` at the repo root (`/docker-compose.yml`) does everything:
 - **postgres** (`ahpunjab-postgres`) — auto-runs `schema.sql → seed-geo → seed-login → seed-other` on first init (validated: 0 errors), loopback-published `127.0.0.1:5432`.
 - **backend** — built from `Backend/Dockerfile` (`node:24-alpine`, `npm ci --omit=dev`), `depends_on: postgres (service_healthy)`, connects via `DB_HOST=postgres`.
-- **frontend** — built from `ahpunjabfrontend/Dockerfile` (multi-stage: Vite build → nginx), `depends_on: backend`, published `8082:80`.
+- **frontend** — built from `PWA/Dockerfile` (multi-stage: Vite build → nginx), `depends_on: backend`, published `8082:80`.
 - **pgadmin** — `5050:80`.
 
 All four share the default compose network, so service-name DNS (`postgres`, `backend`) resolves automatically. **No manual linking needed.**
 
 ### 3.2 Connections ✅
-- Frontend → backend: `ahpunjabfrontend/nginx.conf` proxies `location /v1 → http://backend:8080`. The SPA calls the relative `/v1` base, so it's same-origin in the container — no CORS needed in prod, and the rolling-token header passes straight through nginx.
+- Frontend → backend: `PWA/nginx.conf` proxies `location /v1 → http://backend:8080`. The SPA calls the relative `/v1` base, so it's same-origin in the container — no CORS needed in prod, and the rolling-token header passes straight through nginx.
 - Backend → DB: `pg` pool in `src/database/db.js`, env-driven.
 - Dev mode: `npm run dev` (root) starts the DB via compose, then Vite (`:3000`, proxies `/v1 → :8080`) + Fastify (`:8080`).
 
@@ -179,7 +179,7 @@ The design is explicit (`config/roles.js`): field roles (CVD/CVH/PAIW/SemenBank/
 
 Backend endpoint surface today: **99 endpoints across 14 route groups**; roughly **51 of them** (`admin` 16, `master-data` 18, `distributions` 10, `periods` 5, `rollup` 2) are oversight-oriented and should be served to the panel, guarded by `scope.js` (already correct).
 
-> **Migration note:** move the 7 orphan screens out of `ahpunjabfrontend/` into the panel app so the PWA bundle carries only field code. The backend can stay shared or be split later (`roles.js` already flags this as Phase 2).
+> **Migration note:** move the 7 orphan screens out of `PWA/` into the panel app so the PWA bundle carries only field code. The backend can stay shared or be split later (`roles.js` already flags this as Phase 2).
 
 ---
 

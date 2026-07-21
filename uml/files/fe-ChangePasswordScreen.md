@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/ChangePasswordScreen.tsx
+# File: PWA/src/screens/ChangePasswordScreen.tsx
 
 Allows an authenticated user to change their password. Requires current password confirmation.
 

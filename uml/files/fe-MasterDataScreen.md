@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/MasterDataScreen.tsx
+# File: PWA/src/screens/MasterDataScreen.tsx
 
 HQ Admin screen to manage the reference tables that power report calculations: service charges, semen types, and vaccines.
 

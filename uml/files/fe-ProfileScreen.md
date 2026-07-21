@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/ProfileScreen.tsx
+# File: PWA/src/screens/ProfileScreen.tsx
 
 Displays and edits the logged-in user's profile. Uses flexbox scroll pattern (not fixed positioning).
 

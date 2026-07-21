@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/VaccineDistributionScreen.tsx
+# File: PWA/src/screens/VaccineDistributionScreen.tsx
 
 VaccineBank screen for issuing vaccine doses to CVH/CVD institutes and viewing current stock.
 

@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/ActiveSessionsScreen.tsx
+# File: PWA/src/screens/ActiveSessionsScreen.tsx
 
 Shows all active login sessions (refresh tokens) across devices and allows revoking individual sessions.
 

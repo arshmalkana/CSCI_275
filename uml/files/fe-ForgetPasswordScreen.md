@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/ForgetPasswordScreen.tsx
+# File: PWA/src/screens/ForgetPasswordScreen.tsx
 
 Public screen (no auth required). User enters their email to receive a password reset link.
 

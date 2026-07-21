@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/services/authService.ts
+# File: PWA/src/services/authService.ts
 
 Authentication state manager — token storage, login, logout, user retrieval.
 
@@ -39,4 +39,4 @@ credentials: include"]
 - Access token: localStorage, 15-minute expiry, refreshed by `apiClient.ts` on 401
 - Refresh token: HttpOnly cookie (never accessible from JS), 7-day rolling
 
-**File:** `ahpunjabfrontend/src/services/authService.ts`
+**File:** `PWA/src/services/authService.ts`

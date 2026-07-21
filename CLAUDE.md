@@ -10,7 +10,7 @@ AH Punjab Reporting - A Progressive Web App for Punjab's Animal Husbandry Depart
 
 **Architecture**: React PWA + Fastify + PostgreSQL (traditional client-server, not offline-first)
 
-- **Frontend**: `ahpunjabfrontend/` - React 19 PWA with TypeScript, TailwindCSS v4, Vite, auto-updating service workers
+- **Frontend**: `PWA/` - React 19 PWA with TypeScript, TailwindCSS v4, Vite, auto-updating service workers
 - **Backend**: `Backend/` - Fastify 5.6 Node.js server with plugin architecture, JSON Schema validation, Swagger docs
 
 ## Environment & Deployment
@@ -36,10 +36,10 @@ This repo has MCP servers configured in Claude Code. Prefer them over reasoning 
 
 ## Development Commands
 
-### Frontend (ahpunjabfrontend/)
+### Frontend (PWA/)
 
 ```bash
-cd ahpunjabfrontend
+cd PWA
 npm run dev          # Start Vite dev server with --host (accessible on network)
 npm run build        # TypeScript compile + Vite build with PWA manifest
 npm run preview      # Preview production build with --host
@@ -62,14 +62,14 @@ npm test             # Node.js test runner with --watch mode
 cd Backend && npm run dev
 
 # Terminal 2: Start frontend (proxies /v1 to backend)
-cd ahpunjabfrontend && npm run dev
+cd PWA && npm run dev
 
 # Access: Frontend at http://localhost:3000, API docs at http://localhost:8080/docs
 ```
 
 ## Architecture
 
-### Frontend Structure (ahpunjabfrontend/)
+### Frontend Structure (PWA/)
 
 - **React 19.1.1 + TypeScript** with strict configuration (`noUnusedLocals`, `noUnusedParameters`)
 - **Vite 7.1.7** build system with ES2022 target, ESNext modules

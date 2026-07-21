@@ -37,7 +37,7 @@ sequenceDiagram
 ```
 
 **Key files:**
-- `ahpunjabfrontend/src/screens/ForgetPasswordScreen.tsx`, `ResetPasswordScreen.tsx`
+- `PWA/src/screens/ForgetPasswordScreen.tsx`, `ResetPasswordScreen.tsx`
 - `Backend/src/services/passwordResetService.js`
 - `Backend/src/services/emailService.js`
 - `Backend/src/routes/auth.js`

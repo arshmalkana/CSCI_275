@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/LoginScreen.tsx
+# File: PWA/src/screens/LoginScreen.tsx
 
 Password + passkey login with Oversight block.
 
@@ -31,4 +31,4 @@ flowchart TD
 
 **Oversight block:** Even if an Oversight user's credentials are valid, they are logged out immediately and shown "Please use the oversight panel." This prevents privilege confusion.
 
-**File:** `ahpunjabfrontend/src/screens/LoginScreen.tsx`
+**File:** `PWA/src/screens/LoginScreen.tsx`

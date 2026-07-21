@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/PeriodConfigScreen.tsx
+# File: PWA/src/screens/PeriodConfigScreen.tsx
 
 HQ Admin screen to manage reporting periods — open new months, set deadlines, lock or reopen.
 

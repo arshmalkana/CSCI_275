@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/utils/api.ts
+# File: PWA/src/utils/api.ts
 
 Typed wrappers over all backend API calls — single import for all screens.
 
@@ -42,4 +42,4 @@ flowchart TD
 
 **Pattern:** Every function calls `apiClient.fetch()` and parses JSON. Errors are thrown with the backend `message` field.
 
-**File:** `ahpunjabfrontend/src/utils/api.ts`
+**File:** `PWA/src/utils/api.ts`

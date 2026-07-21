@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/AdminPanelScreen.tsx
+# File: PWA/src/screens/AdminPanelScreen.tsx
 
 HQ Admin hub with two tabs: Pending Registrations and Users management.
 

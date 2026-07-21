@@ -16,7 +16,7 @@ Progressive Web App for Punjab's Animal Husbandry Department, replacing the old 
 ## Project Layout
 
 ```
-├── ahpunjabfrontend/      React PWA
+├── PWA/      React PWA
 │   ├── src/screens/       One file per screen
 │   ├── src/components/    Shared UI components
 │   ├── src/utils/         api.ts (all API calls), apiClient.ts (JWT + refresh), offlineQueue.ts
@@ -67,7 +67,7 @@ npm install
 npm run dev
 
 # 3. Frontend (port 3000)
-cd ahpunjabfrontend
+cd PWA
 cp .env.example .env
 npm install
 npm run dev

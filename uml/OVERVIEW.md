@@ -11,8 +11,8 @@ The system is split into two separate deployments that share the same backend:
 
 | App | Who logs in | Role |
 |---|---|---|
-| **PWA** (`ahpunjabfrontend/`) | CVD, CVH, PAIW, SemenBank, VaccineBank | Submit monthly reports, manage distributions |
-| **Panel** (`ahpunjabpanel/`) | Oversight (Tehsil-level officers) | Approve reports, close periods, view rollups |
+| **PWA** (`PWA/`) | CVD, CVH, PAIW, SemenBank, VaccineBank | Submit monthly reports, manage distributions |
+| **Panel** (`OversightPanel/`) | Oversight (Tehsil-level officers) | Approve reports, close periods, view rollups |
 
 `ProtectedRoute` in each app enforces this split at the client level.
 `authenticate.js` enforces it at the API level — every sensitive route checks

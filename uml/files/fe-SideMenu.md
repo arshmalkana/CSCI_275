@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/components/SideMenu.tsx
+# File: PWA/src/components/SideMenu.tsx
 
 Slide-out navigation — role-filtered links, async logout.
 
@@ -27,4 +27,4 @@ flowchart TD
     R --> S["navigate to /login"]
 ```
 
-**File:** `ahpunjabfrontend/src/components/SideMenu.tsx`
+**File:** `PWA/src/components/SideMenu.tsx`

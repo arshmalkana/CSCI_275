@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/NotificationsScreen.tsx
+# File: PWA/src/screens/NotificationsScreen.tsx
 
 In-app notification inbox. Supports mark read, mark all read, and delete.
 

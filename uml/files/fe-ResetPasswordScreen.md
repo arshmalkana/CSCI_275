@@ -1,4 +1,4 @@
-# File: ahpunjabfrontend/src/screens/ResetPasswordScreen.tsx
+# File: PWA/src/screens/ResetPasswordScreen.tsx
 
 Loaded via the email reset link: `/reset-password?token=<rawToken>`. Public screen (no auth).
 
