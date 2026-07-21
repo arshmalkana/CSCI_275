@@ -24,7 +24,8 @@
       "Bash(/root/.npm/_npx/2aa740410ff9d1f3/node_modules/snyk/bin/snyk config *)",
       "Bash(/root/.npm/_npx/2aa740410ff9d1f3/node_modules/snyk/bin/snyk whoami *)",
       "mcp__serena__get_symbols_overview",
-      "mcp__postgres__list_objects"
+      "mcp__postgres__list_objects",
+      "Skill(run)"
     ],
     "deny": [],
     "ask": []

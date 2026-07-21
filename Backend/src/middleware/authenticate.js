@@ -31,32 +31,57 @@ export async function authenticate(request, reply) {
       })
     }
 
-    // Verify the account is still active in the DB (catches deactivation between JWT issuance)
-    const activeCheck = await query('SELECT is_active FROM staff WHERE staff_id = $1', [payload.staffId])
-    if (!activeCheck.rows[0]?.is_active) {
+    // Re-read the live identity from the DB on every request. This is the
+    // authorization source of truth — the JWT payload is only a claim.
+    //   - is_active   : catches deactivation between token issuance and use
+    //   - user_role / current_institute_id / designation : catch role changes and
+    //     transfers so RBAC scope is NEVER stale (fixes B1)
+    //   - has_session : an unrevoked, unexpired refresh-token session must exist
+    //     for the rolling token to keep renewing (bounds a stolen access token to
+    //     one token lifetime after logout/revocation) (fixes B2)
+    const identity = await query(
+      `SELECT s.is_active,
+              s.user_role,
+              s.current_institute_id,
+              s.designation,
+              EXISTS (
+                SELECT 1 FROM refresh_tokens rt
+                WHERE rt.staff_id = s.staff_id
+                  AND rt.is_revoked = FALSE
+                  AND rt.expires_at > NOW()
+              ) AS has_session
+       FROM staff s
+       WHERE s.staff_id = $1`,
+      [payload.staffId]
+    )
+
+    const row = identity.rows[0]
+    if (!row?.is_active) {
       return reply.code(401).send({ success: false, message: 'Account is inactive' })
     }
 
-    // Attach user data to request for use in route handlers
+    // Attach FRESH user data (not the possibly-stale token claims) to the request
     request.user = {
       staffId: payload.staffId,
       userId: payload.userId,
-      role: payload.role,
-      designation: payload.designation,
-      instituteId: payload.instituteId
+      role: row.user_role,
+      designation: row.designation,
+      instituteId: row.current_institute_id
     }
 
-    // Generate new access token (rolling token approach)
-    const newAccessToken = jwtUtils.generateAccessToken({
-      staffId: payload.staffId,
-      userId: payload.userId,
-      role: payload.role,
-      designation: payload.designation,
-      instituteId: payload.instituteId
-    })
-
-    // Add new token to response header
-    reply.header('X-New-Token', newAccessToken)
+    // Rolling token: re-issue a fresh access token carrying the fresh identity,
+    // but ONLY while a valid session exists. Once the session is revoked/expired,
+    // the current token stops rolling and expires on its own (≤ its TTL).
+    if (row.has_session) {
+      const newAccessToken = jwtUtils.generateAccessToken({
+        staffId: payload.staffId,
+        userId: payload.userId,
+        role: row.user_role,
+        designation: row.designation,
+        instituteId: row.current_institute_id
+      })
+      reply.header('X-New-Token', newAccessToken)
+    }
 
   } catch (error) {
     request.log.error('Authentication error:', error)

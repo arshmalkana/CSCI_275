@@ -1190,53 +1190,53 @@ BEGIN
   SELECT
     iis.institute_id::INTEGER,
     iis.institute_name,
-    COALESCE(oa.large_opd,    0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'OPD_LARGE'),    10) AS opd_fee,
-    COALESCE(oa.dogs_opd,     0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'OPD_DOGS'),     50) AS opd_dogs_fee,
-    COALESCE(cpa.castrations, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'CASTRATION'),   50) AS cast_fee,
-    COALESCE(cpa.pd_count,    0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'PD'),           25) AS pd_fee,
-    COALESCE(la.lab_count,    0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'LAB_FECAL'),    40) AS lab_fee,
-    COALESCE(ca.hc_count,     0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'HC_LARGE'),    100) AS hc_fee,
-    COALESCE(ca.pm_count,     0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'PM_LARGE'),    100) AS pm_fee,
+    COALESCE(oa.large_opd,    0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'OPD_LARGE'),    0) AS opd_fee,
+    COALESCE(oa.dogs_opd,     0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'OPD_DOGS'),     0) AS opd_dogs_fee,
+    COALESCE(cpa.castrations, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'CASTRATION'),   0) AS cast_fee,
+    COALESCE(cpa.pd_count,    0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'PD'),           0) AS pd_fee,
+    COALESCE(la.lab_count,    0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'LAB_FECAL'),    0) AS lab_fee,
+    COALESCE(ca.hc_count,     0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'HC_LARGE'),    0) AS hc_fee,
+    COALESCE(ca.pm_count,     0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'PM_LARGE'),    0) AS pm_fee,
     (
-      COALESCE(oa.large_opd,    0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'OPD_LARGE'),    10)
-      + COALESCE(oa.dogs_opd,   0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'OPD_DOGS'),     50)
-      + COALESCE(cpa.castrations,0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'CASTRATION'),  50)
-      + COALESCE(cpa.pd_count,  0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'PD'),           25)
-      + COALESCE(la.lab_count,  0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'LAB_FECAL'),    40)
-      + COALESCE(ca.hc_count,   0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'HC_LARGE'),    100)
-      + COALESCE(ca.pm_count,   0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'PM_LARGE'),    100)
+      COALESCE(oa.large_opd,    0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'OPD_LARGE'),    0)
+      + COALESCE(oa.dogs_opd,   0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'OPD_DOGS'),     0)
+      + COALESCE(cpa.castrations,0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'CASTRATION'),  0)
+      + COALESCE(cpa.pd_count,  0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'PD'),           0)
+      + COALESCE(la.lab_count,  0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'LAB_FECAL'),    0)
+      + COALESCE(ca.hc_count,   0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'HC_LARGE'),    0)
+      + COALESCE(ca.pm_count,   0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'PM_LARGE'),    0)
     ) AS total_opd_fee,
-    COALESCE(aa.cow_local_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_LOCAL'),  25) AS cow_ai_fee,
-    COALESCE(aa.cow_ett_ai,   0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_ETT'),    35) AS ett_ai_fee,
-    COALESCE(aa.cow_imp_ai,   0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_IMP'),    50) AS imp_ai_fee,
-    COALESCE(aa.cow_sexed_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_SEXED'), 200) AS sexed_ai_fee,
+    COALESCE(aa.cow_local_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_LOCAL'),  0) AS cow_ai_fee,
+    COALESCE(aa.cow_ett_ai,   0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_ETT'),    0) AS ett_ai_fee,
+    COALESCE(aa.cow_imp_ai,   0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_IMP'),    0) AS imp_ai_fee,
+    COALESCE(aa.cow_sexed_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_SEXED'), 0) AS sexed_ai_fee,
     (
-      COALESCE(aa.cow_local_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_LOCAL'),  25)
-      + COALESCE(aa.cow_ett_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_ETT'),    35)
-      + COALESCE(aa.cow_imp_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_IMP'),    50)
-      + COALESCE(aa.cow_sexed_ai,0)* COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_SEXED'), 200)
+      COALESCE(aa.cow_local_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_LOCAL'),  0)
+      + COALESCE(aa.cow_ett_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_ETT'),    0)
+      + COALESCE(aa.cow_imp_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_IMP'),    0)
+      + COALESCE(aa.cow_sexed_ai,0)* COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_SEXED'), 0)
     ) AS total_cow_ai,
-    COALESCE(aa.buff_ai,      0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_BUFFALO'),    25) AS buff_ai_fee,
+    COALESCE(aa.buff_ai,      0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_BUFFALO'),    0) AS buff_ai_fee,
     (
-      COALESCE(aa.cow_local_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_LOCAL'),  25)
-      + COALESCE(aa.cow_ett_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_ETT'),    35)
-      + COALESCE(aa.cow_imp_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_IMP'),    50)
-      + COALESCE(aa.cow_sexed_ai,0)* COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_SEXED'), 200)
-      + COALESCE(aa.buff_ai,    0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_BUFFALO'),    25)
+      COALESCE(aa.cow_local_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_LOCAL'),  0)
+      + COALESCE(aa.cow_ett_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_ETT'),    0)
+      + COALESCE(aa.cow_imp_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_IMP'),    0)
+      + COALESCE(aa.cow_sexed_ai,0)* COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_SEXED'), 0)
+      + COALESCE(aa.buff_ai,    0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_BUFFALO'),    0)
     ) AS total_ai_fee,
     (
-      COALESCE(oa.large_opd,    0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'OPD_LARGE'),    10)
-      + COALESCE(oa.dogs_opd,   0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'OPD_DOGS'),     50)
-      + COALESCE(cpa.castrations,0)* COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'CASTRATION'),   50)
-      + COALESCE(cpa.pd_count,  0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'PD'),           25)
-      + COALESCE(la.lab_count,  0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'LAB_FECAL'),    40)
-      + COALESCE(ca.hc_count,   0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'HC_LARGE'),    100)
-      + COALESCE(ca.pm_count,   0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'PM_LARGE'),    100)
-      + COALESCE(aa.cow_local_ai,0)* COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_LOCAL'),  25)
-      + COALESCE(aa.cow_ett_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_ETT'),    35)
-      + COALESCE(aa.cow_imp_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_IMP'),    50)
-      + COALESCE(aa.cow_sexed_ai,0)* COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_SEXED'), 200)
-      + COALESCE(aa.buff_ai,    0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_BUFFALO'),    25)
+      COALESCE(oa.large_opd,    0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'OPD_LARGE'),    0)
+      + COALESCE(oa.dogs_opd,   0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'OPD_DOGS'),     0)
+      + COALESCE(cpa.castrations,0)* COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'CASTRATION'),   0)
+      + COALESCE(cpa.pd_count,  0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'PD'),           0)
+      + COALESCE(la.lab_count,  0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'LAB_FECAL'),    0)
+      + COALESCE(ca.hc_count,   0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'HC_LARGE'),    0)
+      + COALESCE(ca.pm_count,   0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'PM_LARGE'),    0)
+      + COALESCE(aa.cow_local_ai,0)* COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_LOCAL'),  0)
+      + COALESCE(aa.cow_ett_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_ETT'),    0)
+      + COALESCE(aa.cow_imp_ai, 0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_IMP'),    0)
+      + COALESCE(aa.cow_sexed_ai,0)* COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_COW_SEXED'), 0)
+      + COALESCE(aa.buff_ai,    0) * COALESCE((SELECT rate FROM fee_rates WHERE service_code = 'AI_BUFFALO'),    0)
     ) AS grand_total
   FROM institutes_in_scope iis
   LEFT JOIN opd_agg     oa  ON oa.institute_id  = iis.institute_id
@@ -1336,3 +1336,42 @@ CREATE TABLE semen_stock (
 );
 
 CREATE INDEX idx_semen_stock_institute ON semen_stock(institute_id);
+
+-- ============================================================================
+-- 32. INTEGRITY HARDENING (audit fixes)
+--     Grouped here so the constraints/indexes added after the code review are
+--     reviewable in one place. All run once on a fresh init.
+-- ============================================================================
+
+-- S2: enforce "single current" rows that application logic already assumes.
+-- Only one active posting per staff member...
+CREATE UNIQUE INDEX uq_staff_postings_one_current
+    ON staff_postings(staff_id) WHERE is_current;
+-- ...and only one primary service village per institute.
+CREATE UNIQUE INDEX uq_service_villages_one_primary
+    ON institute_service_villages(institute_id) WHERE is_primary;
+
+-- S4: service_charges has updated_at but was missing its auto-update trigger.
+CREATE TRIGGER update_service_charges_updated_at BEFORE UPDATE ON service_charges
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- S5: index FK/join columns that lacked coverage. (opd/ai/vaccination/diagnostic
+-- detail tables already get report_id coverage from their UNIQUE(report_id, ...);
+-- surgery/certificate/extension have no such unique, so index them explicitly.)
+CREATE INDEX idx_surgery_report_details_report     ON surgery_report_details(report_id);
+CREATE INDEX idx_certificate_report_details_report ON certificate_report_details(report_id);
+CREATE INDEX idx_extension_activities_report       ON extension_activities_details(report_id);
+CREATE INDEX idx_monthly_reports_prepared_by       ON monthly_reports(prepared_by);
+CREATE INDEX idx_monthly_reports_verified_by       ON monthly_reports(verified_by) WHERE verified_by IS NOT NULL;
+CREATE INDEX idx_notifications_sender              ON notifications(sender_id) WHERE sender_id IS NOT NULL;
+
+-- S6: domain CHECKs. reporting_month must be YYYY-MM (otherwise TO_DATE() throws
+-- inside the progressive-total views and get_straw_balance), and report windows
+-- must be ordered.
+ALTER TABLE monthly_reports
+    ADD CONSTRAINT chk_monthly_reports_month_format CHECK (reporting_month ~ '^[0-9]{4}-[0-9]{2}$'),
+    ADD CONSTRAINT chk_monthly_reports_date_order   CHECK (end_date >= start_date);
+ALTER TABLE reporting_periods
+    ADD CONSTRAINT chk_reporting_periods_month_format CHECK (reporting_month ~ '^[0-9]{4}-[0-9]{2}$');
+ALTER TABLE compiled_reports
+    ADD CONSTRAINT chk_compiled_reports_month_format CHECK (reporting_month ~ '^[0-9]{4}-[0-9]{2}$');
